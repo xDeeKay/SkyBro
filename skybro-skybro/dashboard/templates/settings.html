@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkyWatch · Settings</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3248;
+  --text:#e2e4f0;--muted:#7b7f9e;--accent:#4f7cff;
+  --green:#2ecc71;--red:#e74c3c;--font:system-ui,-apple-system,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+header{padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px}
+.logo{font-size:17px;font-weight:700}.logo span{color:var(--accent)}
+.back{color:var(--muted);text-decoration:none;font-size:13px;transition:color .15s}.back:hover{color:var(--text)}
+.content{max-width:680px;margin:32px auto;padding:0 20px 60px}
+h1{font-size:22px;font-weight:700;margin-bottom:6px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:28px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.card-title{font-weight:700;font-size:15px;margin-bottom:4px}
+.card-desc{color:var(--muted);font-size:12px;margin-bottom:16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-row.single{grid-template-columns:1fr}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+input[type=text],input[type=number],input[type=password]{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;
+  transition:border-color .15s;outline:none;font-family:inherit
+}
+input:focus{border-color:var(--accent)}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border:none}
+.toggle-label{font-size:13px}.toggle-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--border);border-radius:22px;cursor:pointer;transition:.2s}
+.slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--accent)}
+input:checked+.slider:before{transform:translateX(18px)}
+.actions{display:flex;gap:10px;margin-top:20px;align-items:center}
+.btn{padding:9px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.btn-test{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+.toast.success{background:var(--green);color:#000;opacity:1}
+.toast.error{background:var(--red);color:#fff;opacity:1}
+.hint{font-size:11px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Sky<span>Watch</span></div>
+  <a class="back" href="/">← Back to dashboard</a>
+</header>
+<div class="content">
+  <h1>Settings</h1>
+  <p class="sub">Changes are saved instantly and picked up by the tracker within 15 seconds — no restart needed.</p>
+
+  <!-- Location & Thresholds -->
+  <div class="card">
+    <div class="card-title">📍 Location & Alert Thresholds</div>
+    <div class="card-desc">Set your home coordinates and the conditions that trigger an alert.</div>
+    <div class="form-row">
+      <div><label>Home Latitude</label><input type="number" id="home_lat" step="0.0001" value="{{ cfg.home_lat }}"></div>
+      <div><label>Home Longitude</label><input type="number" id="home_lon" step="0.0001" value="{{ cfg.home_lon }}"></div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>Alert Radius (km)</label>
+        <input type="number" id="radius_km" step="0.5" min="1" max="100" value="{{ cfg.radius_km }}">
+        <div class="hint">Planes within this distance trigger an alert</div>
+      </div>
+      <div>
+        <label>Altitude Threshold (ft)</label>
+        <input type="number" id="alt_threshold_ft" step="500" min="500" max="50000" value="{{ cfg.alt_threshold_ft }}">
+        <div class="hint">Only alert if plane is below this altitude</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Polling -->
+  <div class="card">
+    <div class="card-title">⏱ Polling Intervals</div>
+    <div class="card-desc">How often to check for new data. OpenSky rate-limits anonymous users to ~10s minimum.</div>
+    <div class="form-row">
+      <div><label>Aircraft Poll (seconds)</label><input type="number" id="poll_interval" min="10" max="120" value="{{ cfg.poll_interval }}"></div>
+      <div><label>ISS Re-check (hours)</label><input type="number" id="iss_check_hours" min="1" max="12" value="{{ cfg.iss_check_hours }}"></div>
+    </div>
+    <div class="form-row single">
+      <div>
+        <label>ISS Alert Lead Time (minutes)</label>
+        <input type="number" id="iss_warn_mins" min="5" max="60" value="{{ cfg.iss_warn_mins }}">
+        <div class="hint">Send ISS alert this many minutes before the pass</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div class="card">
+    <div class="card-title">🔔 Notifications</div>
+    <div class="card-desc">Configure Pushover and/or Discord. Leave blank to disable that channel.</div>
+    <div class="form-row">
+      <div><label>Pushover App Token</label><input type="password" id="pushover_token" placeholder="••••••••" value="{{ cfg.pushover_token }}"></div>
+      <div><label>Pushover User Key</label><input type="password" id="pushover_user" placeholder="••••••••" value="{{ cfg.pushover_user }}"></div>
+    </div>
+    <div class="form-row single">
+      <div><label>Discord Webhook URL</label><input type="text" id="discord_webhook" placeholder="https://discord.com/api/webhooks/…" value="{{ cfg.discord_webhook }}"></div>
+    </div>
+    <div class="toggle-row" style="margin-top:8px">
+      <div><div class="toggle-label">Enable plane alerts</div><div class="toggle-sub">Alert when a plane enters your radius + altitude window</div></div>
+      <label class="toggle"><input type="checkbox" id="alerts_enabled" {% if cfg.alerts_enabled %}checked{% endif %}><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Enable ISS alerts</div><div class="toggle-sub">Alert before upcoming ISS flyovers</div></div>
+      <label class="toggle"><input type="checkbox" id="iss_alerts_enabled" {% if cfg.iss_alerts_enabled %}checked{% endif %}><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <!-- OpenSky account (optional) -->
+  <div class="card">
+    <div class="card-title">🔑 OpenSky Account (optional)</div>
+    <div class="card-desc">Free account gives better rate limits (10s vs 10s anon). Register at opensky-network.org.</div>
+    <div class="form-row">
+      <div><label>Username</label><input type="text" id="opensky_user" value="{{ cfg.opensky_user }}"></div>
+      <div><label>Password</label><input type="password" id="opensky_pass" placeholder="••••••••" value="{{ cfg.opensky_pass }}"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" onclick="save()">Save settings</button>
+    <button class="btn btn-test" onclick="testAlert()">Send test alert</button>
+    <span id="test-result" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function getVal(id) {
+  const el = document.getElementById(id);
+  if (el.type === 'checkbox') return el.checked;
+  if (el.type === 'number')   return parseFloat(el.value);
+  return el.value;
+}
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast '+type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+async function save() {
+  const payload = {};
+  ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
+   'iss_check_hours','iss_warn_mins','pushover_token','pushover_user',
+   'discord_webhook','opensky_user','opensky_pass',
+   'alerts_enabled','iss_alerts_enabled'].forEach(k => payload[k] = getVal(k));
+  try {
+    const r = await fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if (r.ok) showToast('✅ Settings saved');
+    else showToast('❌ Save failed', 'error');
+  } catch(e) { showToast('❌ '+e.message, 'error'); }
+}
+
+async function testAlert() {
+  const el = document.getElementById('test-result');
+  el.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/test-alert', {method:'POST'});
+    const data = await r.json();
+    const msgs = Object.entries(data).map(([k,v]) => `${k}: ${v}`).join(' · ');
+    el.textContent = msgs;
+    if (data.error) showToast('⚠ '+data.error, 'error');
+    else showToast('✅ Test alert sent');
+  } catch(e) { el.textContent = 'Error: '+e.message; }
+}
+</script>
+</body>
+</html>

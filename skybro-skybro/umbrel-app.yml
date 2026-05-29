@@ -1,0 +1,52 @@
+manifestVersion: 1
+id: skybro-skybro
+category: networking
+name: SkyBro
+version: "1.0.0"
+tagline: Live aircraft, ISS, weather & moon tracker
+description: >-
+  SkyBro is a real-time sky tracker for your home. It runs silently in the
+  background 24/7 and alerts you the moment something interesting is overhead.
+
+
+  ✈️ Aircraft — Tracks live planes in your vicinity using OpenSky Network's
+  public ADS-B data. Get Pushover or Discord alerts when a plane enters your
+  configured radius and altitude window, with full details including callsign,
+  aircraft model, registration, speed, altitude, and vertical rate.
+
+
+  🛸 ISS — Monitors upcoming International Space Station flyovers for your
+  location and fires an alert before each visible pass so you never miss one.
+
+
+  ☁️ Weather — Pulls hyperlocal forecasts from Open-Meteo (no API key needed)
+  including current conditions, 24-hour hourly breakdown, and 7-day forecast.
+  Includes a sky visibility score so you know the best times for spotting
+  planes or the ISS.
+
+
+  🌙 Moon — Shows the current lunar phase, illumination percentage, and
+  dates of the next full and new moons. Computed locally. No API needed.
+
+
+  All settings — home coordinates, alert radius, altitude threshold, ISS lead
+  time, and notification credentials are configurable through the built-in
+  settings page. No config file editing required. Changes apply within 15
+  seconds without restarting.
+
+developer: SkyBro
+website: https://github.com/xDeeKay/SkyBro
+dependencies: []
+repo: https://github.com/xDeeKay/SkyBro
+support: https://github.com/xDeeKay/SkyBro/issues
+port: 7437
+gallery:
+  - 1.jpg
+  - 2.jpg
+  - 3.jpg
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+releaseNotes: >-
+  Initial release. Aircraft tracking, ISS flyover alerts, weather forecasts,
+  and moon phase, all in one dashboard.

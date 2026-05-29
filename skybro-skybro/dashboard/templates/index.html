@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkyWatch</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3248;
+  --text:#e2e4f0;--muted:#7b7f9e;--accent:#4f7cff;
+  --green:#2ecc71;--amber:#f39c12;--red:#e74c3c;--teal:#1abc9c;
+  --font:system-ui,-apple-system,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* Header */
+header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:16px}
+.logo{font-size:17px;font-weight:700;letter-spacing:-0.3px;white-space:nowrap}.logo span{color:var(--accent)}
+.stats{display:flex;gap:16px;flex:1;justify-content:center}
+.stat{text-align:center}.stat-val{font-size:19px;font-weight:700;color:var(--accent);line-height:1}.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:12px}
+.live-pill{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+.settings-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;transition:border-color .15s}
+.settings-btn:hover{border-color:var(--accent)}
+
+/* Layout */
+.main{display:flex;flex:1;overflow:hidden}
+#map{flex:1}
+
+/* Sidebar */
+.sidebar{width:340px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:9px 4px;text-align:center;cursor:pointer;color:var(--muted);font-size:12px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:var(--text)}
+.tab-pane{flex:1;overflow-y:auto;padding:12px;display:none}
+.tab-pane.active{display:block}
+
+/* Plane cards */
+.plane-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.plane-card:hover{border-color:var(--accent)}
+.plane-card.alert{border-left:3px solid var(--amber)}
+.pc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.pc-call{font-weight:700;font-size:14px}.pc-dist{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2px 7px;font-size:11px;color:var(--muted)}
+.pc-model{color:var(--muted);font-size:11px;margin-bottom:8px}
+.pc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.pstat{background:var(--surface);border-radius:5px;padding:5px 7px}
+.pstat-val{font-weight:600;font-size:12px}.pstat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase}
+
+/* ISS cards */
+.iss-card{background:var(--surface2);border:1px solid var(--teal);border-radius:8px;padding:12px;margin-bottom:8px}
+.iss-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.iss-title{font-weight:700;color:var(--teal);font-size:14px}
+.iss-soon{background:var(--teal);color:#000;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
+.iss-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+
+/* History */
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.hist-call{font-weight:600;font-size:13px}
+.hist-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.hist-meta{text-align:right;font-size:11px;color:var(--muted)}
+
+.empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
+
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Sky<span>Watch</span></div>
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="s-live">—</div><div class="stat-lbl">Live</div></div>
+    <div class="stat"><div class="stat-val" id="s-today">—</div><div class="stat-lbl">Alerts today</div></div>
+    <div class="stat"><div class="stat-val" id="s-total">—</div><div class="stat-lbl">All time</div></div>
+    <div class="stat"><div class="stat-val" id="s-countries">—</div><div class="stat-lbl">Countries</div></div>
+  </div>
+  <div class="header-right">
+    <div class="live-pill"><div class="dot"></div><span id="last-upd">updating…</span></div>
+    <a class="settings-btn" href="/settings">⚙ Settings</a>
+  </div>
+</header>
+
+<div class="main">
+  <div id="map"></div>
+  <div class="sidebar">
+    <div class="tabs">
+      <div class="tab active" data-tab="nearby">Nearby</div>
+      <div class="tab" data-tab="iss">🛸 ISS</div>
+      <div class="tab" data-tab="history">History</div>
+    </div>
+    <div class="tab-pane active" id="pane-nearby"></div>
+    <div class="tab-pane" id="pane-iss"></div>
+    <div class="tab-pane" id="pane-history"></div>
+  </div>
+</div>
+
+<script>
+const HOME_LAT = {{ cfg.home_lat }};
+const HOME_LON = {{ cfg.home_lon }};
+const RADIUS   = {{ cfg.radius_km }};
+const ALT_THR  = {{ cfg.alt_threshold_ft }};
+
+// ── Map ───────────────────────────────────────────────────────────────────────
+const map = L.map('map', {zoomControl:true}).setView([HOME_LAT, HOME_LON], 11);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution:'© OpenStreetMap © CARTO', maxZoom:19
+}).addTo(map);
+
+L.circleMarker([HOME_LAT, HOME_LON], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
+  .addTo(map).bindPopup('<b>Home</b>');
+L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'#4f7cff',
+  fillColor:'#4f7cff',fillOpacity:.04,weight:1,dashArray:'5 7'}).addTo(map);
+
+const markers = {};
+
+function planeIcon(heading, alert) {
+  const col = alert ? '#f39c12' : '#4f7cff';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+    <g transform="rotate(${heading},15,15)">
+      <path d="M15 3L19 13L28 15L19 18L17 26L15 24L13 26L11 18L2 15L11 13Z"
+        fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.6)" stroke-width="1"/>
+    </g></svg>`;
+  return L.divIcon({html:svg, className:'', iconSize:[30,30], iconAnchor:[15,15]});
+}
+
+function updateMap(aircraft) {
+  const seen = new Set();
+  for (const ac of aircraft) {
+    seen.add(ac.icao24);
+    const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
+    const icon = planeIcon(ac.heading, isAlert);
+    const vr = ac.vertical_rate;
+    const vrStr = vr > .5 ? `↑${(Math.abs(vr)*196.85).toFixed(0)} fpm`
+                : vr < -.5 ? `↓${(Math.abs(vr)*196.85).toFixed(0)} fpm` : 'level';
+    const popup = `<b>${ac.callsign}</b>${ac.registration ? ' ('+ac.registration+')' : ''}<br>
+      ${ac.model || 'Unknown'}<br>
+      ${(ac.alt_ft||0).toLocaleString()} ft &bull; ${ac.speed_kts} kts &bull; ${vrStr}<br>
+      ${ac.dist_km} km away &bull; ${ac.origin_country}`;
+    if (markers[ac.icao24])
+      markers[ac.icao24].setLatLng([ac.lat,ac.lon]).setIcon(icon).setPopupContent(popup);
+    else
+      markers[ac.icao24] = L.marker([ac.lat,ac.lon],{icon}).addTo(map).bindPopup(popup);
+  }
+  for (const id of Object.keys(markers)) {
+    if (!seen.has(id)) { map.removeLayer(markers[id]); delete markers[id]; }
+  }
+}
+
+// ── Sidebar rendering ─────────────────────────────────────────────────────────
+function renderNearby(aircraft) {
+  const el = document.getElementById('pane-nearby');
+  if (!aircraft.length) { el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+ALT_THR.toLocaleString()+' ft</small></div>'; return; }
+  el.innerHTML = aircraft.map(ac => {
+    const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
+    const vr = ac.vertical_rate;
+    const vrStr = vr > .5 ? `↑ ${(Math.abs(vr)*196.85).toFixed(0)} fpm`
+                : vr < -.5 ? `↓ ${(Math.abs(vr)*196.85).toFixed(0)} fpm` : '→ level';
+    return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
+      <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
+      <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
+      <div class="pc-grid">
+        <div class="pstat"><div class="pstat-val">${(ac.alt_ft||0).toLocaleString()}</div><div class="pstat-lbl">Feet</div></div>
+        <div class="pstat"><div class="pstat-val">${ac.speed_kts}</div><div class="pstat-lbl">Knots</div></div>
+        <div class="pstat"><div class="pstat-val" style="font-size:11px">${vrStr}</div><div class="pstat-lbl">V/S</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderISS(passes) {
+  const el = document.getElementById('pane-iss');
+  if (!passes.length) { el.innerHTML = '<div class="empty">No upcoming ISS passes found<br><small>Check back in a few hours</small></div>'; return; }
+  el.innerHTML = passes.map(p => {
+    const dt  = new Date(p.pass_time * 1000);
+    const time = dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const date = dt.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+    const soon = p.mins_away < 30;
+    return `<div class="iss-card">
+      <div class="iss-head">
+        <span class="iss-title">🛸 ISS Flyover</span>
+        ${soon ? `<span class="iss-soon">In ${p.mins_away} min</span>` : ''}
+      </div>
+      <div class="iss-grid">
+        <div class="pstat"><div class="pstat-val">${time}</div><div class="pstat-lbl">Time</div></div>
+        <div class="pstat"><div class="pstat-val">${date}</div><div class="pstat-lbl">Date</div></div>
+        <div class="pstat"><div class="pstat-val">${p.mins_away < 60 ? p.mins_away+' min' : Math.round(p.mins_away/60)+'h'}</div><div class="pstat-lbl">From now</div></div>
+        <div class="pstat"><div class="pstat-val">${p.duration}s</div><div class="pstat-lbl">Duration</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistory(rows) {
+  const el = document.getElementById('pane-history');
+  if (!rows.length) { el.innerHTML = '<div class="empty">No alerts yet<br><small>Alerts appear here once triggered</small></div>'; return; }
+  el.innerHTML = rows.map(r => {
+    const dt = new Date(r.last_seen*1000).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="hist-row">
+      <div>
+        <div class="hist-call">✈ ${r.callsign}</div>
+        <div class="hist-sub">${r.model||'Unknown'}${r.registration?' · '+r.registration:''}</div>
+      </div>
+      <div class="hist-meta">${(r.min_alt_ft||0).toLocaleString()} ft<br>${r.min_dist_km} km · ${dt}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('pane-'+t.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Refresh ───────────────────────────────────────────────────────────────────
+async function refresh() {
+  try {
+    const [aircraft, iss, history, stats] = await Promise.all([
+      fetch('/api/live').then(r=>r.json()),
+      fetch('/api/iss').then(r=>r.json()),
+      fetch('/api/history').then(r=>r.json()),
+      fetch('/api/stats').then(r=>r.json()),
+    ]);
+    updateMap(aircraft);
+    renderNearby(aircraft);
+    renderISS(iss);
+    renderHistory(history);
+    document.getElementById('s-live').textContent      = stats.live;
+    document.getElementById('s-today').textContent     = stats.today;
+    document.getElementById('s-total').textContent     = stats.total;
+    document.getElementById('s-countries').textContent = stats.countries;
+    document.getElementById('last-upd').textContent    = new Date().toLocaleTimeString();
+  } catch(e) { console.error(e); }
+}
+
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>
+<script>
+// ── Weather & Moon tab additions ──────────────────────────────────────────────
+// Inject two new tabs into the sidebar after DOM loads
+document.addEventListener('DOMContentLoaded', () => {
+  // Tabs
+  const tabBar = document.querySelector('.tabs');
+  ['Weather','Moon'].forEach(name => {
+    const t = document.createElement('div');
+    t.className = 'tab'; t.dataset.tab = name.toLowerCase(); t.textContent = name === 'Weather' ? '☁ Weather' : '🌙 Moon';
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('pane-'+t.dataset.tab).classList.add('active');
+    });
+    tabBar.appendChild(t);
+  });
+
+  // Panes
+  const sidebar = document.querySelector('.sidebar');
+  ['weather','moon'].forEach(name => {
+    const p = document.createElement('div');
+    p.className = 'tab-pane'; p.id = 'pane-'+name;
+    sidebar.appendChild(p);
+  });
+});
+
+function windDir(deg) {
+  return ['N','NE','E','SE','S','SW','W','NW'][Math.round((deg % 360) / 45) % 8];
+}
+function uvLabel(uv) {
+  if (uv <= 2)  return ['Low',      '#2ecc71'];
+  if (uv <= 5)  return ['Moderate', '#f1c40f'];
+  if (uv <= 7)  return ['High',     '#e67e22'];
+  if (uv <= 10) return ['V.High',   '#e74c3c'];
+  return ['Extreme','#9b59b6'];
+}
+function wmoEmoji(code) {
+  if (code === 0 || code === 1) return '☀️';
+  if (code === 2) return '⛅';
+  if (code === 3) return '☁️';
+  if (code <= 48) return '🌫️';
+  if (code <= 67) return '🌧️';
+  if (code <= 77) return '❄️';
+  if (code <= 82) return '🌦️';
+  return '⛈️';
+}
+
+function renderWeather(cur, hourly, daily) {
+  const el = document.getElementById('pane-weather');
+  if (!cur || !cur.temp) { el.innerHTML = '<div class="empty">Weather loading…</div>'; return; }
+
+  const [uvLbl, uvCol] = uvLabel(cur.uv_index || 0);
+  const [astroLbl, astroCol] = [cur.astronomy_label, cur.astronomy_color];
+
+  let html = `
+  <div class="plane-card" style="border-left:3px solid ${astroCol}">
+    <div class="pc-header"><span class="pc-call" style="font-size:20px">${wmoEmoji(cur.weather_code)} ${cur.description}</span></div>
+    <div class="pc-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px">
+      <div class="pstat"><div class="pstat-val">${cur.temp}°C</div><div class="pstat-lbl">Temp</div></div>
+      <div class="pstat"><div class="pstat-val">${cur.feels_like}°C</div><div class="pstat-lbl">Feels like</div></div>
+      <div class="pstat"><div class="pstat-val">${cur.humidity}%</div><div class="pstat-lbl">Humidity</div></div>
+      <div class="pstat"><div class="pstat-val">${cur.wind_speed_kts}kt ${windDir(cur.wind_direction||0)}</div><div class="pstat-lbl">Wind</div></div>
+      <div class="pstat"><div class="pstat-val" style="color:${uvCol}">${cur.uv_index} ${uvLbl}</div><div class="pstat-lbl">UV Index</div></div>
+      <div class="pstat"><div class="pstat-val">${cur.cloud_cover_pct}%</div><div class="pstat-lbl">Cloud cover</div></div>
+    </div>
+    <div style="background:var(--surface);border-radius:6px;padding:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:var(--muted)">Sky visibility</span>
+      <span style="font-weight:700;color:${astroCol}">${astroLbl} (${cur.astronomy_score}/100)</span>
+    </div>
+  </div>`;
+
+  // Hourly (next 24h)
+  html += `<div style="font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">Next 24 hours</div>
+  <div style="overflow-x:auto;padding-bottom:6px">
+  <div style="display:flex;gap:6px;min-width:max-content">`;
+  (hourly||[]).slice(0,24).forEach(h => {
+    const hTime = h.time ? h.time.split('T')[1] : '';
+    const [,ac] = [null, h.astronomy_score >= 60 ? '#2ecc71' : h.astronomy_score >= 40 ? '#f39c12' : '#e74c3c'];
+    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 6px;text-align:center;min-width:54px">
+      <div style="font-size:10px;color:var(--muted)">${hTime}</div>
+      <div style="font-size:16px;margin:3px 0">${wmoEmoji(h.weather_code)}</div>
+      <div style="font-size:12px;font-weight:600">${h.temp}°</div>
+      <div style="font-size:10px;color:#4f7cff">${h.precip_prob||0}%</div>
+      <div style="font-size:10px;color:var(--muted)">${h.wind_kts}kt</div>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // Daily (7 days)
+  html += `<div style="font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">7-day forecast</div>`;
+  (daily||[]).forEach(d => {
+    const day = d.date ? new Date(d.date+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'}) : '';
+    const [,ac] = [null, d.astronomy_score >= 60 ? 'var(--green)' : d.astronomy_score >= 40 ? 'var(--amber)' : 'var(--red)'];
+    html += `<div class="hist-row">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px">${wmoEmoji(d.weather_code)}</span>
+        <div><div class="hist-call">${day}</div><div class="hist-sub">${d.description}</div></div>
+      </div>
+      <div class="hist-meta">
+        ${d.temp_min}° – ${d.temp_max}°C<br>
+        💧${d.precip_prob||0}% · ☁ <span style="color:${ac}">${d.astronomy_score}</span>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function renderMoon(moon) {
+  const el = document.getElementById('pane-moon');
+  if (!moon || !moon.phase_name) { el.innerHTML = '<div class="empty">Moon data loading…</div>'; return; }
+
+  const nextFull = new Date(moon.next_full_moon * 1000).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+  const nextNew  = new Date(moon.next_new_moon  * 1000).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+
+  // Draw illumination arc in SVG
+  const pct  = moon.illumination;
+  const frac = moon.fraction;
+  const r = 54, cx = 70, cy = 70;
+  const circumference = 2 * Math.PI * r;
+  const dash = (pct / 100) * circumference;
+
+  el.innerHTML = `
+  <div class="plane-card" style="text-align:center;padding:20px">
+    <div style="font-size:72px;line-height:1;margin-bottom:8px">${moon.phase_emoji}</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:4px">${moon.phase_name}</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:16px">${moon.illumination}% illuminated · ${moon.age_days} days old</div>
+    <svg width="140" height="140" viewBox="0 0 140 140" style="margin:0 auto 16px;display:block">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="8"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f39c12" stroke-width="8"
+        stroke-dasharray="${dash.toFixed(1)} ${circumference.toFixed(1)}"
+        stroke-linecap="round"
+        transform="rotate(-90 ${cx} ${cy})"/>
+      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
+        fill="var(--text)" font-size="18" font-weight="700">${pct}%</text>
+    </svg>
+  </div>
+  <div class="plane-card">
+    <div class="pc-grid" style="grid-template-columns:1fr 1fr">
+      <div class="pstat"><div class="pstat-val" style="font-size:13px">${nextFull}</div><div class="pstat-lbl">Next full moon</div></div>
+      <div class="pstat"><div class="pstat-val" style="font-size:13px">${nextNew}</div><div class="pstat-lbl">Next new moon</div></div>
+      <div class="pstat"><div class="pstat-val">${moon.age_days}d</div><div class="pstat-lbl">Moon age</div></div>
+      <div class="pstat"><div class="pstat-val">${(moon.fraction * 100).toFixed(0)}%</div><div class="pstat-lbl">Cycle complete</div></div>
+    </div>
+  </div>`;
+}
+
+// Extend the existing refresh() to also fetch weather + moon
+const _origRefresh = refresh;
+async function refresh() {
+  await _origRefresh();
+  try {
+    const [cur, hourly, daily, moon] = await Promise.all([
+      fetch('/api/weather/current').then(r=>r.json()),
+      fetch('/api/weather/hourly').then(r=>r.json()),
+      fetch('/api/weather/daily').then(r=>r.json()),
+      fetch('/api/moon').then(r=>r.json()),
+    ]);
+    renderWeather(cur, hourly, daily);
+    renderMoon(moon);
+  } catch(e) { console.error('Weather/moon error:', e); }
+}
+</script>

@@ -1,0 +1,59 @@
+version: "3.9"
+
+# Umbrel injects APP_DATA_DIR automatically — this is where /data lives on the host.
+# Port 7437 is declared in umbrel-app.yml and proxied by Umbrel's nginx.
+
+services:
+
+  tracker:
+    build: ./tracker
+    container_name: skybro-tracker
+    restart: unless-stopped
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+      HOME_LAT: "1.3521"
+      HOME_LON: "103.8198"
+    networks:
+      - skybro-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dashboard:
+    build: ./dashboard
+    container_name: skybro-dashboard
+    restart: unless-stopped
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+      HOME_LAT: "1.3521"
+      HOME_LON: "103.8198"
+    depends_on:
+      - tracker
+    networks:
+      - skybro-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  web:
+    image: nginx:alpine
+    container_name: skybro-web
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - dashboard
+    networks:
+      - skybro-net
+
+networks:
+  skybro-net:
+    name: skybro-net
