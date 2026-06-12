@@ -1,5 +1,5 @@
 """
-SkyWatch Dashboard — Flask app
+SkyBro Dashboard — Flask app
 Serves the live map UI, API endpoints, and the settings page.
 Settings are persisted to /data/config.json (hot-reloaded by tracker).
 """
@@ -10,7 +10,7 @@ from flask import Flask, render_template, jsonify, request, abort
 
 app = Flask(__name__)
 DATA_DIR = Path("/data")
-DB_PATH  = DATA_DIR / "skywatch.db"
+DB_PATH  = DATA_DIR / "skybro.db"
 CFG_PATH = DATA_DIR / "config.json"
 
 DEFAULTS = {
@@ -141,7 +141,7 @@ def api_test_alert():
         try:
             r = req.post("https://api.pushover.net/1/messages.json", data={
                 "token": cfg["pushover_token"], "user": cfg["pushover_user"],
-                "title": "✅ SkyWatch test", "message": "Alerts are working!",
+                "title": "✅ SkyBro test", "message": "Alerts are working!",
             }, timeout=10)
             results["pushover"] = "ok" if r.ok else f"error {r.status_code}"
         except Exception as e:
@@ -149,7 +149,7 @@ def api_test_alert():
     if cfg.get("discord_webhook"):
         try:
             r = req.post(cfg["discord_webhook"], json={"embeds":[{
-                "title":"✅ SkyWatch test","description":"Alerts are working!","color":0x2ecc71
+                "title":"✅ SkyBro test","description":"Alerts are working!","color":0x2ecc71
             }]}, timeout=10)
             results["discord"] = "ok" if r.ok else f"error {r.status_code}"
         except Exception as e:
