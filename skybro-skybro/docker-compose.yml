@@ -29,8 +29,12 @@ services:
     depends_on:
       - tracker
     networks:
+      - default
       - skybro-net
 
 networks:
+  default:
+    external: true
+    name: umbrel_main_network
   skybro-net:
     name: skybro-net
