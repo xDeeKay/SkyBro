@@ -46,7 +46,7 @@ def fetch_weather(lat, lon):
             "wind_speed_10m_max","uv_index_max","sunrise","sunset",
         ]),
         "forecast_days": 7,
-        "timezone": "Asia/Singapore",
+        "timezone": "auto",
         "wind_speed_unit": "kn",
     }
     try:

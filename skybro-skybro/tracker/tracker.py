@@ -317,7 +317,7 @@ def dispatch_iss_alerts():
         mins = (pass_time - now) // 60
         dt   = datetime.fromtimestamp(pass_time).strftime("%H:%M")
         notify(
-            "🛸 ISS flyover coming up",
+            "🛰️ ISS flyover coming up",
             f"Visible pass in ~{mins} min (at {dt} local)\nDuration: {duration}s — look up!",
             priority=1, color=0x1abc9c,
             fields=[
