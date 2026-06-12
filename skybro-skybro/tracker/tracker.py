@@ -8,6 +8,7 @@ Config is read from /data/config.json and hot-reloaded when it changes.
 import time, math, json, logging, sqlite3, requests, os, csv, io
 from datetime import datetime, timezone
 from pathlib import Path
+from weather import fetch_weather, process_weather, process_moon
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,22 +22,27 @@ DB_PATH   = DATA_DIR / "skybro.db"
 AC_DB     = DATA_DIR / "aircraft_db.json"
 CFG_PATH  = DATA_DIR / "config.json"
 
+WEATHER_INTERVAL = 900   # 15 minutes
+_weather_last    = 0.0
+MOON_INTERVAL    = 3600  # 1 hour
+_moon_last       = 0.0
+
 # ── Default config (overridden by config.json) ───────────────────────────────
 DEFAULTS = {
-    "home_lat":          1.3521,
-    "home_lon":          103.8198,
-    "radius_km":         15.0,
-    "alt_threshold_ft":  5000.0,
-    "poll_interval":     15,
-    "iss_check_hours":   2,
-    "iss_warn_mins":     20,
-    "pushover_token":    "",
-    "pushover_user":     "",
-    "discord_webhook":   "",
-    "opensky_user":      "",
-    "opensky_pass":      "",
-    "alerts_enabled":    True,
-    "iss_alerts_enabled":True,
+    "home_lat":           1.3521,
+    "home_lon":           103.8198,
+    "radius_km":          15.0,
+    "alt_threshold_ft":   5000.0,
+    "poll_interval":      15,
+    "iss_check_hours":    2,
+    "iss_warn_mins":      20,
+    "pushover_token":     "",
+    "pushover_user":      "",
+    "discord_webhook":    "",
+    "opensky_user":       "",
+    "opensky_pass":       "",
+    "alerts_enabled":     True,
+    "iss_alerts_enabled": True,
 }
 
 cfg = dict(DEFAULTS)
@@ -90,6 +96,10 @@ def init_db():
             duration INTEGER,
             alerted INTEGER DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS weather_current (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS weather_hourly  (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS weather_daily   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS moon_phase      (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
     """)
     conn.commit()
     conn.close()
@@ -187,7 +197,7 @@ def notify(title, body, fields=None, priority=0, color=0x4f7cff):
     log.info(f"Alert sent: {title}")
 
 # ── OpenSky ───────────────────────────────────────────────────────────────────
-_alerted = set()   # icao24s alerted this session
+_alerted = set()
 
 def fetch_states():
     pad = cfg["radius_km"] / 111.0 * 1.3
@@ -231,7 +241,6 @@ def process_states(states):
             (icao24, callsign, lat, lon, alt_ft, speed_kts, heading,
              vrate, country, model, reg, dist_km, now))
 
-        # Alert condition: within radius AND below altitude threshold
         if (dist_km <= cfg["radius_km"] and
                 alt_ft <= cfg["alt_threshold_ft"] and
                 icao24 not in _alerted):
@@ -243,14 +252,14 @@ def process_states(states):
             title = f"✈ {callsign} overhead"
             body  = f"{model} • {direction} at {dist_km} km\n{alt_ft:,} ft • {speed_kts} kts • {vr_str}"
             notify(title, body, color=0xE67E22, fields=[
-                {"name": "Callsign",     "value": callsign,              "inline": True},
-                {"name": "Registration", "value": reg or "N/A",          "inline": True},
-                {"name": "Model",        "value": model,                 "inline": True},
+                {"name": "Callsign",     "value": callsign,                   "inline": True},
+                {"name": "Registration", "value": reg or "N/A",               "inline": True},
+                {"name": "Model",        "value": model,                      "inline": True},
                 {"name": "Distance",     "value": f"{dist_km} km {direction}", "inline": True},
-                {"name": "Altitude",     "value": f"{alt_ft:,} ft",      "inline": True},
-                {"name": "Speed",        "value": f"{speed_kts} kts",    "inline": True},
-                {"name": "V/S",          "value": vr_str,                "inline": True},
-                {"name": "Country",      "value": country,               "inline": True},
+                {"name": "Altitude",     "value": f"{alt_ft:,} ft",           "inline": True},
+                {"name": "Speed",        "value": f"{speed_kts} kts",         "inline": True},
+                {"name": "V/S",          "value": vr_str,                     "inline": True},
+                {"name": "Country",      "value": country,                    "inline": True},
             ])
             c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
@@ -258,12 +267,10 @@ def process_states(states):
                 VALUES (?,?,?,?,?,?,?,?,?,1)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, country, model, reg))
 
-    # Expire stale live entries (> 90s)
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()
     conn.close()
 
-    # Expire alerted set for planes that have left
     live_icaos = {s[0] for s in states if s[6] and s[5]}
     for icao in list(_alerted):
         if icao not in live_icaos:
@@ -314,12 +321,33 @@ def dispatch_iss_alerts():
             f"Visible pass in ~{mins} min (at {dt} local)\nDuration: {duration}s — look up!",
             priority=1, color=0x1abc9c,
             fields=[
-                {"name": "Time",     "value": dt,            "inline": True},
-                {"name": "In",       "value": f"{mins} min", "inline": True},
-                {"name": "Duration", "value": f"{duration}s","inline": True},
+                {"name": "Time",     "value": dt,             "inline": True},
+                {"name": "In",       "value": f"{mins} min",  "inline": True},
+                {"name": "Duration", "value": f"{duration}s", "inline": True},
             ])
         c.execute("UPDATE iss_alerts SET alerted=1 WHERE pass_time=?", (pass_time,))
     conn.commit(); conn.close()
+
+# ── Weather ───────────────────────────────────────────────────────────────────
+def maybe_update_weather():
+    global _weather_last
+    if time.time() - _weather_last < WEATHER_INTERVAL:
+        return
+    _weather_last = time.time()
+    data = fetch_weather(cfg["home_lat"], cfg["home_lon"])
+    conn = sqlite3.connect(DB_PATH)
+    process_weather(data, conn)
+    conn.close()
+
+# ── Moon ──────────────────────────────────────────────────────────────────────
+def maybe_update_moon():
+    global _moon_last
+    if time.time() - _moon_last < MOON_INTERVAL:
+        return
+    _moon_last = time.time()
+    conn = sqlite3.connect(DB_PATH)
+    process_moon(conn)
+    conn.close()
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
@@ -336,71 +364,11 @@ def main():
             process_states(states)
             check_iss()
             dispatch_iss_alerts()
+            maybe_update_weather()
+            maybe_update_moon()
         except Exception as e:
             log.error(f"Loop error: {e}", exc_info=True)
         time.sleep(cfg["poll_interval"])
 
 if __name__ == "__main__":
     main()
-
-
-# ── Weather + Moon integration (appended) ────────────────────────────────────
-from weather import fetch_weather, process_weather, process_moon
-
-WEATHER_INTERVAL = 900   # 15 minutes
-_weather_last    = 0.0
-MOON_INTERVAL    = 3600  # 1 hour
-_moon_last       = 0.0
-
-def init_extra_tables():
-    conn = sqlite3.connect(DB_PATH)
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS weather_current (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS weather_hourly  (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS weather_daily   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS moon_phase      (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-    """)
-    conn.commit(); conn.close()
-
-def maybe_update_weather():
-    global _weather_last
-    if time.time() - _weather_last < WEATHER_INTERVAL:
-        return
-    _weather_last = time.time()
-    data = fetch_weather(cfg["home_lat"], cfg["home_lon"])
-    conn = sqlite3.connect(DB_PATH)
-    process_weather(data, conn)
-    conn.close()
-
-def maybe_update_moon():
-    global _moon_last
-    if time.time() - _moon_last < MOON_INTERVAL:
-        return
-    _moon_last = time.time()
-    conn = sqlite3.connect(DB_PATH)
-    process_moon(conn)
-    conn.close()
-
-# Monkey-patch main() to call extra init + weather/moon each loop
-_orig_main = main
-
-def main():
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    load_config()
-    init_db()
-    init_extra_tables()
-    load_aircraft_db()
-    log.info(f"SkyBro running | Home: {cfg['home_lat']}, {cfg['home_lon']} | "
-             f"Radius: {cfg['radius_km']} km | Alt: {cfg['alt_threshold_ft']} ft")
-    while True:
-        load_config()
-        try:
-            states = fetch_states()
-            process_states(states)
-            check_iss()
-            dispatch_iss_alerts()
-            maybe_update_weather()
-            maybe_update_moon()
-        except Exception as e:
-            log.error(f"Loop error: {e}", exc_info=True)
-        time.sleep(cfg["poll_interval"])
