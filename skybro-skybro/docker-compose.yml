@@ -18,7 +18,7 @@ services:
       - skybro-net
 
   web:
-    image: xdeekay/skybro-dashboard:1.0.4
+    image: xdeekay/skybro-dashboard:1.0.5
     container_name: skybro-web
     restart: unless-stopped
     volumes:
