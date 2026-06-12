@@ -1,5 +1,5 @@
 """
-SkyWatch Tracker Service
+SkyBro Tracker Service
 Polls OpenSky Network for nearby aircraft and Open Notify for ISS passes.
 Sends alerts via Pushover and/or Discord webhook.
 Config is read from /data/config.json and hot-reloaded when it changes.
@@ -14,10 +14,10 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-log = logging.getLogger("skywatch")
+log = logging.getLogger("skybro")
 
 DATA_DIR  = Path("/data")
-DB_PATH   = DATA_DIR / "skywatch.db"
+DB_PATH   = DATA_DIR / "skybro.db"
 AC_DB     = DATA_DIR / "aircraft_db.json"
 CFG_PATH  = DATA_DIR / "config.json"
 
@@ -174,7 +174,7 @@ def send_discord(title, description, color=0x4f7cff, fields=None):
             "title": title, "description": description, "color": color,
             "fields": fields or [],
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "footer": {"text": "SkyWatch • Singapore"},
+            "footer": {"text": "SkyBro • Singapore"},
         }]}, timeout=10)
     except Exception as e:
         log.error(f"Discord error: {e}")
@@ -327,7 +327,7 @@ def main():
     load_config()
     init_db()
     load_aircraft_db()
-    log.info(f"SkyWatch running | Home: {cfg['home_lat']}, {cfg['home_lon']} | "
+    log.info(f"SkyBro running | Home: {cfg['home_lat']}, {cfg['home_lon']} | "
              f"Radius: {cfg['radius_km']} km | Alt: {cfg['alt_threshold_ft']} ft")
     while True:
         load_config()
