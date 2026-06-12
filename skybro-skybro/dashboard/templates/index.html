@@ -15,8 +15,6 @@
   --font:system-ui,-apple-system,sans-serif;
 }
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-
-/* Header */
 header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:16px}
 .logo{font-size:17px;font-weight:700;letter-spacing:-0.3px;white-space:nowrap}.logo span{color:var(--accent)}
 .stats{display:flex;gap:16px;flex:1;justify-content:center}
@@ -27,21 +25,15 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
 .settings-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;transition:border-color .15s}
 .settings-btn:hover{border-color:var(--accent)}
-
-/* Layout */
 .main{display:flex;flex:1;overflow:hidden}
 #map{flex:1}
-
-/* Sidebar */
 .sidebar{width:340px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
-.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.tab{flex:1;padding:9px 4px;text-align:center;cursor:pointer;color:var(--muted);font-size:12px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none}
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+.tab{flex:1;min-width:60px;padding:9px 4px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
 .tab.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab:hover:not(.active){color:var(--text)}
 .tab-pane{flex:1;overflow-y:auto;padding:12px;display:none}
 .tab-pane.active{display:block}
-
-/* Plane cards */
 .plane-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
 .plane-card:hover{border-color:var(--accent)}
 .plane-card.alert{border-left:3px solid var(--amber)}
@@ -51,22 +43,16 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .pc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
 .pstat{background:var(--surface);border-radius:5px;padding:5px 7px}
 .pstat-val{font-weight:600;font-size:12px}.pstat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase}
-
-/* ISS cards */
 .iss-card{background:var(--surface2);border:1px solid var(--teal);border-radius:8px;padding:12px;margin-bottom:8px}
 .iss-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
 .iss-title{font-weight:700;color:var(--teal);font-size:14px}
 .iss-soon{background:var(--teal);color:#000;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
 .iss-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-
-/* History */
 .hist-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
 .hist-call{font-weight:600;font-size:13px}
 .hist-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .hist-meta{text-align:right;font-size:11px;color:var(--muted)}
-
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
-
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
 </head>
@@ -93,10 +79,14 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
       <div class="tab active" data-tab="nearby">Nearby</div>
       <div class="tab" data-tab="iss">🛸 ISS</div>
       <div class="tab" data-tab="history">History</div>
+      <div class="tab" data-tab="weather">☁ Weather</div>
+      <div class="tab" data-tab="moon">🌙 Moon</div>
     </div>
     <div class="tab-pane active" id="pane-nearby"></div>
     <div class="tab-pane" id="pane-iss"></div>
     <div class="tab-pane" id="pane-history"></div>
+    <div class="tab-pane" id="pane-weather"></div>
+    <div class="tab-pane" id="pane-moon"></div>
   </div>
 </div>
 
@@ -111,7 +101,6 @@ const map = L.map('map', {zoomControl:true}).setView([HOME_LAT, HOME_LON], 11);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution:'© OpenStreetMap © CARTO', maxZoom:19
 }).addTo(map);
-
 L.circleMarker([HOME_LAT, HOME_LON], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');
 L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'#4f7cff',
@@ -175,11 +164,11 @@ function renderNearby(aircraft) {
 
 function renderISS(passes) {
   const el = document.getElementById('pane-iss');
-  if (!passes.length) { el.innerHTML = '<div class="empty">No upcoming ISS passes found<br><small>Check back in a few hours</small></div>'; return; }
+  if (!passes.length) { el.innerHTML = '<div class="empty">No upcoming ISS passes found<br><small>Check back later</small></div>'; return; }
   el.innerHTML = passes.map(p => {
     const dt  = new Date(p.pass_time * 1000);
-    const time = dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    const date = dt.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+    const timeStr = dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const dateStr = dt.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
     const soon = p.mins_away < 30;
     return `<div class="iss-card">
       <div class="iss-head">
@@ -187,8 +176,8 @@ function renderISS(passes) {
         ${soon ? `<span class="iss-soon">In ${p.mins_away} min</span>` : ''}
       </div>
       <div class="iss-grid">
-        <div class="pstat"><div class="pstat-val">${time}</div><div class="pstat-lbl">Time</div></div>
-        <div class="pstat"><div class="pstat-val">${date}</div><div class="pstat-lbl">Date</div></div>
+        <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
+        <div class="pstat"><div class="pstat-val">${dateStr}</div><div class="pstat-lbl">Date</div></div>
         <div class="pstat"><div class="pstat-val">${p.mins_away < 60 ? p.mins_away+' min' : Math.round(p.mins_away/60)+'h'}</div><div class="pstat-lbl">From now</div></div>
         <div class="pstat"><div class="pstat-val">${p.duration}s</div><div class="pstat-lbl">Duration</div></div>
       </div>
@@ -202,77 +191,11 @@ function renderHistory(rows) {
   el.innerHTML = rows.map(r => {
     const dt = new Date(r.last_seen*1000).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
     return `<div class="hist-row">
-      <div>
-        <div class="hist-call">✈ ${r.callsign}</div>
-        <div class="hist-sub">${r.model||'Unknown'}${r.registration?' · '+r.registration:''}</div>
-      </div>
+      <div><div class="hist-call">✈ ${r.callsign}</div><div class="hist-sub">${r.model||'Unknown'}${r.registration?' · '+r.registration:''}</div></div>
       <div class="hist-meta">${(r.min_alt_ft||0).toLocaleString()} ft<br>${r.min_dist_km} km · ${dt}</div>
     </div>`;
   }).join('');
 }
-
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('pane-'+t.dataset.tab).classList.add('active');
-  });
-});
-
-// ── Refresh ───────────────────────────────────────────────────────────────────
-async function refresh() {
-  try {
-    const [aircraft, iss, history, stats] = await Promise.all([
-      fetch('/api/live').then(r=>r.json()),
-      fetch('/api/iss').then(r=>r.json()),
-      fetch('/api/history').then(r=>r.json()),
-      fetch('/api/stats').then(r=>r.json()),
-    ]);
-    updateMap(aircraft);
-    renderNearby(aircraft);
-    renderISS(iss);
-    renderHistory(history);
-    document.getElementById('s-live').textContent      = stats.live;
-    document.getElementById('s-today').textContent     = stats.today;
-    document.getElementById('s-total').textContent     = stats.total;
-    document.getElementById('s-countries').textContent = stats.countries;
-    document.getElementById('last-upd').textContent    = new Date().toLocaleTimeString();
-  } catch(e) { console.error(e); }
-}
-
-refresh();
-setInterval(refresh, 15000);
-</script>
-</body>
-</html>
-<script>
-// ── Weather & Moon tab additions ──────────────────────────────────────────────
-// Inject two new tabs into the sidebar after DOM loads
-document.addEventListener('DOMContentLoaded', () => {
-  // Tabs
-  const tabBar = document.querySelector('.tabs');
-  ['Weather','Moon'].forEach(name => {
-    const t = document.createElement('div');
-    t.className = 'tab'; t.dataset.tab = name.toLowerCase(); t.textContent = name === 'Weather' ? '☁ Weather' : '🌙 Moon';
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-      document.getElementById('pane-'+t.dataset.tab).classList.add('active');
-    });
-    tabBar.appendChild(t);
-  });
-
-  // Panes
-  const sidebar = document.querySelector('.sidebar');
-  ['weather','moon'].forEach(name => {
-    const p = document.createElement('div');
-    p.className = 'tab-pane'; p.id = 'pane-'+name;
-    sidebar.appendChild(p);
-  });
-});
 
 function windDir(deg) {
   return ['N','NE','E','SE','S','SW','W','NW'][Math.round((deg % 360) / 45) % 8];
@@ -298,10 +221,9 @@ function wmoEmoji(code) {
 function renderWeather(cur, hourly, daily) {
   const el = document.getElementById('pane-weather');
   if (!cur || !cur.temp) { el.innerHTML = '<div class="empty">Weather loading…</div>'; return; }
-
   const [uvLbl, uvCol] = uvLabel(cur.uv_index || 0);
-  const [astroLbl, astroCol] = [cur.astronomy_label, cur.astronomy_color];
-
+  const astroCol = cur.astronomy_color;
+  const astroLbl = cur.astronomy_label;
   let html = `
   <div class="plane-card" style="border-left:3px solid ${astroCol}">
     <div class="pc-header"><span class="pc-call" style="font-size:20px">${wmoEmoji(cur.weather_code)} ${cur.description}</span></div>
@@ -318,14 +240,10 @@ function renderWeather(cur, hourly, daily) {
       <span style="font-weight:700;color:${astroCol}">${astroLbl} (${cur.astronomy_score}/100)</span>
     </div>
   </div>`;
-
-  // Hourly (next 24h)
   html += `<div style="font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">Next 24 hours</div>
-  <div style="overflow-x:auto;padding-bottom:6px">
-  <div style="display:flex;gap:6px;min-width:max-content">`;
+  <div style="overflow-x:auto;padding-bottom:6px"><div style="display:flex;gap:6px;min-width:max-content">`;
   (hourly||[]).slice(0,24).forEach(h => {
     const hTime = h.time ? h.time.split('T')[1] : '';
-    const [,ac] = [null, h.astronomy_score >= 60 ? '#2ecc71' : h.astronomy_score >= 40 ? '#f39c12' : '#e74c3c'];
     html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 6px;text-align:center;min-width:54px">
       <div style="font-size:10px;color:var(--muted)">${hTime}</div>
       <div style="font-size:16px;margin:3px 0">${wmoEmoji(h.weather_code)}</div>
@@ -335,41 +253,29 @@ function renderWeather(cur, hourly, daily) {
     </div>`;
   });
   html += `</div></div>`;
-
-  // Daily (7 days)
   html += `<div style="font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">7-day forecast</div>`;
   (daily||[]).forEach(d => {
     const day = d.date ? new Date(d.date+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'}) : '';
-    const [,ac] = [null, d.astronomy_score >= 60 ? 'var(--green)' : d.astronomy_score >= 40 ? 'var(--amber)' : 'var(--red)'];
     html += `<div class="hist-row">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:18px">${wmoEmoji(d.weather_code)}</span>
         <div><div class="hist-call">${day}</div><div class="hist-sub">${d.description}</div></div>
       </div>
-      <div class="hist-meta">
-        ${d.temp_min}° – ${d.temp_max}°C<br>
-        💧${d.precip_prob||0}% · ☁ <span style="color:${ac}">${d.astronomy_score}</span>
-      </div>
+      <div class="hist-meta">${d.temp_min}° – ${d.temp_max}°C<br>💧${d.precip_prob||0}% · ☁ ${d.astronomy_score}</div>
     </div>`;
   });
-
   el.innerHTML = html;
 }
 
 function renderMoon(moon) {
   const el = document.getElementById('pane-moon');
   if (!moon || !moon.phase_name) { el.innerHTML = '<div class="empty">Moon data loading…</div>'; return; }
-
   const nextFull = new Date(moon.next_full_moon * 1000).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
   const nextNew  = new Date(moon.next_new_moon  * 1000).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
-
-  // Draw illumination arc in SVG
-  const pct  = moon.illumination;
-  const frac = moon.fraction;
+  const pct = moon.illumination;
   const r = 54, cx = 70, cy = 70;
   const circumference = 2 * Math.PI * r;
   const dash = (pct / 100) * circumference;
-
   el.innerHTML = `
   <div class="plane-card" style="text-align:center;padding:20px">
     <div style="font-size:72px;line-height:1;margin-bottom:8px">${moon.phase_emoji}</div>
@@ -379,8 +285,7 @@ function renderMoon(moon) {
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="8"/>
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f39c12" stroke-width="8"
         stroke-dasharray="${dash.toFixed(1)} ${circumference.toFixed(1)}"
-        stroke-linecap="round"
-        transform="rotate(-90 ${cx} ${cy})"/>
+        stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
       <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
         fill="var(--text)" font-size="18" font-weight="700">${pct}%</text>
     </svg>
@@ -395,19 +300,45 @@ function renderMoon(moon) {
   </div>`;
 }
 
-// Extend the existing refresh() to also fetch weather + moon
-const _origRefresh = refresh;
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('pane-'+t.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Single refresh function ───────────────────────────────────────────────────
 async function refresh() {
-  await _origRefresh();
   try {
-    const [cur, hourly, daily, moon] = await Promise.all([
+    const [aircraft, iss, history, stats, cur, hourly, daily, moon] = await Promise.all([
+      fetch('/api/live').then(r=>r.json()),
+      fetch('/api/iss').then(r=>r.json()),
+      fetch('/api/history').then(r=>r.json()),
+      fetch('/api/stats').then(r=>r.json()),
       fetch('/api/weather/current').then(r=>r.json()),
       fetch('/api/weather/hourly').then(r=>r.json()),
       fetch('/api/weather/daily').then(r=>r.json()),
       fetch('/api/moon').then(r=>r.json()),
     ]);
+    updateMap(aircraft);
+    renderNearby(aircraft);
+    renderISS(iss);
+    renderHistory(history);
     renderWeather(cur, hourly, daily);
     renderMoon(moon);
-  } catch(e) { console.error('Weather/moon error:', e); }
+    document.getElementById('s-live').textContent      = stats.live;
+    document.getElementById('s-today').textContent     = stats.today;
+    document.getElementById('s-total').textContent     = stats.total;
+    document.getElementById('s-countries').textContent = stats.countries;
+    document.getElementById('last-upd').textContent    = new Date().toLocaleTimeString();
+  } catch(e) { console.error('Refresh error:', e); }
 }
+
+refresh();
+setInterval(refresh, 15000);
 </script>
+</body>
+</html>
