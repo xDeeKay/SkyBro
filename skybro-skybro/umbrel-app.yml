@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro-skybro
 category: networking
 name: SkyBro
-version: "1.0.1"
+version: "1.0.2"
 tagline: Live aircraft, ISS, weather & moon tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
