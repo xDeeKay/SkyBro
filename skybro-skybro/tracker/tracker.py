@@ -385,10 +385,9 @@ def fetch_states():
 def process_states(states):
     now = int(time.time())
 
-    # Build photo cache lookup in one query before opening the write transaction
+    # ── Phase 1: read photo cache (read-only, no write lock) ─────────────────
     visible = [s[0] for s in states if s[6] is not None and s[5] is not None and not s[8]]
     photo_cache_map = {}
-    needs_photo = []
     if visible:
         conn_r = sqlite3.connect(DB_PATH)
         ph = ','.join('?' * len(visible))
@@ -396,11 +395,13 @@ def process_states(states):
                 f"SELECT icao24, thumb_url FROM photo_cache WHERE icao24 IN ({ph})", visible):
             photo_cache_map[row[0]] = row[1] or ""
         conn_r.close()
-        needs_photo = [icao for icao in visible if icao not in photo_cache_map]
+    needs_photo = [icao for icao in visible if icao not in photo_cache_map]
 
+    # ── Phase 2: write transaction — no HTTP, no secondary connections ────────
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM live_aircraft")
+    alert_queue = []
 
     for s in states:
         icao24, callsign = s[0], (s[1] or "").strip() or s[0].upper()
@@ -431,43 +432,66 @@ def process_states(states):
             vr_str = (f"↑ {abs(vrate*196.85):.0f} fpm" if vrate > 0.5
                       else f"↓ {abs(vrate*196.85):.0f} fpm" if vrate < -0.5
                       else "level")
-            title = f"✈ {callsign} overhead"
-            body  = f"{model} • {direction} at {dist_km} km\n{alt_ft:,} ft • {speed_kts} kts • {vr_str}"
-            photo_url, fetch_thumb = fetch_aircraft_photo(icao24)
-            notify(title, body, color=0xE67E22,
-                   thumb_url=photo_url or None,
-                   fields=[
-                       {"name": "Callsign",     "value": callsign,                    "inline": True},
-                       {"name": "Registration", "value": reg or "N/A",                "inline": True},
-                       {"name": "Model",        "value": model,                       "inline": True},
-                       {"name": "Distance",     "value": f"{dist_km} km {direction}", "inline": True},
-                       {"name": "Altitude",     "value": f"{alt_ft:,} ft",            "inline": True},
-                       {"name": "Speed",        "value": f"{speed_kts} kts",          "inline": True},
-                       {"name": "V/S",          "value": vr_str,                      "inline": True},
-                       {"name": "Country",      "value": country,                     "inline": True},
-                   ])
-            c.execute("""INSERT INTO seen_aircraft
+            alert_queue.append({
+                'icao24': icao24, 'callsign': callsign, 'lat': lat, 'lon': lon,
+                'alt_ft': alt_ft, 'speed_kts': speed_kts, 'vrate': vrate,
+                'vr_str': vr_str, 'dist_km': dist_km, 'country': country,
+                'model': model, 'reg': reg, 'direction': direction,
+            })
+            c.execute("""INSERT OR IGNORE INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
                  origin_country,model,registration,alerted,photo_url)
                 VALUES (?,?,?,?,?,?,?,?,?,1,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, country, model, reg,
-                 fetch_thumb or thumb_url))
+                 thumb_url))
 
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()
     conn.close()
+    # ── No DB connections open beyond this point until Phase 4 ───────────────
 
-    # Fetch photos for aircraft not yet in cache — runs after commit so no DB lock contention.
-    # Results cached now; live_aircraft.photo_url updated immediately so they appear this cycle.
-    if needs_photo:
-        conn_p = sqlite3.connect(DB_PATH)
-        for icao24 in needs_photo:
+    # ── Phase 3: fetch photos — each call opens/closes its own connection ─────
+    newly_fetched = {}
+    for icao24 in needs_photo:
+        _, thumb = fetch_aircraft_photo(icao24)
+        if thumb:
+            newly_fetched[icao24] = thumb
+    for alert in alert_queue:
+        icao24 = alert['icao24']
+        if icao24 not in photo_cache_map and icao24 not in newly_fetched:
             _, thumb = fetch_aircraft_photo(icao24)
             if thumb:
-                conn_p.execute(
-                    "UPDATE live_aircraft SET photo_url=? WHERE icao24=?", (thumb, icao24))
-        conn_p.commit()
-        conn_p.close()
+                newly_fetched[icao24] = thumb
+
+    # ── Phase 4: single write to update photo_urls ────────────────────────────
+    if newly_fetched:
+        conn_upd = sqlite3.connect(DB_PATH)
+        for icao24, thumb in newly_fetched.items():
+            conn_upd.execute(
+                "UPDATE live_aircraft SET photo_url=? WHERE icao24=?", (thumb, icao24))
+            conn_upd.execute(
+                "UPDATE seen_aircraft SET photo_url=? WHERE icao24=? AND photo_url=''",
+                (thumb, icao24))
+        conn_upd.commit()
+        conn_upd.close()
+
+    # ── Phase 5: send notifications (no DB operations) ────────────────────────
+    for alert in alert_queue:
+        icao24    = alert['icao24']
+        photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
+        title = f"✈ {alert['callsign']} overhead"
+        body  = (f"{alert['model']} • {alert['direction']} at {alert['dist_km']} km\n"
+                 f"{alert['alt_ft']:,} ft • {alert['speed_kts']} kts • {alert['vr_str']}")
+        notify(title, body, color=0xE67E22, thumb_url=photo_url, fields=[
+            {"name": "Callsign",     "value": alert['callsign'],                            "inline": True},
+            {"name": "Registration", "value": alert['reg'] or "N/A",                        "inline": True},
+            {"name": "Model",        "value": alert['model'],                               "inline": True},
+            {"name": "Distance",     "value": f"{alert['dist_km']} km {alert['direction']}", "inline": True},
+            {"name": "Altitude",     "value": f"{alert['alt_ft']:,} ft",                    "inline": True},
+            {"name": "Speed",        "value": f"{alert['speed_kts']} kts",                  "inline": True},
+            {"name": "V/S",          "value": alert['vr_str'],                              "inline": True},
+            {"name": "Country",      "value": alert['country'],                             "inline": True},
+        ])
 
     live_icaos = {s[0] for s in states if s[6] and s[5]}
     for icao in list(_alerted):
