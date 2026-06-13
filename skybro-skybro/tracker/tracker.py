@@ -402,7 +402,7 @@ def process_states(states):
         country   = s[2] or ""
         dist_km   = round(haversine(cfg["home_lat"], cfg["home_lon"], lat, lon), 2)
         model, reg = lookup(icao24)
-        thumb_url  = get_cached_photo(icao24)
+        _, thumb_url = fetch_aircraft_photo(icao24)
 
         c.execute("""INSERT OR REPLACE INTO live_aircraft VALUES
             (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
