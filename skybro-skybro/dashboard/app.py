@@ -106,7 +106,12 @@ def api_stats():
         today   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen > ?", (now-86400,)).fetchone()[0]
         total   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
         countries = conn.execute("SELECT COUNT(DISTINCT origin_country) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
-        return jsonify({"live": live, "today": today, "total": total, "countries": countries})
+        cfg = read_config()
+        return jsonify({
+            "live": live, "today": today, "total": total, "countries": countries,
+            "use_location_time": cfg.get("use_location_time", False),
+            "time_format": cfg.get("time_format", "12h"),
+        })
     except Exception:
         return jsonify({"live":0,"today":0,"total":0,"countries":0})
 

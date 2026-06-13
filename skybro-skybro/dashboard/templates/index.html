@@ -119,13 +119,13 @@ const HOME_LAT   = {{ cfg.home_lat }};
 const HOME_LON   = {{ cfg.home_lon }};
 const RADIUS     = {{ cfg.radius_km }};
 const ALT_THR    = {{ cfg.alt_threshold_ft }};
-const USE_LOC_TZ = {{ 'true' if cfg.use_location_time else 'false' }};
-const TIME_24H   = {{ 'true' if cfg.time_format == '24h' else 'false' }};
-let   locationTZ = '';
+let USE_LOC_TZ = {{ 'true' if cfg.use_location_time else 'false' }};
+let TIME_24H   = {{ 'true' if cfg.time_format == '24h' else 'false' }};
+let locationTZ = '';
 
 function _tz() { return (USE_LOC_TZ && locationTZ) ? locationTZ : undefined; }
 function fmtTime(d) {
-  const o = {hour:'2-digit', minute:'2-digit', hour12: !TIME_24H};
+  const o = {hour: TIME_24H ? '2-digit' : 'numeric', minute:'2-digit', hour12: !TIME_24H};
   if (_tz()) o.timeZone = _tz();
   return d.toLocaleTimeString([], o);
 }
@@ -135,7 +135,7 @@ function fmtDate(d) {
   return d.toLocaleDateString([], o);
 }
 function fmtDateTime(d) {
-  const o = {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12: !TIME_24H};
+  const o = {month:'short', day:'numeric', hour: TIME_24H ? '2-digit' : 'numeric', minute:'2-digit', hour12: !TIME_24H};
   if (_tz()) o.timeZone = _tz();
   return d.toLocaleString([], o);
 }
@@ -430,6 +430,8 @@ async function refresh() {
       fetch('/api/status').then(r=>r.json()),
     ]);
     if (cur && cur.timezone) locationTZ = cur.timezone;
+    if (stats.use_location_time !== undefined) USE_LOC_TZ = stats.use_location_time;
+    if (stats.time_format) TIME_24H = (stats.time_format === '24h');
     updateMap(aircraft);
     renderNearby(aircraft);
     renderISS(iss);
