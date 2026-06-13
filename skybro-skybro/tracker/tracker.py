@@ -44,6 +44,8 @@ DEFAULTS = {
     "n2yo_api_key":       "",
     "alerts_enabled":     True,
     "iss_alerts_enabled": True,
+    "use_location_time":  False,
+    "time_format":        "12h",
 }
 
 cfg = dict(DEFAULTS)

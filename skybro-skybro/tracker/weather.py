@@ -91,6 +91,7 @@ def process_weather(data, conn):
 
     current_doc = {
         "ts":               now_ts,
+        "timezone":         data.get("timezone", ""),
         "temp":             cur.get("temperature_2m"),
         "feels_like":       cur.get("apparent_temperature"),
         "humidity":         cur.get("relative_humidity_2m"),
