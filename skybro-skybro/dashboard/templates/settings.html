@@ -123,10 +123,22 @@ input:checked+.slider:before{transform:translateX(18px)}
   <!-- OpenSky account (optional) -->
   <div class="card">
     <div class="card-title">🔑 OpenSky Account (optional)</div>
-    <div class="card-desc">Free account gives better rate limits (10s vs 10s anon). Register at opensky-network.org.</div>
+    <div class="card-desc">Free account gives better rate limits. Register at opensky-network.org. Exponential backoff applies on 429 responses (5 min → doubles → 1 hr max).</div>
     <div class="form-row">
       <div><label>Username</label><input type="text" id="opensky_user" value="{{ cfg.opensky_user }}"></div>
       <div><label>Password</label><input type="password" id="opensky_pass" placeholder="••••••••" value="{{ cfg.opensky_pass }}"></div>
+    </div>
+  </div>
+
+  <!-- n2yo API key -->
+  <div class="card">
+    <div class="card-title">🛰️ n2yo API Key (for ISS passes)</div>
+    <div class="card-desc">Required for ISS flyover alerts. Register free at n2yo.com — API key arrives by email. Leave blank to disable ISS tracking.</div>
+    <div class="form-row single">
+      <div>
+        <label>n2yo API Key</label>
+        <input type="text" id="n2yo_api_key" placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX" value="{{ cfg.n2yo_api_key }}">
+      </div>
     </div>
   </div>
 
@@ -158,7 +170,7 @@ async function save() {
   const payload = {};
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
    'iss_check_hours','iss_warn_mins','pushover_token','pushover_user',
-   'discord_webhook','opensky_user','opensky_pass',
+   'discord_webhook','opensky_user','opensky_pass','n2yo_api_key',
    'alerts_enabled','iss_alerts_enabled'].forEach(k => payload[k] = getVal(k));
   try {
     const r = await fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});

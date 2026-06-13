@@ -19,10 +19,11 @@ DEFAULTS = {
     "poll_interval": 15, "iss_check_hours": 2, "iss_warn_mins": 20,
     "pushover_token": "", "pushover_user": "",
     "discord_webhook": "", "opensky_user": "", "opensky_pass": "",
+    "n2yo_api_key": "",
     "alerts_enabled": True, "iss_alerts_enabled": True,
 }
 
-# Fields the UI is allowed to read/write (keeps secrets manageable)
+# Fields the UI is allowed to read/write
 UI_FIELDS = list(DEFAULTS.keys())
 
 def read_config():
@@ -194,5 +195,13 @@ def api_moon():
         return jsonify(json.loads(row["data"]) if row else {})
     except Exception:
         return jsonify({})
+
+@app.route("/api/status")
+def api_status():
+    try:
+        rows = db().execute("SELECT * FROM source_status").fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception:
+        return jsonify([])
 
 import json as _json  # ensure json available in appended scope

@@ -1,6 +1,6 @@
 """
 SkyBro Tracker Service
-Polls OpenSky Network for nearby aircraft and Open Notify for ISS passes.
+Polls OpenSky Network for nearby aircraft and n2yo for ISS passes.
 Sends alerts via Pushover and/or Discord webhook.
 Config is read from /data/config.json and hot-reloaded when it changes.
 """
@@ -27,7 +27,7 @@ _weather_last    = 0.0
 MOON_INTERVAL    = 3600  # 1 hour
 _moon_last       = 0.0
 
-# ── Default config (overridden by config.json) ───────────────────────────────
+# ── Default config ────────────────────────────────────────────────────────────
 DEFAULTS = {
     "home_lat":           1.3521,
     "home_lon":           103.8198,
@@ -41,6 +41,7 @@ DEFAULTS = {
     "discord_webhook":    "",
     "opensky_user":       "",
     "opensky_pass":       "",
+    "n2yo_api_key":       "",
     "alerts_enabled":     True,
     "iss_alerts_enabled": True,
 }
@@ -81,7 +82,7 @@ def init_db():
             alt_ft REAL, speed_kts REAL, heading REAL,
             vertical_rate REAL, origin_country TEXT,
             model TEXT, registration TEXT,
-            dist_km REAL, updated INTEGER
+            dist_km REAL, updated INTEGER, photo_url TEXT
         );
         CREATE TABLE IF NOT EXISTS seen_aircraft (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,7 +90,7 @@ def init_db():
             first_seen INTEGER, last_seen INTEGER,
             min_alt_ft REAL, min_dist_km REAL,
             origin_country TEXT, model TEXT, registration TEXT,
-            alerted INTEGER DEFAULT 0
+            alerted INTEGER DEFAULT 0, photo_url TEXT
         );
         CREATE TABLE IF NOT EXISTS iss_alerts (
             pass_time INTEGER PRIMARY KEY,
@@ -100,7 +101,33 @@ def init_db():
         CREATE TABLE IF NOT EXISTS weather_hourly  (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
         CREATE TABLE IF NOT EXISTS weather_daily   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
         CREATE TABLE IF NOT EXISTS moon_phase      (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS source_status (
+            source TEXT PRIMARY KEY,
+            last_success INTEGER DEFAULT 0,
+            last_error   INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'unknown',
+            detail TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS photo_cache (
+            icao24 TEXT PRIMARY KEY,
+            photo_url TEXT,
+            thumb_url TEXT,
+            fetched INTEGER
+        );
     """)
+    conn.commit()
+    conn.close()
+
+def migrate_db():
+    """Add columns introduced after initial release to existing tables."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    for table, col in [("live_aircraft", "photo_url TEXT"),
+                       ("seen_aircraft",  "photo_url TEXT")]:
+        try:
+            c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
+        except sqlite3.OperationalError:
+            pass  # column already exists
     conn.commit()
     conn.close()
 
@@ -164,6 +191,32 @@ def lookup(icao24):
     entry = _ac_db.get(icao24.lower(), {})
     return entry.get("model", "Unknown"), entry.get("reg", "")
 
+# ── Source status ─────────────────────────────────────────────────────────────
+def update_source_status(source, success, detail='', status_override=None):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        now = int(time.time())
+        row = c.execute("SELECT last_success, last_error FROM source_status WHERE source=?",
+                        (source,)).fetchone()
+        prev_success = row[0] if row else 0
+        prev_error   = row[1] if row else 0
+        if success:
+            c.execute("""INSERT OR REPLACE INTO source_status
+                         (source, last_success, last_error, status, detail)
+                         VALUES (?,?,?,?,?)""",
+                      (source, now, prev_error, 'ok', ''))
+        else:
+            st = status_override or 'error'
+            c.execute("""INSERT OR REPLACE INTO source_status
+                         (source, last_success, last_error, status, detail)
+                         VALUES (?,?,?,?,?)""",
+                      (source, prev_success, now, st, detail))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        log.debug(f"source_status update error: {e}")
+
 # ── Notifications ─────────────────────────────────────────────────────────────
 def send_pushover(title, message, priority=0):
     if not cfg.get("pushover_token") or not cfg.get("pushover_user"):
@@ -176,30 +229,80 @@ def send_pushover(title, message, priority=0):
     except Exception as e:
         log.error(f"Pushover error: {e}")
 
-def send_discord(title, description, color=0x4f7cff, fields=None):
+def send_discord(title, description, color=0x4f7cff, fields=None, thumb_url=None):
     if not cfg.get("discord_webhook"):
         return
+    embed = {
+        "title": title, "description": description, "color": color,
+        "fields": fields or [],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "footer": {"text": "SkyBro"},
+    }
+    if thumb_url:
+        embed["thumbnail"] = {"url": thumb_url}
     try:
-        requests.post(cfg["discord_webhook"], json={"embeds": [{
-            "title": title, "description": description, "color": color,
-            "fields": fields or [],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "footer": {"text": "SkyBro • Singapore"},
-        }]}, timeout=10)
+        requests.post(cfg["discord_webhook"], json={"embeds": [embed]}, timeout=10)
     except Exception as e:
         log.error(f"Discord error: {e}")
 
-def notify(title, body, fields=None, priority=0, color=0x4f7cff):
+def notify(title, body, fields=None, priority=0, color=0x4f7cff, thumb_url=None):
     if not cfg.get("alerts_enabled", True):
         return
     send_pushover(title, body, priority)
-    send_discord(title, body, color, fields)
+    send_discord(title, body, color, fields, thumb_url)
     log.info(f"Alert sent: {title}")
+
+# ── Aircraft photos ───────────────────────────────────────────────────────────
+def get_cached_photo(icao24):
+    """Return cached thumb_url without making any HTTP request."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        row = conn.execute("SELECT thumb_url FROM photo_cache WHERE icao24=?",
+                           (icao24,)).fetchone()
+        conn.close()
+        return row[0] if row and row[0] else ""
+    except Exception:
+        return ""
+
+def fetch_aircraft_photo(icao24):
+    """Return (photo_url, thumb_url) from cache or Planespotters.net."""
+    conn = sqlite3.connect(DB_PATH)
+    row = conn.execute("SELECT photo_url, thumb_url FROM photo_cache WHERE icao24=?",
+                       (icao24,)).fetchone()
+    conn.close()
+    if row is not None:
+        return row[0] or "", row[1] or ""
+    try:
+        r = requests.get(f"https://api.planespotters.net/pub/photos/hex/{icao24}",
+                         timeout=5)
+        r.raise_for_status()
+        photos = r.json().get("photos", [])
+        if photos:
+            photo_url = photos[0].get("link", "")
+            tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
+            thumb_url = tl.get("src", "")
+        else:
+            photo_url, thumb_url = "", ""
+    except Exception as e:
+        log.debug(f"Photo fetch {icao24}: {e}")
+        photo_url, thumb_url = "", ""
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("INSERT OR REPLACE INTO photo_cache (icao24,photo_url,thumb_url,fetched) VALUES (?,?,?,?)",
+                 (icao24, photo_url, thumb_url, int(time.time())))
+    conn.commit()
+    conn.close()
+    return photo_url, thumb_url
 
 # ── OpenSky ───────────────────────────────────────────────────────────────────
 _alerted = set()
+_opensky_backoff_until = 0.0
+_opensky_backoff_step  = 300  # 5 min starting step, doubles on each 429 up to 1 hr
 
 def fetch_states():
+    global _opensky_backoff_until, _opensky_backoff_step
+    if time.time() < _opensky_backoff_until:
+        log.debug(f"OpenSky backoff: {int(_opensky_backoff_until - time.time())}s remaining")
+        return []
     pad = cfg["radius_km"] / 111.0 * 1.3
     params = {
         "lamin": cfg["home_lat"] - pad, "lomin": cfg["home_lon"] - pad,
@@ -209,10 +312,24 @@ def fetch_states():
     try:
         r = requests.get("https://opensky-network.org/api/states/all",
                          params=params, auth=auth, timeout=20)
+        if r.status_code == 429:
+            wait_mins = _opensky_backoff_step // 60
+            _opensky_backoff_until = time.time() + _opensky_backoff_step
+            log.warning(f"OpenSky rate limited (429) — backing off {wait_mins} min "
+                        f"(next step: {min(_opensky_backoff_step*2, 3600)//60} min)")
+            _opensky_backoff_step = min(_opensky_backoff_step * 2, 3600)
+            update_source_status('opensky', False,
+                                 f"Rate limited — retry in {wait_mins} min", 'backoff')
+            return []
         r.raise_for_status()
-        return r.json().get("states") or []
+        _opensky_backoff_step  = 300
+        _opensky_backoff_until = 0.0
+        states = r.json().get("states") or []
+        update_source_status('opensky', True)
+        return states
     except Exception as e:
         log.warning(f"OpenSky error: {e}")
+        update_source_status('opensky', False, str(e))
         return []
 
 def process_states(states):
@@ -235,11 +352,12 @@ def process_states(states):
         country   = s[2] or ""
         dist_km   = round(haversine(cfg["home_lat"], cfg["home_lon"], lat, lon), 2)
         model, reg = lookup(icao24)
+        thumb_url  = get_cached_photo(icao24)
 
         c.execute("""INSERT OR REPLACE INTO live_aircraft VALUES
-            (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (icao24, callsign, lat, lon, alt_ft, speed_kts, heading,
-             vrate, country, model, reg, dist_km, now))
+             vrate, country, model, reg, dist_km, now, thumb_url))
 
         if (dist_km <= cfg["radius_km"] and
                 alt_ft <= cfg["alt_threshold_ft"] and
@@ -251,21 +369,25 @@ def process_states(states):
                       else "level")
             title = f"✈ {callsign} overhead"
             body  = f"{model} • {direction} at {dist_km} km\n{alt_ft:,} ft • {speed_kts} kts • {vr_str}"
-            notify(title, body, color=0xE67E22, fields=[
-                {"name": "Callsign",     "value": callsign,                   "inline": True},
-                {"name": "Registration", "value": reg or "N/A",               "inline": True},
-                {"name": "Model",        "value": model,                      "inline": True},
-                {"name": "Distance",     "value": f"{dist_km} km {direction}", "inline": True},
-                {"name": "Altitude",     "value": f"{alt_ft:,} ft",           "inline": True},
-                {"name": "Speed",        "value": f"{speed_kts} kts",         "inline": True},
-                {"name": "V/S",          "value": vr_str,                     "inline": True},
-                {"name": "Country",      "value": country,                    "inline": True},
-            ])
+            photo_url, fetch_thumb = fetch_aircraft_photo(icao24)
+            notify(title, body, color=0xE67E22,
+                   thumb_url=photo_url or None,
+                   fields=[
+                       {"name": "Callsign",     "value": callsign,                    "inline": True},
+                       {"name": "Registration", "value": reg or "N/A",                "inline": True},
+                       {"name": "Model",        "value": model,                       "inline": True},
+                       {"name": "Distance",     "value": f"{dist_km} km {direction}", "inline": True},
+                       {"name": "Altitude",     "value": f"{alt_ft:,} ft",            "inline": True},
+                       {"name": "Speed",        "value": f"{speed_kts} kts",          "inline": True},
+                       {"name": "V/S",          "value": vr_str,                      "inline": True},
+                       {"name": "Country",      "value": country,                     "inline": True},
+                   ])
             c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
-                 origin_country,model,registration,alerted)
-                VALUES (?,?,?,?,?,?,?,?,?,1)""",
-                (icao24, callsign, now, now, alt_ft, dist_km, country, model, reg))
+                 origin_country,model,registration,alerted,photo_url)
+                VALUES (?,?,?,?,?,?,?,?,?,1,?)""",
+                (icao24, callsign, now, now, alt_ft, dist_km, country, model, reg,
+                 fetch_thumb or thumb_url))
 
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()
@@ -286,22 +408,29 @@ def check_iss():
     if time.time() - _iss_last_check < cfg["iss_check_hours"] * 3600:
         return
     _iss_last_check = time.time()
+    api_key = cfg.get("n2yo_api_key", "")
+    if not api_key:
+        log.info("ISS: n2yo API key not configured — skipping")
+        update_source_status('iss', False, "No API key configured", 'no_key')
+        return
     try:
-        r = requests.get(
-            f"https://api.open-notify.org/iss-pass.json"
-            f"?lat={cfg['home_lat']}&lon={cfg['home_lon']}&n=6&altitude=0",
-            timeout=15)
+        lat, lon = cfg["home_lat"], cfg["home_lon"]
+        url = (f"https://api.n2yo.com/rest/v1/satellite/visualpasses/"
+               f"25544/{lat}/{lon}/0/10/60/&apiKey={api_key}")
+        r = requests.get(url, timeout=15)
         r.raise_for_status()
-        passes = r.json().get("response", [])
+        passes = r.json().get("passes") or []
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         for p in passes:
             c.execute("INSERT OR IGNORE INTO iss_alerts (pass_time,duration,alerted) VALUES (?,?,0)",
-                      (p["risetime"], p["duration"]))
+                      (p["startUTC"], p["duration"]))
         conn.commit(); conn.close()
-        log.info(f"ISS: {len(passes)} passes fetched")
+        update_source_status('iss', True)
+        log.info(f"ISS: {len(passes)} passes fetched from n2yo")
     except Exception as e:
         log.warning(f"ISS fetch error: {e}")
+        update_source_status('iss', False, str(e))
 
 def dispatch_iss_alerts():
     if not cfg.get("iss_alerts_enabled", True):
@@ -338,6 +467,10 @@ def maybe_update_weather():
     conn = sqlite3.connect(DB_PATH)
     process_weather(data, conn)
     conn.close()
+    if data:
+        update_source_status('weather', True)
+    else:
+        update_source_status('weather', False, 'Open-Meteo fetch failed')
 
 # ── Moon ──────────────────────────────────────────────────────────────────────
 def maybe_update_moon():
@@ -354,6 +487,7 @@ def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     load_config()
     init_db()
+    migrate_db()
     load_aircraft_db()
     log.info(f"SkyBro running | Home: {cfg['home_lat']}, {cfg['home_lon']} | "
              f"Radius: {cfg['radius_km']} km | Alt: {cfg['alt_threshold_ft']} ft")

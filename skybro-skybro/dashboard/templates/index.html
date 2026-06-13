@@ -53,6 +53,13 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .hist-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .hist-meta{text-align:right;font-size:11px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
+.src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+.src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border)}
+.src-item:last-child{border-right:none}
+.src-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border)}
+.src-dot.ok{background:var(--green)}.src-dot.error{background:var(--red)}.src-dot.backoff{background:var(--amber)}.src-dot.no_key{background:var(--amber)}
+.src-name{font-weight:600;white-space:nowrap}.src-detail{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.pc-photo{width:100%;height:80px;object-fit:cover;border-radius:5px;margin-bottom:7px;display:block}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
 </head>
@@ -87,6 +94,11 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tab-pane" id="pane-history"></div>
     <div class="tab-pane" id="pane-weather"></div>
     <div class="tab-pane" id="pane-moon"></div>
+    <div class="src-bar" id="src-bar">
+      <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div><div class="src-name">OpenSky</div><div class="src-detail" id="st-opensky">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div><div class="src-name">ISS</div><div class="src-detail" id="st-iss">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-weather"></div><div><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
+    </div>
   </div>
 </div>
 
@@ -151,6 +163,7 @@ function renderNearby(aircraft) {
     const vrStr = vr > .5 ? `↑ ${(Math.abs(vr)*196.85).toFixed(0)} fpm`
                 : vr < -.5 ? `↓ ${(Math.abs(vr)*196.85).toFixed(0)} fpm` : '→ level';
     return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
+      ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" loading="lazy" onerror="this.style.display='none'">` : ''}
       <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
       <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
       <div class="pc-grid">
@@ -300,6 +313,36 @@ function renderMoon(moon) {
   </div>`;
 }
 
+// ── Source status bar ─────────────────────────────────────────────────────────
+function agoStr(ts) {
+  if (!ts) return 'never';
+  const s = Math.floor(Date.now()/1000) - ts;
+  if (s < 60)  return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s/60)}m ago`;
+  return `${Math.floor(s/3600)}h ago`;
+}
+
+function renderStatus(rows) {
+  const map = {};
+  (rows||[]).forEach(r => map[r.source] = r);
+  ['opensky','iss','weather'].forEach(src => {
+    const r = map[src];
+    const dot  = document.getElementById('sd-'+src);
+    const lbl  = document.getElementById('st-'+src);
+    if (!r) { dot.className='src-dot'; lbl.textContent='no data'; return; }
+    dot.className = 'src-dot ' + r.status;
+    if (r.status === 'ok') {
+      lbl.textContent = agoStr(r.last_success);
+    } else if (r.status === 'no_key') {
+      lbl.textContent = 'no key';
+    } else if (r.status === 'backoff') {
+      lbl.textContent = r.detail || 'rate limited';
+    } else {
+      lbl.textContent = r.detail ? r.detail.slice(0,28) : 'error';
+    }
+  });
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
@@ -313,7 +356,7 @@ document.querySelectorAll('.tab').forEach(t => {
 // ── Single refresh function ───────────────────────────────────────────────────
 async function refresh() {
   try {
-    const [aircraft, iss, history, stats, cur, hourly, daily, moon] = await Promise.all([
+    const [aircraft, iss, history, stats, cur, hourly, daily, moon, status] = await Promise.all([
       fetch('/api/live').then(r=>r.json()),
       fetch('/api/iss').then(r=>r.json()),
       fetch('/api/history').then(r=>r.json()),
@@ -322,6 +365,7 @@ async function refresh() {
       fetch('/api/weather/hourly').then(r=>r.json()),
       fetch('/api/weather/daily').then(r=>r.json()),
       fetch('/api/moon').then(r=>r.json()),
+      fetch('/api/status').then(r=>r.json()),
     ]);
     updateMap(aircraft);
     renderNearby(aircraft);
@@ -329,6 +373,7 @@ async function refresh() {
     renderHistory(history);
     renderWeather(cur, hourly, daily);
     renderMoon(moon);
+    renderStatus(status);
     document.getElementById('s-live').textContent      = stats.live;
     document.getElementById('s-today').textContent     = stats.today;
     document.getElementById('s-total').textContent     = stats.total;
