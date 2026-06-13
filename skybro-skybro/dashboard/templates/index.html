@@ -52,7 +52,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .iss-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
 .iss-title{font-weight:700;color:var(--teal);font-size:14px}
 .iss-soon{background:var(--teal);color:#000;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
-.iss-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.iss-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 .hist-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
 .hist-call{font-weight:600;font-size:13px}
 .hist-sub{font-size:11px;color:var(--muted);margin-top:2px}
@@ -223,16 +223,23 @@ function renderISS(passes) {
     const timeStr = fmtTime(dt);
     const dateStr = fmtDate(dt);
     const soon = p.mins_away < 30;
+    const countdownStr = p.mins_away < 60 ? p.mins_away+' min' : Math.round(p.mins_away/60)+'h';
+    const durationStr  = p.duration >= 60
+      ? Math.floor(p.duration/60)+'m '+(p.duration%60)+'s'
+      : p.duration+'s';
     return `<div class="iss-card">
       <div class="iss-head">
         <span class="iss-title">🛰️ ISS Flyover</span>
-        ${soon ? `<span class="iss-soon">In ${p.mins_away} min</span>` : ''}
+        ${soon ? `<span class="iss-soon">In ${countdownStr}</span>` : ''}
       </div>
       <div class="iss-grid">
-        <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
         <div class="pstat"><div class="pstat-val">${dateStr}</div><div class="pstat-lbl">Date</div></div>
-        <div class="pstat"><div class="pstat-val">${p.mins_away < 60 ? p.mins_away+' min' : Math.round(p.mins_away/60)+'h'}</div><div class="pstat-lbl">From now</div></div>
-        <div class="pstat"><div class="pstat-val">${p.duration}s</div><div class="pstat-lbl">Duration</div></div>
+        <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
+        <div class="pstat"><div class="pstat-val">${countdownStr}</div><div class="pstat-lbl">From now</div></div>
+        <div class="pstat"><div class="pstat-val">${durationStr}</div><div class="pstat-lbl">Duration</div></div>
+        <div class="pstat"><div class="pstat-val">${p.start_az || '—'}</div><div class="pstat-lbl">Appears</div></div>
+        <div class="pstat"><div class="pstat-val">${p.max_el != null ? p.max_el+'°' : '—'}</div><div class="pstat-lbl">Max height</div></div>
+        <div class="pstat"><div class="pstat-val">${p.end_az || '—'}</div><div class="pstat-lbl">Disappears</div></div>
       </div>
     </div>`;
   }).join('');

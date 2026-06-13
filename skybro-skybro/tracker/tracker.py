@@ -97,7 +97,10 @@ def init_db():
         CREATE TABLE IF NOT EXISTS iss_alerts (
             pass_time INTEGER PRIMARY KEY,
             duration INTEGER,
-            alerted INTEGER DEFAULT 0
+            alerted INTEGER DEFAULT 0,
+            start_az TEXT,
+            max_el INTEGER,
+            end_az TEXT
         );
         CREATE TABLE IF NOT EXISTS weather_current (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
         CREATE TABLE IF NOT EXISTS weather_hourly  (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
@@ -124,8 +127,11 @@ def migrate_db():
     """Add columns introduced after initial release to existing tables."""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    for table, col in [("live_aircraft", "photo_url TEXT"),
-                       ("seen_aircraft",  "photo_url TEXT")]:
+    for table, col in [("live_aircraft",  "photo_url TEXT"),
+                       ("seen_aircraft",   "photo_url TEXT"),
+                       ("iss_alerts",      "start_az TEXT"),
+                       ("iss_alerts",      "max_el INTEGER"),
+                       ("iss_alerts",      "end_az TEXT")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -425,8 +431,12 @@ def check_iss():
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         for p in passes:
-            c.execute("INSERT OR IGNORE INTO iss_alerts (pass_time,duration,alerted) VALUES (?,?,0)",
-                      (p["startUTC"], p["duration"]))
+            c.execute(
+                "INSERT OR IGNORE INTO iss_alerts "
+                "(pass_time,duration,alerted,start_az,max_el,end_az) VALUES (?,?,0,?,?,?)",
+                (p["startUTC"], p["duration"],
+                 p.get("startAzCompass"), p.get("maxEl"), p.get("endAzCompass"))
+            )
         conn.commit(); conn.close()
         update_source_status('iss', True)
         log.info(f"ISS: {len(passes)} passes fetched from n2yo")
