@@ -384,6 +384,20 @@ def fetch_states():
 
 def process_states(states):
     now = int(time.time())
+
+    # Build photo cache lookup in one query before opening the write transaction
+    visible = [s[0] for s in states if s[6] is not None and s[5] is not None and not s[8]]
+    photo_cache_map = {}
+    needs_photo = []
+    if visible:
+        conn_r = sqlite3.connect(DB_PATH)
+        ph = ','.join('?' * len(visible))
+        for row in conn_r.execute(
+                f"SELECT icao24, thumb_url FROM photo_cache WHERE icao24 IN ({ph})", visible):
+            photo_cache_map[row[0]] = row[1] or ""
+        conn_r.close()
+        needs_photo = [icao for icao in visible if icao not in photo_cache_map]
+
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM live_aircraft")
@@ -402,7 +416,7 @@ def process_states(states):
         country   = s[2] or ""
         dist_km   = round(haversine(cfg["home_lat"], cfg["home_lon"], lat, lon), 2)
         model, reg = lookup(icao24)
-        _, thumb_url = fetch_aircraft_photo(icao24)
+        thumb_url  = photo_cache_map.get(icao24, "")
 
         c.execute("""INSERT OR REPLACE INTO live_aircraft VALUES
             (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
@@ -442,6 +456,18 @@ def process_states(states):
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()
     conn.close()
+
+    # Fetch photos for aircraft not yet in cache — runs after commit so no DB lock contention.
+    # Results cached now; live_aircraft.photo_url updated immediately so they appear this cycle.
+    if needs_photo:
+        conn_p = sqlite3.connect(DB_PATH)
+        for icao24 in needs_photo:
+            _, thumb = fetch_aircraft_photo(icao24)
+            if thumb:
+                conn_p.execute(
+                    "UPDATE live_aircraft SET photo_url=? WHERE icao24=?", (thumb, icao24))
+        conn_p.commit()
+        conn_p.close()
 
     live_icaos = {s[0] for s in states if s[6] and s[5]}
     for icao in list(_alerted):
