@@ -91,10 +91,10 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 
 <div class="main">
   <div id="map"></div>
-  <button class="expand-btn" id="expand-btn" title="Show sidebar">▶</button>
+  <button class="expand-btn" id="expand-btn" title="Show sidebar">◀</button>
   <div class="sidebar">
     <div class="tabs">
-      <button class="collapse-btn" id="collapse-btn" title="Hide sidebar">◀</button>
+      <button class="collapse-btn" id="collapse-btn" title="Hide sidebar">▶</button>
       <div class="tab active" data-tab="aircraft">✈  Aircraft</div>
       <div class="tab" data-tab="iss">🛰️ ISS</div>
       <div class="tab" data-tab="history">📋 History</div>
@@ -365,12 +365,12 @@ const collapseBtn = document.getElementById('collapse-btn');
 collapseBtn.addEventListener('click', () => {
   sidebar.classList.add('collapsed');
   expandBtn.style.display = 'block';
-  sidebar.addEventListener('transitionend', () => map.invalidateSize(), {once: true});
+  setTimeout(() => map.invalidateSize(), 220);
 });
 expandBtn.addEventListener('click', () => {
   sidebar.classList.remove('collapsed');
   expandBtn.style.display = 'none';
-  sidebar.addEventListener('transitionend', () => map.invalidateSize(), {once: true});
+  setTimeout(() => map.invalidateSize(), 220);
 });
 
 if (window.innerWidth < 600) {
