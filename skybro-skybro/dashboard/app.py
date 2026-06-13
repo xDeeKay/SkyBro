@@ -18,11 +18,13 @@ DEFAULTS = {
     "radius_km": 15.0, "alt_threshold_ft": 5000.0,
     "poll_interval": 15, "iss_check_hours": 2, "iss_warn_mins": 20,
     "pushover_token": "", "pushover_user": "",
-    "discord_webhook": "", "opensky_user": "", "opensky_pass": "",
+    "discord_webhook": "", "opensky_client_id": "", "opensky_client_secret": "",
+    "n2yo_api_key": "",
     "alerts_enabled": True, "iss_alerts_enabled": True,
+    "use_location_time": False, "time_format": "12h",
 }
 
-# Fields the UI is allowed to read/write (keeps secrets manageable)
+# Fields the UI is allowed to read/write
 UI_FIELDS = list(DEFAULTS.keys())
 
 def read_config():
@@ -61,7 +63,9 @@ def settings():
 @app.route("/api/live")
 def api_live():
     try:
-        rows = db().execute("SELECT * FROM live_aircraft ORDER BY dist_km ASC").fetchall()
+        rows = db().execute(
+            "SELECT * FROM live_aircraft WHERE updated > ? ORDER BY dist_km ASC",
+            (int(time.time()) - 90,)).fetchall()
         return jsonify([dict(r) for r in rows])
     except Exception:
         return jsonify([])
@@ -104,7 +108,12 @@ def api_stats():
         today   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen > ?", (now-86400,)).fetchone()[0]
         total   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
         countries = conn.execute("SELECT COUNT(DISTINCT origin_country) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
-        return jsonify({"live": live, "today": today, "total": total, "countries": countries})
+        cfg = read_config()
+        return jsonify({
+            "live": live, "today": today, "total": total, "countries": countries,
+            "use_location_time": cfg.get("use_location_time", False),
+            "time_format": cfg.get("time_format", "12h"),
+        })
     except Exception:
         return jsonify({"live":0,"today":0,"total":0,"countries":0})
 
@@ -113,7 +122,7 @@ def api_config_get():
     cfg = read_config()
     # Mask secrets in GET response
     masked = dict(cfg)
-    for k in ("pushover_token","pushover_user","discord_webhook","opensky_pass"):
+    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret"):
         if masked.get(k):
             masked[k] = "••••••••"
     return jsonify(masked)
@@ -125,7 +134,7 @@ def api_config_post():
         abort(400)
     # Don't overwrite masked secrets with placeholder
     current = read_config()
-    for k in ("pushover_token","pushover_user","discord_webhook","opensky_pass"):
+    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret"):
         if data.get(k) == "••••••••":
             data[k] = current.get(k, "")
     saved = write_config(data)
@@ -194,5 +203,13 @@ def api_moon():
         return jsonify(json.loads(row["data"]) if row else {})
     except Exception:
         return jsonify({})
+
+@app.route("/api/status")
+def api_status():
+    try:
+        rows = db().execute("SELECT * FROM source_status").fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception:
+        return jsonify([])
 
 import json as _json  # ensure json available in appended scope

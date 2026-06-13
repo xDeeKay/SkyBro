@@ -13,6 +13,7 @@
   --text:#e2e4f0;--muted:#7b7f9e;--accent:#4f7cff;
   --green:#2ecc71;--amber:#f39c12;--red:#e74c3c;--teal:#1abc9c;
   --font:system-ui,-apple-system,sans-serif;
+  --sidebar-w:clamp(240px,28vw,340px);
 }
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:16px}
@@ -25,11 +26,15 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
 .settings-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;transition:border-color .15s}
 .settings-btn:hover{border-color:var(--accent)}
-.main{display:flex;flex:1;overflow:hidden}
-#map{flex:1}
-.sidebar{width:340px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.main{display:flex;flex:1;overflow:hidden;position:relative}
+#map{flex:1;min-width:0}
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease}
+.sidebar.collapsed{width:0;min-width:0;border:none}
+.sidebar-tab{position:absolute;right:var(--sidebar-w);top:50%;transform:translateY(-50%);width:18px;height:44px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;z-index:500;transition:right .2s ease;padding:0;line-height:1;user-select:none}
+.sidebar-tab:hover{color:var(--text);background:var(--surface2)}
+.sidebar.collapsed~.sidebar-tab{right:0}
 .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
-.tab{flex:1;min-width:60px;padding:9px 4px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
+.tab{flex:1;min-width:max-content;padding:9px 6px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
 .tab.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab:hover:not(.active){color:var(--text)}
 .tab-pane{flex:1;overflow-y:auto;padding:12px;display:none}
@@ -47,13 +52,27 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .iss-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
 .iss-title{font-weight:700;color:var(--teal);font-size:14px}
 .iss-soon{background:var(--teal);color:#000;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700}
-.iss-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.iss-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
 .hist-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
 .hist-call{font-weight:600;font-size:13px}
 .hist-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .hist-meta{text-align:right;font-size:11px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
+.src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+.src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border)}
+.src-item:last-child{border-right:none}
+.src-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border)}
+.src-dot.ok{background:var(--green)}.src-dot.error{background:var(--red)}.src-dot.backoff{background:var(--amber)}.src-dot.no_key{background:var(--amber)}
+.src-info{min-width:0;overflow:hidden;flex:1}
+.src-name{font-weight:600;white-space:nowrap}.src-detail{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.pc-photo{width:100%;height:80px;object-fit:cover;border-radius:5px;margin-bottom:7px;display:block}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@media (max-width:600px){
+  .sidebar{position:absolute;right:0;top:0;height:100%;z-index:400;width:80vw;max-width:300px;transition:transform .2s ease;transform:translateX(0)}
+  .sidebar.collapsed{width:80vw;max-width:300px;min-width:0;border-left:1px solid var(--border);transform:translateX(100%)}
+  .sidebar-tab{right:min(80vw,300px)}
+  .sidebar.collapsed~.sidebar-tab{right:0}
+}
 </style>
 </head>
 <body>
@@ -87,14 +106,47 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tab-pane" id="pane-history"></div>
     <div class="tab-pane" id="pane-weather"></div>
     <div class="tab-pane" id="pane-moon"></div>
+    <div class="src-bar" id="src-bar">
+      <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div class="src-info"><div class="src-name">OpenSky</div><div class="src-detail" id="st-opensky">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">ISS</div><div class="src-detail" id="st-iss">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-weather"></div><div class="src-info"><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
+    </div>
   </div>
+  <button class="sidebar-tab" id="sidebar-tab" title="Toggle sidebar">›</button>
 </div>
 
 <script>
-const HOME_LAT = {{ cfg.home_lat }};
-const HOME_LON = {{ cfg.home_lon }};
-const RADIUS   = {{ cfg.radius_km }};
-const ALT_THR  = {{ cfg.alt_threshold_ft }};
+const HOME_LAT   = {{ cfg.home_lat }};
+const HOME_LON   = {{ cfg.home_lon }};
+const RADIUS     = {{ cfg.radius_km }};
+const ALT_THR    = {{ cfg.alt_threshold_ft }};
+let USE_LOC_TZ = {{ 'true' if cfg.use_location_time else 'false' }};
+let TIME_24H   = {{ 'true' if cfg.time_format == '24h' else 'false' }};
+let locationTZ = '';
+
+function _tz() { return (USE_LOC_TZ && locationTZ) ? locationTZ : undefined; }
+function fmtTime(d) {
+  const o = {hour: TIME_24H ? '2-digit' : 'numeric', minute:'2-digit', hour12: !TIME_24H};
+  if (_tz()) o.timeZone = _tz();
+  return d.toLocaleTimeString([], o);
+}
+function fmtDate(d) {
+  const o = {weekday:'short', month:'short', day:'numeric'};
+  if (_tz()) o.timeZone = _tz();
+  return d.toLocaleDateString([], o);
+}
+function fmtDateTime(d) {
+  const o = {month:'short', day:'numeric', hour: TIME_24H ? '2-digit' : 'numeric', minute:'2-digit', hour12: !TIME_24H};
+  if (_tz()) o.timeZone = _tz();
+  return d.toLocaleString([], o);
+}
+function fmtHourStr(s) {
+  if (!s) return '';
+  if (TIME_24H) return s;
+  const [h, m] = s.split(':').map(Number);
+  const d = new Date(); d.setHours(h, m, 0, 0);
+  return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit', hour12:true});
+}
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 const map = L.map('map', {zoomControl:true}).setView([HOME_LAT, HOME_LON], 11);
@@ -103,8 +155,9 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 }).addTo(map);
 L.circleMarker([HOME_LAT, HOME_LON], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');
-L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'#4f7cff',
+const radiusCircle = L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'#4f7cff',
   fillColor:'#4f7cff',fillOpacity:.04,weight:1,dashArray:'5 7'}).addTo(map);
+map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 
 const markers = {};
 
@@ -151,6 +204,7 @@ function renderNearby(aircraft) {
     const vrStr = vr > .5 ? `↑ ${(Math.abs(vr)*196.85).toFixed(0)} fpm`
                 : vr < -.5 ? `↓ ${(Math.abs(vr)*196.85).toFixed(0)} fpm` : '→ level';
     return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
+      ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" loading="lazy" onerror="this.style.display='none'">` : ''}
       <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
       <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
       <div class="pc-grid">
@@ -167,19 +221,25 @@ function renderISS(passes) {
   if (!passes.length) { el.innerHTML = '<div class="empty">No upcoming ISS passes found<br><small>Check back later</small></div>'; return; }
   el.innerHTML = passes.map(p => {
     const dt  = new Date(p.pass_time * 1000);
-    const timeStr = dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    const dateStr = dt.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+    const timeStr = fmtTime(dt);
+    const dateStr = fmtDate(dt);
     const soon = p.mins_away < 30;
+    const countdownStr = p.mins_away < 60 ? p.mins_away+' min' : Math.round(p.mins_away/60)+'h';
+    const durationStr  = p.duration >= 60
+      ? Math.floor(p.duration/60)+'m '+(p.duration%60)+'s'
+      : p.duration+'s';
     return `<div class="iss-card">
       <div class="iss-head">
-        <span class="iss-title">🛰️ ISS Flyover</span>
-        ${soon ? `<span class="iss-soon">In ${p.mins_away} min</span>` : ''}
+        <span class="iss-title">🛰️ ISS Flyover &mdash; ${dateStr}</span>
+        ${soon ? `<span class="iss-soon">In ${countdownStr}</span>` : ''}
       </div>
       <div class="iss-grid">
         <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
-        <div class="pstat"><div class="pstat-val">${dateStr}</div><div class="pstat-lbl">Date</div></div>
-        <div class="pstat"><div class="pstat-val">${p.mins_away < 60 ? p.mins_away+' min' : Math.round(p.mins_away/60)+'h'}</div><div class="pstat-lbl">From now</div></div>
-        <div class="pstat"><div class="pstat-val">${p.duration}s</div><div class="pstat-lbl">Duration</div></div>
+        <div class="pstat"><div class="pstat-val">${countdownStr}</div><div class="pstat-lbl">From now</div></div>
+        <div class="pstat"><div class="pstat-val">${durationStr}</div><div class="pstat-lbl">Duration</div></div>
+        <div class="pstat"><div class="pstat-val">${p.start_az || '—'}</div><div class="pstat-lbl">Appears</div></div>
+        <div class="pstat"><div class="pstat-val">${p.max_el != null ? p.max_el+'°' : '—'}</div><div class="pstat-lbl">Max height</div></div>
+        <div class="pstat"><div class="pstat-val">${p.end_az || '—'}</div><div class="pstat-lbl">Disappears</div></div>
       </div>
     </div>`;
   }).join('');
@@ -189,7 +249,7 @@ function renderHistory(rows) {
   const el = document.getElementById('pane-history');
   if (!rows.length) { el.innerHTML = '<div class="empty">No alerts yet<br><small>Alerts appear here once triggered</small></div>'; return; }
   el.innerHTML = rows.map(r => {
-    const dt = new Date(r.last_seen*1000).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const dt = fmtDateTime(new Date(r.last_seen*1000));
     return `<div class="hist-row">
       <div><div class="hist-call">✈ ${r.callsign}</div><div class="hist-sub">${r.model||'Unknown'}${r.registration?' · '+r.registration:''}</div></div>
       <div class="hist-meta">${(r.min_alt_ft||0).toLocaleString()} ft<br>${r.min_dist_km} km · ${dt}</div>
@@ -245,7 +305,7 @@ function renderWeather(cur, hourly, daily) {
   (hourly||[]).slice(0,24).forEach(h => {
     const hTime = h.time ? h.time.split('T')[1] : '';
     html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 6px;text-align:center;min-width:54px">
-      <div style="font-size:10px;color:var(--muted)">${hTime}</div>
+      <div style="font-size:10px;color:var(--muted)">${fmtHourStr(hTime)}</div>
       <div style="font-size:16px;margin:3px 0">${wmoEmoji(h.weather_code)}</div>
       <div style="font-size:12px;font-weight:600">${h.temp}°</div>
       <div style="font-size:10px;color:#4f7cff">${h.precip_prob||0}%</div>
@@ -270,8 +330,8 @@ function renderWeather(cur, hourly, daily) {
 function renderMoon(moon) {
   const el = document.getElementById('pane-moon');
   if (!moon || !moon.phase_name) { el.innerHTML = '<div class="empty">Moon data loading…</div>'; return; }
-  const nextFull = new Date(moon.next_full_moon * 1000).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
-  const nextNew  = new Date(moon.next_new_moon  * 1000).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+  const nextFull = fmtDate(new Date(moon.next_full_moon * 1000));
+  const nextNew  = fmtDate(new Date(moon.next_new_moon  * 1000));
   const pct = moon.illumination;
   const r = 54, cx = 70, cy = 70;
   const circumference = 2 * Math.PI * r;
@@ -300,6 +360,52 @@ function renderMoon(moon) {
   </div>`;
 }
 
+// ── Source status bar ─────────────────────────────────────────────────────────
+function agoStr(ts) {
+  if (!ts) return 'never';
+  const s = Math.floor(Date.now()/1000) - ts;
+  if (s < 60)  return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s/60)}m ago`;
+  return `${Math.floor(s/3600)}h ago`;
+}
+
+function renderStatus(rows) {
+  const map = {};
+  (rows||[]).forEach(r => map[r.source] = r);
+  ['opensky','iss','weather'].forEach(src => {
+    const r = map[src];
+    const dot  = document.getElementById('sd-'+src);
+    const lbl  = document.getElementById('st-'+src);
+    if (!r) { dot.className='src-dot'; lbl.textContent='no data'; return; }
+    dot.className = 'src-dot ' + r.status;
+    if (r.status === 'ok') {
+      lbl.textContent = agoStr(r.last_success);
+    } else if (r.status === 'no_key') {
+      lbl.textContent = 'no key';
+    } else if (r.status === 'backoff') {
+      const m = (r.detail||'').match(/(\d+)\s*min/);
+      lbl.textContent = m ? `retry ${m[1]}m` : 'rate limited';
+    } else {
+      lbl.textContent = r.detail ? r.detail.slice(0,20) : 'error';
+    }
+  });
+}
+
+// ── Sidebar collapse ──────────────────────────────────────────────────────────
+const sidebar    = document.querySelector('.sidebar');
+const sidebarTab = document.getElementById('sidebar-tab');
+
+sidebarTab.addEventListener('click', () => {
+  const collapsed = sidebar.classList.toggle('collapsed');
+  sidebarTab.textContent = collapsed ? '‹' : '›';
+  setTimeout(() => map.invalidateSize(), 220);
+});
+
+if (window.innerWidth < 600) {
+  sidebar.classList.add('collapsed');
+  sidebarTab.textContent = '‹';
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
@@ -313,7 +419,7 @@ document.querySelectorAll('.tab').forEach(t => {
 // ── Single refresh function ───────────────────────────────────────────────────
 async function refresh() {
   try {
-    const [aircraft, iss, history, stats, cur, hourly, daily, moon] = await Promise.all([
+    const [aircraft, iss, history, stats, cur, hourly, daily, moon, status] = await Promise.all([
       fetch('/api/live').then(r=>r.json()),
       fetch('/api/iss').then(r=>r.json()),
       fetch('/api/history').then(r=>r.json()),
@@ -322,18 +428,23 @@ async function refresh() {
       fetch('/api/weather/hourly').then(r=>r.json()),
       fetch('/api/weather/daily').then(r=>r.json()),
       fetch('/api/moon').then(r=>r.json()),
+      fetch('/api/status').then(r=>r.json()),
     ]);
+    if (cur && cur.timezone) locationTZ = cur.timezone;
+    if (stats.use_location_time !== undefined) USE_LOC_TZ = stats.use_location_time;
+    if (stats.time_format) TIME_24H = (stats.time_format === '24h');
     updateMap(aircraft);
     renderNearby(aircraft);
     renderISS(iss);
     renderHistory(history);
     renderWeather(cur, hourly, daily);
     renderMoon(moon);
+    renderStatus(status);
     document.getElementById('s-live').textContent      = stats.live;
     document.getElementById('s-today').textContent     = stats.today;
     document.getElementById('s-total').textContent     = stats.total;
     document.getElementById('s-countries').textContent = stats.countries;
-    document.getElementById('last-upd').textContent    = new Date().toLocaleTimeString();
+    document.getElementById('last-upd').textContent    = fmtTime(new Date());
   } catch(e) { console.error('Refresh error:', e); }
 }
 

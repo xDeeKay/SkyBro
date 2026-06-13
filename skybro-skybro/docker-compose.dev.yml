@@ -1,0 +1,28 @@
+services:
+  tracker:
+    build: ./tracker
+    container_name: skybro-tracker
+    restart: unless-stopped
+    volumes:
+      - /home/umbrel/umbrel/app-data/skybro-skybro/data:/data
+    networks:
+      - skybro-net
+
+  web:
+    build: ./dashboard
+    container_name: skybro-web
+    restart: unless-stopped
+    volumes:
+      - /home/umbrel/umbrel/app-data/skybro-skybro/data:/data
+    depends_on:
+      - tracker
+    networks:
+      - umbrel_main_network
+      - skybro-net
+
+networks:
+  umbrel_main_network:
+    external: true
+    name: umbrel_main_network
+  skybro-net:
+    name: skybro-net

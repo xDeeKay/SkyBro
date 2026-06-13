@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SkyBro · Settings</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -44,11 +46,22 @@ input:checked+.slider:before{transform:translateX(18px)}
 .btn:hover{opacity:.85}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
-.btn-test{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:12px}
 .toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
 .toast.success{background:var(--green);color:#000;opacity:1}
 .toast.error{background:var(--red);color:#fff;opacity:1}
 .hint{font-size:11px;color:var(--muted);margin-top:4px}
+/* Map modal */
+.modal-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{width:min(640px,94vw);background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;max-height:90vh}
+.modal-hdr{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-hdr-title{font-weight:700;font-size:15px}
+.modal-hdr-coords{font-size:12px;color:var(--muted);margin-top:2px}
+.modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:2px 6px;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-map{height:380px;flex-shrink:0}
+.modal-ftr{padding:12px 16px;display:flex;gap:10px;border-top:1px solid var(--border);flex-shrink:0}
 </style>
 </head>
 <body>
@@ -68,6 +81,9 @@ input:checked+.slider:before{transform:translateX(18px)}
       <div><label>Home Latitude</label><input type="number" id="home_lat" step="0.0001" value="{{ cfg.home_lat }}"></div>
       <div><label>Home Longitude</label><input type="number" id="home_lon" step="0.0001" value="{{ cfg.home_lon }}"></div>
     </div>
+    <div style="margin-bottom:14px">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="openMapPicker()">🗺 Pick on map</button>
+    </div>
     <div class="form-row">
       <div>
         <label>Alert Radius (km)</label>
@@ -79,6 +95,20 @@ input:checked+.slider:before{transform:translateX(18px)}
         <input type="number" id="alt_threshold_ft" step="500" min="500" max="50000" value="{{ cfg.alt_threshold_ft }}">
         <div class="hint">Only alert if plane is below this altitude</div>
       </div>
+    </div>
+  </div>
+
+  <!-- Display Time -->
+  <div class="card">
+    <div class="card-title">🕐 Display Time</div>
+    <div class="card-desc">Control how times appear across the dashboard.</div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Use location time</div><div class="toggle-sub">Show times in the timezone of your set location, not this device's local time</div></div>
+      <label class="toggle"><input type="checkbox" id="use_location_time" {% if cfg.use_location_time %}checked{% endif %}><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">24-hour clock</div><div class="toggle-sub">Display times as 14:30 instead of 2:30 PM</div></div>
+      <label class="toggle"><input type="checkbox" id="time_format_24h" {% if cfg.time_format == '24h' %}checked{% endif %}><span class="slider"></span></label>
     </div>
   </div>
 
@@ -120,20 +150,50 @@ input:checked+.slider:before{transform:translateX(18px)}
     </div>
   </div>
 
-  <!-- OpenSky account (optional) -->
+  <!-- OpenSky OAuth2 (optional) -->
   <div class="card">
-    <div class="card-title">🔑 OpenSky Account (optional)</div>
-    <div class="card-desc">Free account gives better rate limits (10s vs 10s anon). Register at opensky-network.org.</div>
+    <div class="card-title">🔑 OpenSky Credentials (optional)</div>
+    <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials. Exponential backoff applies on 429 responses (5 min → doubles → 1 hr max).</div>
     <div class="form-row">
-      <div><label>Username</label><input type="text" id="opensky_user" value="{{ cfg.opensky_user }}"></div>
-      <div><label>Password</label><input type="password" id="opensky_pass" placeholder="••••••••" value="{{ cfg.opensky_pass }}"></div>
+      <div><label>Client ID</label><input type="text" id="opensky_client_id" value="{{ cfg.opensky_client_id }}"></div>
+      <div><label>Client Secret</label><input type="password" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}"></div>
+    </div>
+  </div>
+
+  <!-- n2yo API key -->
+  <div class="card">
+    <div class="card-title">🛰️ n2yo API Key (for ISS passes)</div>
+    <div class="card-desc">Required for ISS flyover alerts. Register free at n2yo.com — API key arrives by email. Leave blank to disable ISS tracking.</div>
+    <div class="form-row single">
+      <div>
+        <label>n2yo API Key</label>
+        <input type="text" id="n2yo_api_key" placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX" value="{{ cfg.n2yo_api_key }}">
+      </div>
     </div>
   </div>
 
   <div class="actions">
     <button class="btn btn-primary" onclick="save()">Save settings</button>
-    <button class="btn btn-test" onclick="testAlert()">Send test alert</button>
+    <button class="btn btn-secondary" onclick="testAlert()">Send test alert</button>
     <span id="test-result" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+</div>
+
+<!-- Location picker modal -->
+<div class="modal-backdrop" id="map-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-hdr-title">Pick location</div>
+        <div class="modal-hdr-coords" id="picker-coords">Click the map or drag the marker</div>
+      </div>
+      <button class="modal-close" onclick="closeMapPicker()">✕</button>
+    </div>
+    <div class="modal-map" id="picker-map"></div>
+    <div class="modal-ftr">
+      <button class="btn btn-primary" onclick="confirmMapPicker()">Use this location</button>
+      <button class="btn btn-secondary" onclick="closeMapPicker()">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -158,8 +218,9 @@ async function save() {
   const payload = {};
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
    'iss_check_hours','iss_warn_mins','pushover_token','pushover_user',
-   'discord_webhook','opensky_user','opensky_pass',
-   'alerts_enabled','iss_alerts_enabled'].forEach(k => payload[k] = getVal(k));
+   'discord_webhook','opensky_client_id','opensky_client_secret','n2yo_api_key',
+   'alerts_enabled','iss_alerts_enabled','use_location_time'].forEach(k => payload[k] = getVal(k));
+  payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
   try {
     const r = await fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if (r.ok) showToast('✅ Settings saved');
@@ -178,6 +239,55 @@ async function testAlert() {
     if (data.error) showToast('⚠ '+data.error, 'error');
     else showToast('✅ Test alert sent');
   } catch(e) { el.textContent = 'Error: '+e.message; }
+}
+
+// ── Location picker ───────────────────────────────────────────────────────────
+let pickerMap = null, pickerMarker = null, pickedLat = null, pickedLon = null;
+
+function showPickerCoords() {
+  document.getElementById('picker-coords').textContent =
+    `${pickedLat.toFixed(5)}, ${pickedLon.toFixed(5)}`;
+}
+
+function openMapPicker() {
+  pickedLat = parseFloat(document.getElementById('home_lat').value) || -31.9437;
+  pickedLon = parseFloat(document.getElementById('home_lon').value) || 115.9734;
+  document.getElementById('map-modal').classList.add('open');
+  if (!pickerMap) {
+    setTimeout(() => {
+      pickerMap = L.map('picker-map').setView([pickedLat, pickedLon], 11);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution:'© OpenStreetMap © CARTO', maxZoom:19
+      }).addTo(pickerMap);
+      pickerMarker = L.marker([pickedLat, pickedLon], {draggable:true}).addTo(pickerMap);
+      pickerMarker.on('drag dragend', e => {
+        const p = e.target.getLatLng();
+        pickedLat = p.lat; pickedLon = p.lng;
+        showPickerCoords();
+      });
+      pickerMap.on('click', e => {
+        pickedLat = e.latlng.lat; pickedLon = e.latlng.lng;
+        pickerMarker.setLatLng(e.latlng);
+        showPickerCoords();
+      });
+      showPickerCoords();
+    }, 50);
+  } else {
+    pickerMap.setView([pickedLat, pickedLon], 11);
+    pickerMarker.setLatLng([pickedLat, pickedLon]);
+    setTimeout(() => pickerMap.invalidateSize(), 50);
+    showPickerCoords();
+  }
+}
+
+function closeMapPicker() {
+  document.getElementById('map-modal').classList.remove('open');
+}
+
+function confirmMapPicker() {
+  document.getElementById('home_lat').value = pickedLat.toFixed(6);
+  document.getElementById('home_lon').value = pickedLon.toFixed(6);
+  closeMapPicker();
 }
 </script>
 </body>
