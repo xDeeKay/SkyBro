@@ -14,13 +14,15 @@ services:
     restart: unless-stopped
     volumes:
       - /home/umbrel/umbrel/app-data/skybro-skybro/data:/data
-    ports:
-      - "7437:5000"
     depends_on:
       - tracker
     networks:
+      - umbrel_main_network
       - skybro-net
 
 networks:
+  umbrel_main_network:
+    external: true
+    name: umbrel_main_network
   skybro-net:
     name: skybro-net
