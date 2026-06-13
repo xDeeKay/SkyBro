@@ -229,11 +229,10 @@ function renderISS(passes) {
       : p.duration+'s';
     return `<div class="iss-card">
       <div class="iss-head">
-        <span class="iss-title">🛰️ ISS Flyover</span>
+        <span class="iss-title">🛰️ ISS Flyover &mdash; ${dateStr}</span>
         ${soon ? `<span class="iss-soon">In ${countdownStr}</span>` : ''}
       </div>
       <div class="iss-grid">
-        <div class="pstat"><div class="pstat-val">${dateStr}</div><div class="pstat-lbl">Date</div></div>
         <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
         <div class="pstat"><div class="pstat-val">${countdownStr}</div><div class="pstat-lbl">From now</div></div>
         <div class="pstat"><div class="pstat-val">${durationStr}</div><div class="pstat-lbl">Duration</div></div>
