@@ -282,6 +282,7 @@ def fetch_aircraft_photo(icao24):
         return row[0] or "", row[1] or ""
     try:
         r = requests.get(f"https://api.planespotters.net/pub/photos/hex/{icao24}",
+                         headers={"User-Agent": "SkyBro/1.0 (Raspberry Pi sky tracker; https://github.com/xDeeKay/SkyBro)"},
                          timeout=5)
         r.raise_for_status()
         photos = r.json().get("photos", [])
