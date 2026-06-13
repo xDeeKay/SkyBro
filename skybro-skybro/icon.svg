@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#0f1117"/>
+
+  <!-- Radar rings -->
+  <circle cx="256" cy="290" r="175" fill="none" stroke="#4f7cff" stroke-width="1.5" opacity="0.12"/>
+  <circle cx="256" cy="290" r="125" fill="none" stroke="#4f7cff" stroke-width="1.5" opacity="0.18"/>
+  <circle cx="256" cy="290" r="75"  fill="none" stroke="#4f7cff" stroke-width="1.5" opacity="0.28"/>
+
+  <!-- Radar crosshairs -->
+  <line x1="256" y1="115" x2="256" y2="465" stroke="#4f7cff" stroke-width="1" opacity="0.12"/>
+  <line x1="81"  y1="290" x2="431" y2="290" stroke="#4f7cff" stroke-width="1" opacity="0.12"/>
+
+  <!-- Radar sweep sector -->
+  <path d="M256,290 L256,115 A175,175 0 0,1 421,234 Z" fill="#4f7cff" opacity="0.08"/>
+  <line x1="256" y1="290" x2="256" y2="115" stroke="#4f7cff" stroke-width="1.5" opacity="0.5"/>
+  <line x1="256" y1="290" x2="421" y2="234" stroke="#4f7cff" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Centre dot -->
+  <circle cx="256" cy="290" r="5" fill="#4f7cff" opacity="0.8"/>
+
+  <!-- Aircraft (tilted 45°, upper-right quadrant) -->
+  <g transform="translate(306,168) rotate(45)">
+    <path d="M0,-26 C3,-14 9,0 9,7 L24,17 L24,24 L9,20 L9,32 L3,29 L0,33 L-3,29 L-9,32 L-9,20 L-24,24 L-24,17 L-9,7 C-9,0 -3,-14 0,-26 Z"
+          fill="#e2e4f0"/>
+  </g>
+
+  <!-- Satellite orbit arc -->
+  <ellipse cx="256" cy="290" rx="195" ry="62" fill="none"
+           stroke="#4f7cff" stroke-width="1.5" stroke-dasharray="9,7"
+           opacity="0.35" transform="rotate(-18,256,290)"/>
+
+  <!-- Satellite body -->
+  <g transform="translate(174,193) rotate(-18)">
+    <rect x="-5" y="-13" width="10" height="26" rx="2" fill="#4f7cff" opacity="0.9"/>
+    <rect x="-20" y="-5" width="40" height="10" rx="2" fill="#4f7cff" opacity="0.55"/>
+  </g>
+
+  <!-- Alert blip (green dot with pulse ring) -->
+  <circle cx="348" cy="207" r="12" fill="#2ecc71" opacity="0.18"/>
+  <circle cx="348" cy="207" r="6"  fill="#2ecc71"/>
+</svg>
