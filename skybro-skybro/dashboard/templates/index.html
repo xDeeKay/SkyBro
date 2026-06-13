@@ -25,13 +25,18 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
 .settings-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;transition:border-color .15s}
 .settings-btn:hover{border-color:var(--accent)}
-.main{display:flex;flex:1;overflow:hidden}
-#map{flex:1}
-.sidebar{width:340px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.main{display:flex;flex:1;overflow:hidden;position:relative}
+#map{flex:1;min-width:0}
+.sidebar{width:clamp(240px,28vw,340px);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease}
+.sidebar.collapsed{width:0;min-width:0;border:none}
+.expand-btn{display:none;position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:500;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;padding:12px 6px;color:var(--text);font-size:11px;cursor:pointer;line-height:1}
+.expand-btn:hover{background:var(--surface2)}
 .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
-.tab{flex:1;min-width:60px;padding:9px 4px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
+.tab{flex:1;min-width:50px;padding:9px 4px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
 .tab.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab:hover:not(.active){color:var(--text)}
+.tab-collapse{padding:9px 10px;cursor:pointer;color:var(--muted);font-size:13px;user-select:none;flex-shrink:0;border-bottom:2px solid transparent;transition:color .15s;display:flex;align-items:center}
+.tab-collapse:hover{color:var(--text)}
 .tab-pane{flex:1;overflow-y:auto;padding:12px;display:none}
 .tab-pane.active{display:block}
 .plane-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
@@ -58,6 +63,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .src-item:last-child{border-right:none}
 .src-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border)}
 .src-dot.ok{background:var(--green)}.src-dot.error{background:var(--red)}.src-dot.backoff{background:var(--amber)}.src-dot.no_key{background:var(--amber)}
+.src-info{min-width:0;overflow:hidden;flex:1}
 .src-name{font-weight:600;white-space:nowrap}.src-detail{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .pc-photo{width:100%;height:80px;object-fit:cover;border-radius:5px;margin-bottom:7px;display:block}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -81,6 +87,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 
 <div class="main">
   <div id="map"></div>
+  <button class="expand-btn" id="expand-btn" title="Show sidebar">▶</button>
   <div class="sidebar">
     <div class="tabs">
       <div class="tab active" data-tab="aircraft">✈  Aircraft</div>
@@ -88,6 +95,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
       <div class="tab" data-tab="history">📋 History</div>
       <div class="tab" data-tab="weather">☁  Weather</div>
       <div class="tab" data-tab="moon">🌙 Moon</div>
+      <div class="tab-collapse" id="collapse-btn" title="Hide sidebar">◀</div>
     </div>
     <div class="tab-pane active" id="pane-aircraft"></div>
     <div class="tab-pane" id="pane-iss"></div>
@@ -95,9 +103,9 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tab-pane" id="pane-weather"></div>
     <div class="tab-pane" id="pane-moon"></div>
     <div class="src-bar" id="src-bar">
-      <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div><div class="src-name">OpenSky</div><div class="src-detail" id="st-opensky">—</div></div></div>
-      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div><div class="src-name">ISS</div><div class="src-detail" id="st-iss">—</div></div></div>
-      <div class="src-item"><div class="src-dot" id="sd-weather"></div><div><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div class="src-info"><div class="src-name">OpenSky</div><div class="src-detail" id="st-opensky">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">ISS</div><div class="src-detail" id="st-iss">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-weather"></div><div class="src-info"><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
     </div>
   </div>
 </div>
@@ -336,12 +344,29 @@ function renderStatus(rows) {
     } else if (r.status === 'no_key') {
       lbl.textContent = 'no key';
     } else if (r.status === 'backoff') {
-      lbl.textContent = r.detail || 'rate limited';
+      const m = (r.detail||'').match(/(\d+)\s*min/);
+      lbl.textContent = m ? `retry ${m[1]}m` : 'rate limited';
     } else {
-      lbl.textContent = r.detail ? r.detail.slice(0,28) : 'error';
+      lbl.textContent = r.detail ? r.detail.slice(0,20) : 'error';
     }
   });
 }
+
+// ── Sidebar collapse ──────────────────────────────────────────────────────────
+const sidebar    = document.querySelector('.sidebar');
+const expandBtn  = document.getElementById('expand-btn');
+const collapseBtn = document.getElementById('collapse-btn');
+
+collapseBtn.addEventListener('click', () => {
+  sidebar.classList.add('collapsed');
+  expandBtn.style.display = 'block';
+  map.invalidateSize();
+});
+expandBtn.addEventListener('click', () => {
+  sidebar.classList.remove('collapsed');
+  expandBtn.style.display = 'none';
+  map.invalidateSize();
+});
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => {
