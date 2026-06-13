@@ -18,7 +18,7 @@ DEFAULTS = {
     "radius_km": 15.0, "alt_threshold_ft": 5000.0,
     "poll_interval": 15, "iss_check_hours": 2, "iss_warn_mins": 20,
     "pushover_token": "", "pushover_user": "",
-    "discord_webhook": "", "opensky_user": "", "opensky_pass": "",
+    "discord_webhook": "", "opensky_client_id": "", "opensky_client_secret": "",
     "n2yo_api_key": "",
     "alerts_enabled": True, "iss_alerts_enabled": True,
     "use_location_time": False, "time_format": "12h",
@@ -120,7 +120,7 @@ def api_config_get():
     cfg = read_config()
     # Mask secrets in GET response
     masked = dict(cfg)
-    for k in ("pushover_token","pushover_user","discord_webhook","opensky_pass"):
+    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret"):
         if masked.get(k):
             masked[k] = "••••••••"
     return jsonify(masked)
@@ -132,7 +132,7 @@ def api_config_post():
         abort(400)
     # Don't overwrite masked secrets with placeholder
     current = read_config()
-    for k in ("pushover_token","pushover_user","discord_webhook","opensky_pass"):
+    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret"):
         if data.get(k) == "••••••••":
             data[k] = current.get(k, "")
     saved = write_config(data)

@@ -39,8 +39,8 @@ DEFAULTS = {
     "pushover_token":     "",
     "pushover_user":      "",
     "discord_webhook":    "",
-    "opensky_user":       "",
-    "opensky_pass":       "",
+    "opensky_client_id":     "",
+    "opensky_client_secret": "",
     "n2yo_api_key":       "",
     "alerts_enabled":     True,
     "iss_alerts_enabled": True,
@@ -305,9 +305,40 @@ def fetch_aircraft_photo(icao24):
 _alerted = set()
 _opensky_backoff_until = 0.0
 _opensky_backoff_step  = 300  # 5 min starting step, doubles on each 429 up to 1 hr
+_opensky_token         = None
+_opensky_token_expiry  = 0.0
+
+_OPENSKY_TOKEN_URL = ("https://auth.opensky-network.org/auth/realms/"
+                      "opensky-network/protocol/openid-connect/token")
+
+def get_opensky_token():
+    global _opensky_token, _opensky_token_expiry
+    client_id     = cfg.get("opensky_client_id", "")
+    client_secret = cfg.get("opensky_client_secret", "")
+    if not client_id or not client_secret:
+        return None
+    if _opensky_token and time.time() < _opensky_token_expiry - 60:
+        return _opensky_token
+    try:
+        r = requests.post(_OPENSKY_TOKEN_URL, data={
+            "grant_type":    "client_credentials",
+            "client_id":     client_id,
+            "client_secret": client_secret,
+        }, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        _opensky_token        = data["access_token"]
+        _opensky_token_expiry = time.time() + data.get("expires_in", 300)
+        log.info("OpenSky: OAuth2 token acquired")
+        return _opensky_token
+    except Exception as e:
+        log.warning(f"OpenSky token fetch error: {e}")
+        _opensky_token = None
+        _opensky_token_expiry = 0.0
+        return None
 
 def fetch_states():
-    global _opensky_backoff_until, _opensky_backoff_step
+    global _opensky_backoff_until, _opensky_backoff_step, _opensky_token, _opensky_token_expiry
     if time.time() < _opensky_backoff_until:
         log.debug(f"OpenSky backoff: {int(_opensky_backoff_until - time.time())}s remaining")
         return []
@@ -316,10 +347,21 @@ def fetch_states():
         "lamin": cfg["home_lat"] - pad, "lomin": cfg["home_lon"] - pad,
         "lamax": cfg["home_lat"] + pad, "lomax": cfg["home_lon"] + pad,
     }
-    auth = (cfg["opensky_user"], cfg["opensky_pass"]) if cfg.get("opensky_user") else None
+
+    def _request():
+        token = get_opensky_token()
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        return requests.get("https://opensky-network.org/api/states/all",
+                            params=params, headers=headers, timeout=20)
+
     try:
-        r = requests.get("https://opensky-network.org/api/states/all",
-                         params=params, auth=auth, timeout=20)
+        r = _request()
+        if r.status_code == 401:
+            # Token expired mid-session — clear cache and retry once
+            _opensky_token = None
+            _opensky_token_expiry = 0.0
+            log.info("OpenSky: 401 received, refreshing token and retrying")
+            r = _request()
         if r.status_code == 429:
             wait_mins = _opensky_backoff_step // 60
             _opensky_backoff_until = time.time() + _opensky_backoff_step
