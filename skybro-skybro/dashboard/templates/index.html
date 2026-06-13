@@ -123,8 +123,9 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 }).addTo(map);
 L.circleMarker([HOME_LAT, HOME_LON], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');
-L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'#4f7cff',
+const radiusCircle = L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'#4f7cff',
   fillColor:'#4f7cff',fillOpacity:.04,weight:1,dashArray:'5 7'}).addTo(map);
+map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 
 const markers = {};
 
