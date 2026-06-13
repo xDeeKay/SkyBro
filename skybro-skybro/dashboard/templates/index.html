@@ -35,8 +35,9 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .tab{flex:1;min-width:max-content;padding:9px 6px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
 .tab.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab:hover:not(.active){color:var(--text)}
-.tab-collapse{padding:9px 10px;cursor:pointer;color:var(--muted);font-size:13px;user-select:none;flex-shrink:0;border-bottom:2px solid transparent;transition:color .15s;display:flex;align-items:center}
-.tab-collapse:hover{color:var(--text)}
+.sidebar-hdr{display:flex;justify-content:flex-end;align-items:center;padding:3px 6px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+.collapse-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 7px;font-size:13px;border-radius:4px;line-height:1;transition:color .15s}
+.collapse-btn:hover{color:var(--text)}
 .tab-pane{flex:1;overflow-y:auto;padding:12px;display:none}
 .tab-pane.active{display:block}
 .plane-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
@@ -67,6 +68,10 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .src-name{font-weight:600;white-space:nowrap}.src-detail{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .pc-photo{width:100%;height:80px;object-fit:cover;border-radius:5px;margin-bottom:7px;display:block}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@media (max-width:600px){
+  .sidebar{position:absolute;right:0;top:0;height:100%;z-index:400;width:80vw;max-width:300px;transition:transform .2s ease;transform:translateX(0)}
+  .sidebar.collapsed{width:80vw;max-width:300px;min-width:0;border-left:1px solid var(--border);transform:translateX(100%)}
+}
 </style>
 </head>
 <body>
@@ -89,13 +94,15 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
   <div id="map"></div>
   <button class="expand-btn" id="expand-btn" title="Show sidebar">▶</button>
   <div class="sidebar">
+    <div class="sidebar-hdr">
+      <button class="collapse-btn" id="collapse-btn" title="Hide sidebar">◀</button>
+    </div>
     <div class="tabs">
       <div class="tab active" data-tab="aircraft">✈  Aircraft</div>
       <div class="tab" data-tab="iss">🛰️ ISS</div>
       <div class="tab" data-tab="history">📋 History</div>
       <div class="tab" data-tab="weather">☁  Weather</div>
       <div class="tab" data-tab="moon">🌙 Moon</div>
-      <div class="tab-collapse" id="collapse-btn" title="Hide sidebar">◀</div>
     </div>
     <div class="tab-pane active" id="pane-aircraft"></div>
     <div class="tab-pane" id="pane-iss"></div>
@@ -368,6 +375,11 @@ expandBtn.addEventListener('click', () => {
   expandBtn.style.display = 'none';
   sidebar.addEventListener('transitionend', () => map.invalidateSize(), {once: true});
 });
+
+if (window.innerWidth < 600) {
+  sidebar.classList.add('collapsed');
+  expandBtn.style.display = 'block';
+}
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => {
