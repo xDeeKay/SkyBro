@@ -63,7 +63,9 @@ def settings():
 @app.route("/api/live")
 def api_live():
     try:
-        rows = db().execute("SELECT * FROM live_aircraft ORDER BY dist_km ASC").fetchall()
+        rows = db().execute(
+            "SELECT * FROM live_aircraft WHERE updated > ? ORDER BY dist_km ASC",
+            (int(time.time()) - 90,)).fetchall()
         return jsonify([dict(r) for r in rows])
     except Exception:
         return jsonify([])
