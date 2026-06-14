@@ -9,6 +9,7 @@ import time, math, json, logging, sqlite3, requests, os, csv, io
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from weather import fetch_weather, process_weather, process_moon
+from astronomy import process_astronomy
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,10 +23,19 @@ DB_PATH   = DATA_DIR / "skybro.db"
 AC_DB     = DATA_DIR / "aircraft_db.json"
 CFG_PATH  = DATA_DIR / "config.json"
 
-WEATHER_INTERVAL = 900   # 15 minutes
-_weather_last    = 0.0
-MOON_INTERVAL    = 3600  # 1 hour
-_moon_last       = 0.0
+WEATHER_INTERVAL   = 900    # 15 minutes
+_weather_last      = 0.0
+MOON_INTERVAL      = 3600   # 1 hour
+_moon_last         = 0.0
+ASTRONOMY_INTERVAL = 3600   # 1 hour
+_astronomy_last    = 0.0
+
+# Satellites to track in addition to ISS (name, NORAD ID, send_alert)
+SATELLITES = [
+    ("ISS",      25544, True),
+    ("Hubble",   20580, False),
+    ("Tiangong", 48274, False),
+]
 
 # ── Default config ────────────────────────────────────────────────────────────
 DEFAULTS = {
@@ -103,10 +113,11 @@ def init_db():
             max_el INTEGER,
             end_az TEXT
         );
-        CREATE TABLE IF NOT EXISTS weather_current (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS weather_hourly  (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS weather_daily   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS moon_phase      (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS weather_current  (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS weather_hourly   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS weather_daily    (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS moon_phase       (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS astronomy_data   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
         CREATE TABLE IF NOT EXISTS source_status (
             source TEXT PRIMARY KEY,
             last_success INTEGER DEFAULT 0,
@@ -134,7 +145,8 @@ def migrate_db():
                        ("seen_aircraft",   "lon REAL"),
                        ("iss_alerts",      "start_az TEXT"),
                        ("iss_alerts",      "max_el INTEGER"),
-                       ("iss_alerts",      "end_az TEXT")]:
+                       ("iss_alerts",      "end_az TEXT"),
+                       ("iss_alerts",      "sat_name TEXT DEFAULT 'ISS'")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -502,46 +514,49 @@ def process_states(states):
         if icao not in live_icaos:
             _alerted.discard(icao)
 
-# ── ISS ───────────────────────────────────────────────────────────────────────
-_iss_last_check = 0.0
+# ── Satellites ────────────────────────────────────────────────────────────────
+_sat_last_check = 0.0
 
-def check_iss():
-    global _iss_last_check
-    if not cfg.get("iss_alerts_enabled", True):
+def check_satellites():
+    global _sat_last_check
+    if time.time() - _sat_last_check < cfg["iss_check_hours"] * 3600:
         return
-    if time.time() - _iss_last_check < cfg["iss_check_hours"] * 3600:
-        return
-    _iss_last_check = time.time()
+    _sat_last_check = time.time()
     api_key = cfg.get("n2yo_api_key", "")
     if not api_key:
-        log.info("ISS: n2yo API key not configured — skipping")
+        log.info("Satellites: n2yo API key not configured — skipping")
         update_source_status('iss', False, "No API key configured", 'no_key')
         return
-    try:
-        lat, lon = cfg["home_lat"], cfg["home_lon"]
-        url = (f"https://api.n2yo.com/rest/v1/satellite/visualpasses/"
-               f"25544/{lat}/{lon}/0/10/60/&apiKey={api_key}")
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-        passes = r.json().get("passes") or []
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        warn = cfg["iss_warn_mins"] * 60
-        c.execute("DELETE FROM iss_alerts WHERE alerted=0 AND pass_time > ?",
-                  (int(time.time()) + warn,))
-        for p in passes:
-            c.execute(
-                "INSERT OR IGNORE INTO iss_alerts "
-                "(pass_time,duration,alerted,start_az,max_el,end_az) VALUES (?,?,0,?,?,?)",
-                (p["startUTC"], p["duration"],
-                 p.get("startAzCompass"), p.get("maxEl"), p.get("endAzCompass"))
-            )
-        conn.commit(); conn.close()
-        update_source_status('iss', True)
-        log.info(f"ISS: {len(passes)} passes fetched from n2yo")
-    except Exception as e:
-        log.warning(f"ISS fetch error: {e}")
-        update_source_status('iss', False, str(e))
+    lat, lon = cfg["home_lat"], cfg["home_lon"]
+    warn = cfg["iss_warn_mins"] * 60
+    total = 0
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    for sat_name, norad_id, _ in SATELLITES:
+        try:
+            url = (f"https://api.n2yo.com/rest/v1/satellite/visualpasses/"
+                   f"{norad_id}/{lat}/{lon}/0/10/60/&apiKey={api_key}")
+            r = requests.get(url, timeout=15)
+            r.raise_for_status()
+            passes = r.json().get("passes") or []
+            c.execute("DELETE FROM iss_alerts WHERE alerted=0 AND sat_name=? AND pass_time > ?",
+                      (sat_name, int(time.time()) + warn))
+            for p in passes:
+                c.execute(
+                    "INSERT OR IGNORE INTO iss_alerts "
+                    "(pass_time,duration,alerted,start_az,max_el,end_az,sat_name) "
+                    "VALUES (?,?,0,?,?,?,?)",
+                    (p["startUTC"], p["duration"],
+                     p.get("startAzCompass"), p.get("maxEl"), p.get("endAzCompass"),
+                     sat_name)
+                )
+            total += len(passes)
+            log.info(f"Satellites: {sat_name} — {len(passes)} passes fetched")
+        except Exception as e:
+            log.warning(f"Satellites fetch error ({sat_name}): {e}")
+    conn.commit(); conn.close()
+    update_source_status('iss', True)
+    log.info(f"Satellites: {total} total passes across {len(SATELLITES)} objects")
 
 def dispatch_iss_alerts():
     if not cfg.get("iss_alerts_enabled", True):
@@ -554,7 +569,8 @@ def dispatch_iss_alerts():
     utc_off = json.loads(wr[0]).get("utc_offset_seconds", 0) if wr else 0
     local_tz = timezone(timedelta(seconds=utc_off))
     rows = c.execute(
-        "SELECT pass_time, duration FROM iss_alerts WHERE alerted=0 AND pass_time BETWEEN ? AND ?",
+        "SELECT pass_time, duration FROM iss_alerts "
+        "WHERE alerted=0 AND sat_name='ISS' AND pass_time BETWEEN ? AND ?",
         (now, now + warn)).fetchall()
     for pass_time, duration in rows:
         mins = (pass_time - now) // 60
@@ -596,6 +612,16 @@ def maybe_update_moon():
     process_moon(conn)
     conn.close()
 
+# ── Astronomy ─────────────────────────────────────────────────────────────────
+def maybe_update_astronomy():
+    global _astronomy_last
+    if time.time() - _astronomy_last < ASTRONOMY_INTERVAL:
+        return
+    _astronomy_last = time.time()
+    conn = sqlite3.connect(DB_PATH)
+    process_astronomy(cfg["home_lat"], cfg["home_lon"], conn)
+    conn.close()
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -614,10 +640,10 @@ def main():
             log.error(f"Aircraft error: {e}", exc_info=True)
             update_source_status('opensky', False, str(e))
         try:
-            check_iss()
+            check_satellites()
             dispatch_iss_alerts()
         except Exception as e:
-            log.error(f"ISS error: {e}", exc_info=True)
+            log.error(f"Satellites error: {e}", exc_info=True)
             update_source_status('iss', False, str(e))
         try:
             maybe_update_weather()
@@ -628,6 +654,10 @@ def main():
             maybe_update_moon()
         except Exception as e:
             log.error(f"Moon error: {e}", exc_info=True)
+        try:
+            maybe_update_astronomy()
+        except Exception as e:
+            log.error(f"Astronomy error: {e}", exc_info=True)
         time.sleep(cfg["poll_interval"])
 
 if __name__ == "__main__":

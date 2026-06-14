@@ -71,17 +71,20 @@ def api_live():
     except Exception:
         return jsonify([])
 
-@app.route("/api/iss")
-def api_iss():
+@app.route("/api/satellites")
+@app.route("/api/iss")  # keep as alias
+def api_satellites():
     try:
         now  = int(time.time())
         rows = db().execute(
-            "SELECT *, (pass_time - ?) as mins_away FROM iss_alerts WHERE pass_time > ? ORDER BY pass_time ASC LIMIT 6",
+            "SELECT *, (pass_time - ?) as mins_away FROM iss_alerts "
+            "WHERE pass_time > ? ORDER BY pass_time ASC LIMIT 20",
             (now, now)).fetchall()
         result = []
         for r in rows:
             d = dict(r)
             d["mins_away"] = d["mins_away"] // 60
+            d["sat_name"]  = d.get("sat_name") or "ISS"
             result.append(d)
         return jsonify(result)
     except Exception:
@@ -207,6 +210,14 @@ def api_weather_daily():
 def api_moon():
     try:
         row = db().execute("SELECT data FROM moon_phase WHERE id=1").fetchone()
+        return jsonify(json.loads(row["data"]) if row else {})
+    except Exception:
+        return jsonify({})
+
+@app.route("/api/astronomy")
+def api_astronomy():
+    try:
+        row = db().execute("SELECT data FROM astronomy_data WHERE id=1").fetchone()
         return jsonify(json.loads(row["data"]) if row else {})
     except Exception:
         return jsonify({})

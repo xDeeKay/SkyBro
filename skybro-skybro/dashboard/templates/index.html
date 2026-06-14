@@ -82,6 +82,36 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .lb-credit a:hover{text-decoration:underline}
 @keyframes ghost-pulse{0%,100%{opacity:.55}50%{opacity:.2}}
 .ghost-plane{animation:ghost-pulse 2s ease-in-out infinite}
+.astro-topbar{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:8px 12px;z-index:10;margin:-12px -12px 8px}
+.astro-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 9px;color:var(--text);font-size:12px;outline:none;margin-bottom:6px}
+.astro-search:focus{border-color:var(--accent)}
+.astro-btn-row{display:flex;gap:4px;align-items:center}
+.a-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;transition:all .15s}
+.a-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.a-horizon{margin-left:auto}
+.astro-tonight{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.at-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:5px;font-size:11px}
+.at-row:last-child{margin-bottom:0}
+.at-lbl{color:var(--muted);flex-shrink:0;white-space:nowrap}
+.at-val{text-align:right;font-weight:500;font-size:11px}
+.at-hi{margin-top:8px;padding-top:7px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+.astro-sec{border:none;margin-bottom:2px}
+.astro-sec summary{list-style:none;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:9px 2px 5px;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.astro-sec summary::-webkit-details-marker{display:none}
+.a-count{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--text)}
+.astro-card{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;margin-bottom:5px}
+.ac-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.ac-name{font-weight:600;font-size:12px}
+.ac-right{font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.ac-meta{font-size:10px;color:var(--muted);margin-bottom:2px}
+.ac-time{font-size:10px;color:var(--muted)}
+.ac-note{font-size:10px;color:var(--amber);margin-bottom:2px}
+.a-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--muted)}
+.a-badge.live{background:rgba(46,204,113,.15);border-color:var(--green);color:var(--green)}
+.astro-empty{color:var(--muted);font-size:12px;padding:8px 0;text-align:center}
+.astro-moon{padding:4px 0 6px}
+.ac-grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.ac-g2-item{background:var(--surface);border-radius:4px;padding:5px 7px;font-size:10px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
 .src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
 .src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border)}
@@ -123,20 +153,20 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
   <div id="map"></div>
   <div class="sidebar">
     <div class="tabs">
-      <div class="tab active" data-tab="aircraft">✈  Aircraft</div>
-      <div class="tab" data-tab="iss">🛰️ ISS</div>
+      <div class="tab active" data-tab="aircraft">✈ Aircraft</div>
+      <div class="tab" data-tab="satellites">🛰️ Satellites</div>
       <div class="tab" data-tab="history">📋 History</div>
-      <div class="tab" data-tab="weather">☁  Weather</div>
-      <div class="tab" data-tab="moon">🌙 Moon</div>
+      <div class="tab" data-tab="weather">☁ Weather</div>
+      <div class="tab" data-tab="astronomy">✨ Astronomy</div>
     </div>
     <div class="tab-pane active" id="pane-aircraft"></div>
-    <div class="tab-pane" id="pane-iss"></div>
+    <div class="tab-pane" id="pane-satellites"></div>
     <div class="tab-pane" id="pane-history"></div>
     <div class="tab-pane" id="pane-weather"></div>
-    <div class="tab-pane" id="pane-moon"></div>
+    <div class="tab-pane" id="pane-astronomy"></div>
     <div class="src-bar" id="src-bar">
       <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div class="src-info"><div class="src-name">OpenSky</div><div class="src-detail" id="st-opensky">—</div></div></div>
-      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">ISS</div><div class="src-detail" id="st-iss">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">Satellites</div><div class="src-detail" id="st-iss">—</div></div></div>
       <div class="src-item"><div class="src-dot" id="sd-weather"></div><div class="src-info"><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
     </div>
   </div>
@@ -266,32 +296,38 @@ function renderNearby(aircraft) {
   }).join('');
 }
 
-function renderISS(passes) {
-  const el = document.getElementById('pane-iss');
-  if (!passes.length) { el.innerHTML = '<div class="empty">No upcoming ISS passes found<br><small>Check back later</small></div>'; return; }
-  el.innerHTML = passes.map(p => {
-    const dt  = new Date(p.pass_time * 1000);
-    const timeStr = fmtTime(dt);
-    const dateStr = fmtDate(dt);
-    const soon = p.mins_away < 30;
-    const countdownStr = p.mins_away < 60 ? p.mins_away+' min' : Math.round(p.mins_away/60)+'h';
-    const durationStr  = p.duration >= 60
-      ? Math.floor(p.duration/60)+'m '+(p.duration%60)+'s'
-      : p.duration+'s';
-    return `<div class="iss-card">
-      <div class="iss-head">
-        <span class="iss-title">🛰️ ISS Flyover &mdash; ${dateStr}</span>
-        ${soon ? `<span class="iss-soon">In ${countdownStr}</span>` : ''}
-      </div>
-      <div class="iss-grid">
-        <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
-        <div class="pstat"><div class="pstat-val">${countdownStr}</div><div class="pstat-lbl">From now</div></div>
-        <div class="pstat"><div class="pstat-val">${durationStr}</div><div class="pstat-lbl">Duration</div></div>
-        <div class="pstat"><div class="pstat-val">${p.start_az || '—'}</div><div class="pstat-lbl">Appears</div></div>
-        <div class="pstat"><div class="pstat-val">${p.max_el != null ? p.max_el+'°' : '—'}</div><div class="pstat-lbl">Max height</div></div>
-        <div class="pstat"><div class="pstat-val">${p.end_az || '—'}</div><div class="pstat-lbl">Disappears</div></div>
-      </div>
-    </div>`;
+const SAT_COLORS = {ISS:'#1abc9c', Hubble:'#9b59b6', Tiangong:'#e74c3c'};
+
+function renderSatellites(passes) {
+  const el = document.getElementById('pane-satellites');
+  if (!passes.length) { el.innerHTML = '<div class="empty">No upcoming satellite passes<br><small>Check n2yo API key in Settings</small></div>'; return; }
+  const groups = {};
+  passes.forEach(p => { const n = p.sat_name||'ISS'; if (!groups[n]) groups[n]=[]; groups[n].push(p); });
+  el.innerHTML = Object.entries(groups).map(([satName, satPasses]) => {
+    const col = SAT_COLORS[satName] || '#7b7f9e';
+    const cards = satPasses.map(p => {
+      const dt = new Date(p.pass_time * 1000);
+      const timeStr = fmtTime(dt);
+      const dateStr = fmtDate(dt);
+      const soon = p.mins_away < 30;
+      const cd = p.mins_away < 60 ? p.mins_away+' min' : Math.floor(p.mins_away/60)+'h '+(p.mins_away%60)+'m';
+      const dur = p.duration >= 60 ? Math.floor(p.duration/60)+'m '+(p.duration%60)+'s' : p.duration+'s';
+      return `<div class="iss-card" style="border-color:${col}33">
+        <div class="iss-head">
+          <span class="iss-title" style="color:${col}">${satName} — ${dateStr}</span>
+          ${soon ? `<span class="iss-soon" style="background:${col};color:#000">In ${cd}</span>` : ''}
+        </div>
+        <div class="iss-grid">
+          <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
+          <div class="pstat"><div class="pstat-val">${cd}</div><div class="pstat-lbl">From now</div></div>
+          <div class="pstat"><div class="pstat-val">${dur}</div><div class="pstat-lbl">Duration</div></div>
+          <div class="pstat"><div class="pstat-val">${p.start_az||'—'}</div><div class="pstat-lbl">Appears</div></div>
+          <div class="pstat"><div class="pstat-val">${p.max_el!=null?p.max_el+'°':'—'}</div><div class="pstat-lbl">Max height</div></div>
+          <div class="pstat"><div class="pstat-val">${p.end_az||'—'}</div><div class="pstat-lbl">Disappears</div></div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;padding-left:2px">🛰 ${satName}</div>${cards}`;
   }).join('');
 }
 
@@ -411,37 +447,164 @@ function renderWeather(cur, hourly, daily) {
   el.innerHTML = html;
 }
 
-function renderMoon(moon) {
-  const el = document.getElementById('pane-moon');
-  if (!moon || !moon.phase_name) { el.innerHTML = '<div class="empty">Moon data loading…</div>'; return; }
-  const nextFull = fmtDate(new Date(moon.next_full_moon * 1000));
-  const nextNew  = fmtDate(new Date(moon.next_new_moon  * 1000));
-  const pct = moon.illumination;
-  const r = 54, cx = 70, cy = 70;
-  const circumference = 2 * Math.PI * r;
-  const dash = (pct / 100) * circumference;
-  el.innerHTML = `
-  <div class="plane-card" style="text-align:center;padding:20px">
-    <div style="font-size:72px;line-height:1;margin-bottom:8px">${moon.phase_emoji}</div>
-    <div style="font-size:18px;font-weight:700;margin-bottom:4px">${moon.phase_name}</div>
-    <div style="color:var(--muted);font-size:13px;margin-bottom:16px">${moon.illumination}% illuminated · ${moon.age_days} days old</div>
-    <svg width="140" height="140" viewBox="0 0 140 140" style="margin:0 auto 16px;display:block">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="8"/>
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f39c12" stroke-width="8"
-        stroke-dasharray="${dash.toFixed(1)} ${circumference.toFixed(1)}"
-        stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
-      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
-        fill="var(--text)" font-size="18" font-weight="700">${pct}%</text>
-    </svg>
-  </div>
-  <div class="plane-card">
-    <div class="pc-grid" style="grid-template-columns:1fr 1fr">
-      <div class="pstat"><div class="pstat-val" style="font-size:13px">${nextFull}</div><div class="pstat-lbl">Next full moon</div></div>
-      <div class="pstat"><div class="pstat-val" style="font-size:13px">${nextNew}</div><div class="pstat-lbl">Next new moon</div></div>
-      <div class="pstat"><div class="pstat-val">${moon.age_days}d</div><div class="pstat-lbl">Moon age</div></div>
-      <div class="pstat"><div class="pstat-val">${(moon.fraction * 100).toFixed(0)}%</div><div class="pstat-lbl">Cycle complete</div></div>
+// ── Astronomy tab ─────────────────────────────────────────────────────────────
+let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '';
+const _ETIER = {naked_eye:0, binoculars:1, telescope:2};
+
+function fmtTs(ts) { return ts ? fmtTime(new Date(ts * 1000)) : '—'; }
+
+function renderAstronomy(astro) {
+  _aData = astro;
+  _drawAstro();
+}
+
+function _drawAstro() {
+  const el = document.getElementById('pane-astronomy');
+  const a = _aData || {};
+  const q = _aSearch.toLowerCase();
+
+  const planets = (a.planets||[]).filter(p =>
+    (!_aHorizon || p.is_up) &&
+    (!q || p.name.toLowerCase().includes(q) || (p.constellation||'').toLowerCase().includes(q))
+  ).sort((x,y) => y.alt_deg - x.alt_deg);
+
+  const meteors = (a.meteor_showers||[]).filter(s =>
+    !q || s.name.toLowerCase().includes(q) || (s.parent||'').toLowerCase().includes(q)
+  );
+
+  const dso = (a.dso||[]).filter(d =>
+    (!_aHorizon || d.is_up) &&
+    (_ETIER[d.equipment]||0) <= _aEquip &&
+    (!q || d.label.toLowerCase().includes(q) ||
+           (d.type||'').toLowerCase().includes(q) ||
+           (d.constellation||'').toLowerCase().includes(q))
+  ).sort((x,y) => y.alt_deg - x.alt_deg);
+
+  const moonInfo = a.moon || {};
+  const tw = a.twilight || {};
+
+  // Filter bar
+  let html = `<div class="astro-topbar">
+    <input class="astro-search" placeholder="Search planets, DSOs, showers…" value="${_aSearch.replace(/"/g,'&quot;')}" oninput="_aSearch=this.value;_drawAstro()">
+    <div class="astro-btn-row">
+      <button class="a-btn${_aEquip===0?' active':''}" onclick="_aEquip=0;_drawAstro()" title="Naked eye objects only">👁</button>
+      <button class="a-btn${_aEquip===1?' active':''}" onclick="_aEquip=1;_drawAstro()" title="Binoculars and below">🔭</button>
+      <button class="a-btn${_aEquip===2?' active':''}" onclick="_aEquip=2;_drawAstro()" title="All objects">🔬</button>
+      <button class="a-btn a-horizon${_aHorizon?' active':''}" onclick="_aHorizon=!_aHorizon;_drawAstro()">↑ Horizon</button>
     </div>
   </div>`;
+
+  // Tonight's sky
+  if (a.ts) {
+    const darkStr = tw.astronomical_dusk && tw.astronomical_dawn
+      ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}`
+      : '—';
+    const illum = moonInfo.illumination != null ? moonInfo.illumination : 0;
+    const moonUp = moonInfo.is_up;
+    const moonInterf = illum < 25 ? ['Low','var(--green)'] : illum < 60 ? ['Moderate','var(--amber)'] : ['High','var(--red)'];
+    const moonLine = moonUp
+      ? `${moonInterf[0]} (up · ${illum}%)`
+      : (moonInfo.rise_ts ? `${moonInterf[0]} · rises ${fmtTs(moonInfo.rise_ts)}` : `${moonInterf[0]} (below horizon)`);
+    const activeMeteors = (a.meteor_showers||[]).filter(s=>s.active);
+    const upPlanets = (a.planets||[]).filter(p=>p.is_up).length;
+    const visibleDSO = (a.dso||[]).filter(d=>d.is_up&&(_ETIER[d.equipment]||0)<=_aEquip).length;
+
+    html += `<div class="astro-tonight">
+      <div class="at-row"><span class="at-lbl">🌃 Dark window</span><span class="at-val">${darkStr}</span></div>
+      ${tw.sunset ? `<div class="at-row"><span class="at-lbl">🌅 Sun</span><span class="at-val">Sets ${fmtTs(tw.sunset)} · Rises ${fmtTs(tw.sunrise)}</span></div>` : ''}
+      ${a.bortle ? `<div class="at-row"><span class="at-lbl">💡 Light pollution</span><span class="at-val">Bortle ${a.bortle.class} · ${a.bortle.description}</span></div>` : ''}
+      <div class="at-row"><span class="at-lbl">🌙 Moon</span><span class="at-val" style="color:${moonInterf[1]}">${moonLine}</span></div>
+      <div class="at-hi">${upPlanets} planet${upPlanets!==1?'s':''} visible${visibleDSO?' · '+visibleDSO+' DSOs in range':''}${activeMeteors.length?' · '+activeMeteors[0].name+' active':''}</div>
+    </div>`;
+  } else {
+    html += `<div class="empty" style="padding:20px">Astronomy data loading…<br><small>Calculates hourly. Check back shortly.</small></div>`;
+  }
+
+  // Planets
+  const pUpTotal = (a.planets||[]).filter(p=>p.is_up).length;
+  html += `<details class="astro-sec" open><summary>Planets <span class="a-count">${planets.length} ${_aHorizon&&pUpTotal?'/ '+pUpTotal:''}</span></summary>`;
+  if (!planets.length) {
+    html += `<div class="astro-empty">${_aHorizon?'No planets above horizon — toggle horizon filter to see all':'No planets match'}</div>`;
+  } else {
+    html += planets.map(p => {
+      const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
+      const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : `↓ below horizon`;
+      const timeStr = p.is_up
+        ? (p.set_ts ? `Sets ${fmtTs(p.set_ts)}` : '')
+        : (p.rise_ts ? `Rises ${fmtTs(p.rise_ts)}` : '');
+      return `<div class="astro-card">
+        <div class="ac-head"><span class="ac-name">${p.name}</span><span class="ac-right" style="color:${upCol}">${altStr}</span></div>
+        <div class="ac-meta">mag ${p.magnitude} · ${p.constellation||''}${p.distance_au?' · '+p.distance_au+' AU':''}</div>
+        ${timeStr ? `<div class="ac-time">${timeStr}${p.transit_ts?' · Transit '+fmtTs(p.transit_ts):''}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+  html += `</details>`;
+
+  // Meteor showers
+  const activeCount = (a.meteor_showers||[]).filter(s=>s.active).length;
+  html += `<details class="astro-sec" open><summary>Meteor Showers <span class="a-count">${activeCount?'🔥 '+activeCount+' active':meteors.length}</span></summary>`;
+  html += meteors.map(s => {
+    const badge = s.active
+      ? `<span class="a-badge live">ACTIVE</span>`
+      : `<span class="a-badge">${s.days_to_peak<0?'passed':'in '+s.days_to_peak+'d'}</span>`;
+    return `<div class="astro-card">
+      <div class="ac-head"><span class="ac-name">${s.name}</span>${badge}</div>
+      <div class="ac-meta">ZHR ${s.zhr} · ${s.radiant} · ${s.parent}</div>
+      ${s.note ? `<div class="ac-note">${s.note}</div>` : ''}
+      <div class="ac-time">Peak: ${s.peak_date}${s.active?' · Active until '+s.active_end:''}</div>
+    </div>`;
+  }).join('') || `<div class="astro-empty">No showers match</div>`;
+  html += `</details>`;
+
+  // Deep sky objects
+  const dsoUpTotal = (a.dso||[]).filter(d=>d.is_up&&(_ETIER[d.equipment]||0)<=_aEquip).length;
+  html += `<details class="astro-sec" open><summary>Deep Sky Objects <span class="a-count">${dso.length} ${_aHorizon&&dsoUpTotal?'/ '+dsoUpTotal:''}</span></summary>`;
+  if (!dso.length) {
+    html += `<div class="astro-empty">${_aHorizon?'None above horizon with current filter':'No objects match'}</div>`;
+  } else {
+    html += dso.map(d => {
+      const icons = {naked_eye:'👁',binoculars:'🔭',telescope:'🔬'};
+      const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : '↓ below horizon';
+      const upCol = d.is_up ? '' : 'opacity:.55';
+      const moonW = d.moon_warning ? ' · 🌙 moon nearby' : '';
+      return `<div class="astro-card" style="${upCol}">
+        <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${icons[d.equipment]||''} ${d.magnitude}</span></div>
+        <div class="ac-meta">${d.type} · ${d.constellation}</div>
+        <div class="ac-time">${upStr}${d.transit_ts?' · Transit '+fmtTs(d.transit_ts):''}${moonW}</div>
+      </div>`;
+    }).join('');
+  }
+  html += `</details>`;
+
+  // Moon
+  const illum = moonInfo.illumination != null ? moonInfo.illumination : Math.round((moonInfo.phase_pct||0));
+  const r=40, cx=50, cy=50, circ=2*Math.PI*r, dash=(illum/100)*circ;
+  html += `<details class="astro-sec" open><summary>Moon</summary>
+  <div class="astro-moon">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+      <svg width="100" height="100" viewBox="0 0 100 100" style="flex-shrink:0">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f39c12" stroke-width="7"
+          stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
+        <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" font-size="22" font-weight="700">${illum}%</text>
+      </svg>
+      <div>
+        <div style="font-size:30px;line-height:1;margin-bottom:4px">${moonInfo.phase_emoji||'🌙'}</div>
+        <div style="font-weight:700;font-size:13px">${moonInfo.phase_name||'—'}</div>
+        <div style="color:var(--muted);font-size:11px;margin-top:3px">${illum}% illuminated · ${moonInfo.age_days||0}d old</div>
+        <div style="font-size:11px;margin-top:3px;color:${moonInfo.is_up?'var(--green)':'var(--muted)'}">${moonInfo.is_up?'↑ '+moonInfo.alt_deg+'° '+moonInfo.az_compass:'Below horizon'}</div>
+      </div>
+    </div>
+    <div class="ac-grid2">
+      ${moonInfo.rise_ts ? `<div class="ac-g2-item">🌕 Rises ${fmtTs(moonInfo.rise_ts)}</div>` : ''}
+      ${moonInfo.set_ts  ? `<div class="ac-g2-item">🌑 Sets ${fmtTs(moonInfo.set_ts)}</div>` : ''}
+      ${moonInfo.next_full_moon ? `<div class="ac-g2-item">Full: ${fmtDate(new Date(moonInfo.next_full_moon*1000))}</div>` : ''}
+      ${moonInfo.next_new_moon  ? `<div class="ac-g2-item">New: ${fmtDate(new Date(moonInfo.next_new_moon*1000))}</div>` : ''}
+    </div>
+  </div></details>`;
+
+  el.innerHTML = html;
 }
 
 // ── Source status bar ─────────────────────────────────────────────────────────
@@ -503,15 +666,15 @@ document.querySelectorAll('.tab').forEach(t => {
 // ── Single refresh function ───────────────────────────────────────────────────
 async function refresh() {
   try {
-    const [aircraft, iss, history, stats, cur, hourly, daily, moon, status] = await Promise.all([
+    const [aircraft, satellites, history, stats, cur, hourly, daily, astronomy, status] = await Promise.all([
       fetch('/api/live').then(r=>r.json()),
-      fetch('/api/iss').then(r=>r.json()),
+      fetch('/api/satellites').then(r=>r.json()),
       fetch('/api/history').then(r=>r.json()),
       fetch('/api/stats').then(r=>r.json()),
       fetch('/api/weather/current').then(r=>r.json()),
       fetch('/api/weather/hourly').then(r=>r.json()),
       fetch('/api/weather/daily').then(r=>r.json()),
-      fetch('/api/moon').then(r=>r.json()),
+      fetch('/api/astronomy').then(r=>r.json()),
       fetch('/api/status').then(r=>r.json()),
     ]);
     if (cur && cur.timezone) locationTZ = cur.timezone;
@@ -519,10 +682,10 @@ async function refresh() {
     if (stats.time_format) TIME_24H = (stats.time_format === '24h');
     updateMap(aircraft);
     renderNearby(aircraft);
-    renderISS(iss);
+    renderSatellites(satellites);
     renderHistory(history);
     renderWeather(cur, hourly, daily);
-    renderMoon(moon);
+    renderAstronomy(astronomy);
     renderStatus(status);
     document.getElementById('s-live').textContent      = stats.live;
     document.getElementById('s-today').textContent     = stats.today;
