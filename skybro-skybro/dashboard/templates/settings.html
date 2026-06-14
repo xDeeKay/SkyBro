@@ -66,6 +66,13 @@ input:checked+.slider:before{transform:translateX(18px)}
 .modal-search-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .modal-search-btn:hover{opacity:.85}
 .modal-search-err{font-size:11px;color:var(--red);padding:0 16px 8px;flex-shrink:0;display:none}
+.search-dropdown{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:6px;z-index:10001;display:none;box-shadow:0 4px 16px rgba(0,0,0,.5);max-height:220px;overflow-y:auto}
+.search-dropdown.open{display:block}
+.search-opt{padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--border)}
+.search-opt:last-child{border:none}
+.search-opt:hover,.search-opt.active{background:var(--surface2)}
+.search-opt-name{font-size:13px;font-weight:600}
+.search-opt-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .modal-map{height:340px;flex-shrink:0}
 .modal-ftr{padding:12px 16px;display:flex;gap:10px;border-top:1px solid var(--border);flex-shrink:0}
 </style>
@@ -196,9 +203,11 @@ input:checked+.slider:before{transform:translateX(18px)}
       <button class="modal-close" onclick="closeMapPicker()">✕</button>
     </div>
     <div class="modal-search">
-      <input class="modal-search-input" id="city-search" type="text" placeholder="Search city or address…" onkeydown="if(event.key==='Enter')searchCity()">
+      <input class="modal-search-input" id="city-search" type="text" placeholder="Search city or address…"
+        oninput="debouncedSearch()" onkeydown="handleSearchKey(event)" onblur="setTimeout(closeDropdown,150)" autocomplete="off">
       <button class="modal-search-btn" onclick="searchCity()">Search</button>
     </div>
+    <div class="search-dropdown" id="search-dropdown"></div>
     <div class="modal-search-err" id="search-err"></div>
     <div class="modal-map" id="picker-map"></div>
     <div class="modal-ftr">
@@ -295,23 +304,94 @@ function closeMapPicker() {
   document.getElementById('map-modal').classList.remove('open');
 }
 
+let _searchTimer = null, _searchResults = [], _activeIdx = -1;
+
+function debouncedSearch() {
+  clearTimeout(_searchTimer);
+  const q = document.getElementById('city-search').value.trim();
+  if (q.length < 2) { closeDropdown(); return; }
+  _searchTimer = setTimeout(() => fetchSuggestions(q), 300);
+}
+
+async function fetchSuggestions(q) {
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6`,
+      {headers:{'Accept-Language':'en'}}
+    );
+    _searchResults = await r.json();
+    renderDropdown();
+  } catch(e) {}
+}
+
+function renderDropdown() {
+  const dd = document.getElementById('search-dropdown');
+  if (!_searchResults.length) { dd.classList.remove('open'); return; }
+  const input = document.getElementById('city-search');
+  const rect = input.getBoundingClientRect();
+  dd.style.top    = (rect.bottom + 3) + 'px';
+  dd.style.left   = rect.left + 'px';
+  dd.style.width  = rect.width + 'px';
+  _activeIdx = -1;
+  dd.innerHTML = _searchResults.map((res, i) => {
+    const parts = res.display_name.split(', ');
+    const name  = parts[0];
+    const sub   = parts.slice(1).join(', ');
+    return `<div class="search-opt" data-idx="${i}" onmousedown="selectResult(${i})">
+      <div class="search-opt-name">${name}</div>
+      <div class="search-opt-sub">${sub}</div>
+    </div>`;
+  }).join('');
+  dd.classList.add('open');
+}
+
+function selectResult(i) {
+  const res = _searchResults[i];
+  if (!res) return;
+  pickedLat = parseFloat(res.lat);
+  pickedLon = parseFloat(res.lon);
+  document.getElementById('city-search').value = res.display_name.split(', ').slice(0, 2).join(', ');
+  document.getElementById('search-err').style.display = 'none';
+  pickerMap.setView([pickedLat, pickedLon], 12);
+  pickerMarker.setLatLng([pickedLat, pickedLon]);
+  showPickerCoords();
+  closeDropdown();
+}
+
+function closeDropdown() {
+  document.getElementById('search-dropdown').classList.remove('open');
+  _activeIdx = -1;
+}
+
+function handleSearchKey(e) {
+  const opts = document.querySelectorAll('#search-dropdown .search-opt');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _activeIdx = Math.min(_activeIdx + 1, opts.length - 1);
+    opts.forEach((o, i) => o.classList.toggle('active', i === _activeIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _activeIdx = Math.max(_activeIdx - 1, 0);
+    opts.forEach((o, i) => o.classList.toggle('active', i === _activeIdx));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_activeIdx >= 0) selectResult(_activeIdx);
+    else searchCity();
+  } else if (e.key === 'Escape') {
+    closeDropdown();
+  }
+}
+
 async function searchCity() {
   const q = document.getElementById('city-search').value.trim();
   if (!q) return;
   const errEl = document.getElementById('search-err');
   errEl.style.display = 'none';
+  if (_searchResults.length) { selectResult(0); return; }
   try {
-    const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
-      {headers:{'Accept-Language':'en'}}
-    );
-    const data = await r.json();
-    if (!data.length) { errEl.textContent = 'Location not found'; errEl.style.display = 'block'; return; }
-    pickedLat = parseFloat(data[0].lat);
-    pickedLon = parseFloat(data[0].lon);
-    pickerMap.setView([pickedLat, pickedLon], 12);
-    pickerMarker.setLatLng([pickedLat, pickedLon]);
-    showPickerCoords();
+    await fetchSuggestions(q);
+    if (_searchResults.length) selectResult(0);
+    else { errEl.textContent = 'Location not found'; errEl.style.display = 'block'; }
   } catch(e) {
     errEl.textContent = 'Search failed'; errEl.style.display = 'block';
   }
