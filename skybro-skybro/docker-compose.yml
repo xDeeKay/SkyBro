@@ -6,7 +6,7 @@ services:
       APP_PORT: 5000
 
   tracker:
-    image: xdeekay/skybro-tracker:1.1.0
+    image: xdeekay/skybro-tracker:1.2.0
     container_name: skybro-tracker
     restart: unless-stopped
     volumes:
@@ -19,7 +19,7 @@ services:
       - skybro-net
 
   web:
-    image: xdeekay/skybro-dashboard:1.1.1
+    image: xdeekay/skybro-dashboard:1.2.0
     container_name: skybro-web
     restart: unless-stopped
     volumes:

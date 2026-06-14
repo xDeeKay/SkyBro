@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro-skybro
 category: networking
 name: SkyBro
-version: "1.0.3"
+version: "1.2.0"
 tagline: Live aircraft, ISS, weather & moon tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
@@ -48,5 +48,8 @@ path: ""
 defaultUsername: ""
 defaultPassword: ""
 releaseNotes: >-
-  Initial release. Aircraft tracking, ISS flyover alerts, weather forecasts,
-  and moon phase, all in one dashboard.
+  v1.2.0 — History tab redesign with GPS coordinates, aircraft photos, and
+  map ghost marker. Location name shown in header. City search with
+  autocomplete on the location picker. ISS alerts now show correct local
+  time. Hourly weather strip starts from the current hour. Tracker loop
+  isolated so one data source failure no longer blocks the others.
