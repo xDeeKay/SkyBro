@@ -91,6 +91,7 @@ def init_db():
             icao24 TEXT, callsign TEXT,
             first_seen INTEGER, last_seen INTEGER,
             min_alt_ft REAL, min_dist_km REAL,
+            lat REAL, lon REAL,
             origin_country TEXT, model TEXT, registration TEXT,
             alerted INTEGER DEFAULT 0, photo_url TEXT
         );
@@ -129,6 +130,8 @@ def migrate_db():
     c = conn.cursor()
     for table, col in [("live_aircraft",  "photo_url TEXT"),
                        ("seen_aircraft",   "photo_url TEXT"),
+                       ("seen_aircraft",   "lat REAL"),
+                       ("seen_aircraft",   "lon REAL"),
                        ("iss_alerts",      "start_az TEXT"),
                        ("iss_alerts",      "max_el INTEGER"),
                        ("iss_alerts",      "end_az TEXT")]:
@@ -441,10 +444,10 @@ def process_states(states):
             })
             c.execute("""INSERT OR IGNORE INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
-                 origin_country,model,registration,alerted,photo_url)
-                VALUES (?,?,?,?,?,?,?,?,?,1,?)""",
-                (icao24, callsign, now, now, alt_ft, dist_km, country, model, reg,
-                 thumb_url))
+                 lat,lon,origin_country,model,registration,alerted,photo_url)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?)""",
+                (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
+                 country, model, reg, thumb_url))
 
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()

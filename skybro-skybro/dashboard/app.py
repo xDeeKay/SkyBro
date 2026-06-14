@@ -91,10 +91,15 @@ def api_iss():
 def api_history():
     try:
         rows = db().execute("""
-            SELECT callsign, model, registration, origin_country,
-                   min_alt_ft, min_dist_km, first_seen, last_seen
-            FROM seen_aircraft WHERE alerted=1
-            ORDER BY last_seen DESC LIMIT 100
+            SELECT sa.callsign, sa.model, sa.registration, sa.origin_country,
+                   sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
+                   sa.lat, sa.lon,
+                   COALESCE(pc.thumb_url, sa.photo_url) AS thumb_url,
+                   pc.photo_url AS full_photo_url
+            FROM seen_aircraft sa
+            LEFT JOIN photo_cache pc ON pc.icao24 = sa.icao24
+            WHERE sa.alerted=1
+            ORDER BY sa.last_seen DESC LIMIT 100
         """).fetchall()
         return jsonify([dict(r) for r in rows])
     except Exception:

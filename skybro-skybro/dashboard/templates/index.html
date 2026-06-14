@@ -57,6 +57,28 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .hist-call{font-weight:600;font-size:13px}
 .hist-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .hist-meta{text-align:right;font-size:11px;color:var(--muted)}
+.hist-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.hist-card:hover{border-color:var(--accent)}
+.hc-top{display:flex;gap:9px;align-items:flex-start}
+.hc-thumb{width:70px;height:52px;object-fit:cover;border-radius:5px;flex-shrink:0;cursor:pointer;transition:opacity .15s}
+.hc-thumb:hover{opacity:.75}
+.hc-body{flex:1;min-width:0}
+.hc-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.hc-call{font-weight:700;font-size:13px}
+.hc-time{font-size:10px;color:var(--muted);white-space:nowrap;padding-left:6px}
+.hc-model{font-size:11px;color:var(--muted);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hc-tags{display:flex;flex-wrap:wrap;gap:3px}
+.hc-tag{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--muted)}
+.hc-loc{display:block;margin-top:7px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--accent);text-decoration:none}
+.hc-loc:hover{text-decoration:underline}
+.lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:pointer;flex-direction:column;gap:12px}
+.lb.open{display:flex}
+.lb img{max-width:90vw;max-height:80vh;border-radius:8px;object-fit:contain;cursor:default}
+.lb-close{position:absolute;top:14px;right:18px;color:#fff;font-size:26px;line-height:1;opacity:.6;cursor:pointer}
+.lb-close:hover{opacity:1}
+.lb-credit{font-size:11px;color:rgba(255,255,255,.45)}
+.lb-credit a{color:rgba(255,255,255,.65);text-decoration:none}
+.lb-credit a:hover{text-decoration:underline}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
 .src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
 .src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border)}
@@ -250,13 +272,47 @@ function renderHistory(rows) {
   const el = document.getElementById('pane-history');
   if (!rows.length) { el.innerHTML = '<div class="empty">No alerts yet<br><small>Alerts appear here once triggered</small></div>'; return; }
   el.innerHTML = rows.map(r => {
-    const dt = fmtDateTime(new Date(r.last_seen*1000));
-    return `<div class="hist-row">
-      <div><div class="hist-call">✈ ${r.callsign}</div><div class="hist-sub">${r.model||'Unknown'}${r.registration?' · '+r.registration:''}</div></div>
-      <div class="hist-meta">${(r.min_alt_ft||0).toLocaleString()} ft<br>${r.min_dist_km} km · ${dt}</div>
+    const dt = fmtDateTime(new Date(r.last_seen * 1000));
+    const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
+    const flyTo = (r.lat && r.lon) ? `map.flyTo([${r.lat},${r.lon}],12)` : '';
+    const thumb = r.thumb_url
+      ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" loading="lazy" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
+      : '';
+    const locLine = (r.lat && r.lon)
+      ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
+      : '';
+    return `<div class="hist-card"${flyTo ? ` onclick="${flyTo}"` : ''}>
+      <div class="hc-top">
+        ${thumb}
+        <div class="hc-body">
+          <div class="hc-row">
+            <span class="hc-call">✈ ${r.callsign}</span>
+            <span class="hc-time">${dt}</span>
+          </div>
+          <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
+          <div class="hc-tags">
+            ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
+            <span class="hc-tag">↕ ${(r.min_alt_ft||0).toLocaleString()} ft</span>
+            <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
+          </div>
+        </div>
+      </div>
+      ${locLine}
     </div>`;
   }).join('');
 }
+
+function openLightbox(thumbUrl, photoUrl) {
+  document.getElementById('lb-img').src = thumbUrl;
+  const credit = document.getElementById('lb-credit');
+  credit.innerHTML = photoUrl ? `<a href="${photoUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View on Planespotters.net ↗</a>` : '';
+  document.getElementById('lb').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lb').classList.remove('open');
+  document.getElementById('lb-img').src = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 function windDir(deg) {
   return ['N','NE','E','SE','S','SW','W','NW'][Math.round((deg % 360) / 45) % 8];
@@ -452,5 +508,10 @@ async function refresh() {
 refresh();
 setInterval(refresh, 15000);
 </script>
+<div class="lb" id="lb" onclick="closeLightbox()">
+  <span class="lb-close" onclick="closeLightbox()">✕</span>
+  <img id="lb-img" src="" alt="" onclick="event.stopPropagation()">
+  <div class="lb-credit" id="lb-credit"></div>
+</div>
 </body>
 </html>
