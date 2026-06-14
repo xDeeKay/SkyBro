@@ -162,11 +162,12 @@ map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 const markers = {};
 
 function planeIcon(heading, alert) {
-  const col = alert ? '#f39c12' : '#4f7cff';
+  const col = alert ? '#4f7cff' : '#f39c12';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
     <g transform="rotate(${heading},15,15)">
-      <path d="M15 3L19 13L28 15L19 18L17 26L15 24L13 26L11 18L2 15L11 13Z"
-        fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.6)" stroke-width="1"/>
+      <ellipse cx="15" cy="15" rx="2.5" ry="13" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.6)" stroke-width="1"/>
+      <path d="M15,11 L2,21 L13,18.5 L17,18.5 L28,21 Z" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"/>
+      <path d="M14,23.5 L8,29 L15,27 L22,29 L16,23.5 Z" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"/>
     </g></svg>`;
   return L.divIcon({html:svg, className:'', iconSize:[30,30], iconAnchor:[15,15]});
 }
