@@ -6,7 +6,7 @@ Config is read from /data/config.json and hot-reloaded when it changes.
 """
 
 import time, math, json, logging, sqlite3, requests, os, csv, io
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from weather import fetch_weather, process_weather, process_moon
 
@@ -547,12 +547,15 @@ def dispatch_iss_alerts():
     warn = cfg["iss_warn_mins"] * 60
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+    wr = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
+    utc_off = json.loads(wr["data"]).get("utc_offset_seconds", 0) if wr else 0
+    local_tz = timezone(timedelta(seconds=utc_off))
     rows = c.execute(
         "SELECT pass_time, duration FROM iss_alerts WHERE alerted=0 AND pass_time BETWEEN ? AND ?",
         (now, now + warn)).fetchall()
     for pass_time, duration in rows:
         mins = (pass_time - now) // 60
-        dt   = datetime.fromtimestamp(pass_time).strftime("%H:%M")
+        dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
         notify(
             "🛰️ ISS flyover coming up",
             f"Visible pass in ~{mins} min (at {dt} local)\nDuration: {duration}s — look up!",
