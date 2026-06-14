@@ -82,11 +82,15 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .lb-credit a:hover{text-decoration:underline}
 @keyframes ghost-pulse{0%,100%{opacity:.55}50%{opacity:.2}}
 .ghost-plane{animation:ghost-pulse 2s ease-in-out infinite}
+.sub-tabs{display:flex;border-bottom:1px solid var(--border);margin:0 -12px 10px;padding:0 8px;overflow-x:auto;flex-shrink:0;background:var(--surface)}
+.sub-tab{padding:7px 9px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:all .15s}
+.sub-tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.sub-tab:hover:not(.active){color:var(--text)}
+.sub-filter{display:flex;gap:4px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 .astro-topbar{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:8px 12px;z-index:10;margin:-12px -12px 8px}
-.astro-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 9px;color:var(--text);font-size:12px;outline:none;margin-bottom:6px}
+.astro-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 9px;color:var(--text);font-size:12px;outline:none}
 .astro-search:focus{border-color:var(--accent)}
-.astro-btn-row{display:flex;gap:4px;align-items:center}
-.a-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;transition:all .15s}
+.a-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .a-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .a-horizon{margin-left:auto}
 .astro-tonight{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
@@ -297,28 +301,38 @@ function renderNearby(aircraft) {
 }
 
 const SAT_COLORS = {ISS:'#1abc9c', Hubble:'#9b59b6', Tiangong:'#e74c3c'};
+const SAT_NAMES  = ['ISS', 'Hubble', 'Tiangong'];
+let _satPasses = [], _satSubTab = 'ISS';
 
-function renderSatellites(passes) {
+function renderSatellites(passes) { _satPasses = passes; _drawSatellites(); }
+
+function _drawSatellites() {
   const el = document.getElementById('pane-satellites');
-  if (!passes.length) { el.innerHTML = '<div class="empty">No upcoming satellite passes<br><small>Check n2yo API key in Settings</small></div>'; return; }
-  const groups = {};
-  passes.forEach(p => { const n = p.sat_name||'ISS'; if (!groups[n]) groups[n]=[]; groups[n].push(p); });
-  el.innerHTML = Object.entries(groups).map(([satName, satPasses]) => {
-    const col = SAT_COLORS[satName] || '#7b7f9e';
-    const cards = satPasses.map(p => {
+  const col = SAT_COLORS[_satSubTab] || '#7b7f9e';
+  const filtered = _satPasses.filter(p => (p.sat_name||'ISS') === _satSubTab);
+
+  const tabsHtml = SAT_NAMES.map(n => {
+    const count = _satPasses.filter(p=>(p.sat_name||'ISS')===n).length;
+    return `<div class="sub-tab${_satSubTab===n?' active':''}" onclick="_satSubTab='${n}';_drawSatellites()">${n}${count?' ('+count+')':''}</div>`;
+  }).join('');
+
+  let html = `<div class="sub-tabs">${tabsHtml}</div>`;
+
+  if (!filtered.length) {
+    html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>Fetches every 2h — check n2yo key in Settings</small></div>`;
+  } else {
+    html += filtered.map(p => {
       const dt = new Date(p.pass_time * 1000);
-      const timeStr = fmtTime(dt);
-      const dateStr = fmtDate(dt);
       const soon = p.mins_away < 30;
       const cd = p.mins_away < 60 ? p.mins_away+' min' : Math.floor(p.mins_away/60)+'h '+(p.mins_away%60)+'m';
       const dur = p.duration >= 60 ? Math.floor(p.duration/60)+'m '+(p.duration%60)+'s' : p.duration+'s';
-      return `<div class="iss-card" style="border-color:${col}33">
+      return `<div class="iss-card" style="border-color:${col}55">
         <div class="iss-head">
-          <span class="iss-title" style="color:${col}">${satName} — ${dateStr}</span>
+          <span class="iss-title" style="color:${col}">${_satSubTab} — ${fmtDate(dt)}</span>
           ${soon ? `<span class="iss-soon" style="background:${col};color:#000">In ${cd}</span>` : ''}
         </div>
         <div class="iss-grid">
-          <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
+          <div class="pstat"><div class="pstat-val">${fmtTime(dt)}</div><div class="pstat-lbl">Time</div></div>
           <div class="pstat"><div class="pstat-val">${cd}</div><div class="pstat-lbl">From now</div></div>
           <div class="pstat"><div class="pstat-val">${dur}</div><div class="pstat-lbl">Duration</div></div>
           <div class="pstat"><div class="pstat-val">${p.start_az||'—'}</div><div class="pstat-lbl">Appears</div></div>
@@ -327,8 +341,8 @@ function renderSatellites(passes) {
         </div>
       </div>`;
     }).join('');
-    return `<div style="font-size:11px;font-weight:700;color:${col};text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;padding-left:2px">🛰 ${satName}</div>${cards}`;
-  }).join('');
+  }
+  el.innerHTML = html;
 }
 
 function renderHistory(rows) {
@@ -448,163 +462,155 @@ function renderWeather(cur, hourly, daily) {
 }
 
 // ── Astronomy tab ─────────────────────────────────────────────────────────────
-let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '';
+let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '', _astroTab = 'tonight';
 const _ETIER = {naked_eye:0, binoculars:1, telescope:2};
+const _EICON = {naked_eye:'👁', binoculars:'🔭', telescope:'🔬'};
 
 function fmtTs(ts) { return ts ? fmtTime(new Date(ts * 1000)) : '—'; }
 
-function renderAstronomy(astro) {
-  _aData = astro;
-  _drawAstro();
-}
+function renderAstronomy(astro) { _aData = astro; _drawAstro(); }
 
 function _drawAstro() {
   const el = document.getElementById('pane-astronomy');
   const a = _aData || {};
-  const q = _aSearch.toLowerCase();
 
-  const planets = (a.planets||[]).filter(p =>
+  const TABS = [['tonight','🌃 Tonight'],['planets','🪐 Planets'],['meteors','☄️ Meteors'],['dso','🔭 DSOs'],['moon','🌙 Moon']];
+  const tabBar = `<div class="sub-tabs">${TABS.map(([id,lbl])=>
+    `<div class="sub-tab${_astroTab===id?' active':''}" onclick="_astroTab='${id}';_aSearch='';_drawAstro()">${lbl}</div>`
+  ).join('')}</div>`;
+
+  let body = '';
+  if      (_astroTab === 'tonight') body = _astroTonight(a);
+  else if (_astroTab === 'planets') body = _astroPlanets(a);
+  else if (_astroTab === 'meteors') body = _astroMeteors(a);
+  else if (_astroTab === 'dso')     body = _astroDSO(a);
+  else if (_astroTab === 'moon')    body = _astroMoon(a.moon||{});
+
+  el.innerHTML = tabBar + body;
+}
+
+function _searchBar(ph) {
+  return `<input class="astro-search" placeholder="${ph}" value="${_aSearch.replace(/"/g,'&quot;')}" oninput="_aSearch=this.value;_drawAstro()" style="margin-bottom:8px">`;
+}
+function _horizonBtn() {
+  return `<button class="a-btn a-horizon${_aHorizon?' active':''}" onclick="_aHorizon=!_aHorizon;_drawAstro()">↑ Horizon</button>`;
+}
+function _equipBtns() {
+  return [['👁 Naked eye',0],['🔭 Binoculars',1],['🔬 All',2]].map(([l,v])=>
+    `<button class="a-btn${_aEquip===v?' active':''}" onclick="_aEquip=${v};_drawAstro()">${l}</button>`
+  ).join('');
+}
+
+function _astroTonight(a) {
+  if (!a.ts) return `<div class="empty" style="padding:24px">Astronomy data loading…<br><small>Calculates on first startup — check back shortly.</small></div>`;
+  const tw = a.twilight || {}, mi = a.moon || {};
+  const darkStr = tw.astronomical_dusk && tw.astronomical_dawn
+    ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}` : '—';
+  const illum = mi.illumination != null ? mi.illumination : 0;
+  const [ifLabel, ifCol] = illum < 25 ? ['Low','var(--green)'] : illum < 60 ? ['Moderate','var(--amber)'] : ['High','var(--red)'];
+  const moonLine = mi.is_up ? `${ifLabel} (up · ${illum}%)` : (mi.rise_ts ? `${ifLabel} · rises ${fmtTs(mi.rise_ts)}` : `${ifLabel} (below horizon)`);
+  const upPlanets = (a.planets||[]).filter(p=>p.is_up).length;
+  const activeMeteors = (a.meteor_showers||[]).filter(s=>s.active);
+  const visibleDSO = (a.dso||[]).filter(d=>d.is_up&&(_ETIER[d.equipment]||0)<=2).length;
+  return `<div class="astro-tonight">
+    <div class="at-row"><span class="at-lbl">🌃 Astronomical dark</span><span class="at-val">${darkStr}</span></div>
+    ${tw.sunset?`<div class="at-row"><span class="at-lbl">🌅 Sun</span><span class="at-val">Sets ${fmtTs(tw.sunset)} · Rises ${fmtTs(tw.sunrise)}</span></div>`:''}
+    ${tw.civil_dusk?`<div class="at-row"><span class="at-lbl">🌆 Civil dusk</span><span class="at-val">${fmtTs(tw.civil_dusk)}</span></div>`:''}
+    ${a.bortle?`<div class="at-row"><span class="at-lbl">💡 Light pollution</span><span class="at-val">Bortle ${a.bortle.class} — ${a.bortle.description}</span></div>`:''}
+    <div class="at-row"><span class="at-lbl">🌙 Moon interference</span><span class="at-val" style="color:${ifCol}">${moonLine}</span></div>
+    <div class="at-hi">
+      ${upPlanets} planet${upPlanets!==1?'s':''} visible
+      ${visibleDSO?' · '+visibleDSO+' DSOs above horizon':''}
+      ${activeMeteors.length?' · <b>'+activeMeteors[0].name+'</b> active (ZHR '+activeMeteors[0].zhr+')':''}
+    </div>
+  </div>`;
+}
+
+function _astroPlanets(a) {
+  const q = _aSearch.toLowerCase();
+  const list = (a.planets||[]).filter(p =>
     (!_aHorizon || p.is_up) &&
     (!q || p.name.toLowerCase().includes(q) || (p.constellation||'').toLowerCase().includes(q))
   ).sort((x,y) => y.alt_deg - x.alt_deg);
 
-  const meteors = (a.meteor_showers||[]).filter(s =>
+  let html = `<div class="sub-filter">${_searchBar('Search planets…')}<div style="display:flex;gap:4px">${_horizonBtn()}</div></div>`;
+  if (!list.length) return html + `<div class="astro-empty">${_aHorizon?'No planets above horizon — disable Horizon filter to see all':'No planets match'}</div>`;
+  return html + list.map(p => {
+    const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
+    const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : '↓ below horizon';
+    const timeStr = p.is_up ? (p.set_ts?`Sets ${fmtTs(p.set_ts)}`:'') : (p.rise_ts?`Rises ${fmtTs(p.rise_ts)}`:'');
+    return `<div class="astro-card">
+      <div class="ac-head"><span class="ac-name">${p.name}</span><span class="ac-right" style="color:${upCol}">${altStr}</span></div>
+      <div class="ac-meta">mag ${p.magnitude} · ${p.constellation||''}${p.distance_au?' · '+p.distance_au+' AU':''}</div>
+      ${timeStr?`<div class="ac-time">${timeStr}${p.transit_ts?' · Transit '+fmtTs(p.transit_ts):''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function _astroMeteors(a) {
+  const q = _aSearch.toLowerCase();
+  const list = (a.meteor_showers||[]).filter(s =>
     !q || s.name.toLowerCase().includes(q) || (s.parent||'').toLowerCase().includes(q)
   );
-
-  const dso = (a.dso||[]).filter(d =>
-    (!_aHorizon || d.is_up) &&
-    (_ETIER[d.equipment]||0) <= _aEquip &&
-    (!q || d.label.toLowerCase().includes(q) ||
-           (d.type||'').toLowerCase().includes(q) ||
-           (d.constellation||'').toLowerCase().includes(q))
-  ).sort((x,y) => y.alt_deg - x.alt_deg);
-
-  const moonInfo = a.moon || {};
-  const tw = a.twilight || {};
-
-  // Filter bar
-  let html = `<div class="astro-topbar">
-    <input class="astro-search" placeholder="Search planets, DSOs, showers…" value="${_aSearch.replace(/"/g,'&quot;')}" oninput="_aSearch=this.value;_drawAstro()">
-    <div class="astro-btn-row">
-      <button class="a-btn${_aEquip===0?' active':''}" onclick="_aEquip=0;_drawAstro()" title="Naked eye objects only">👁</button>
-      <button class="a-btn${_aEquip===1?' active':''}" onclick="_aEquip=1;_drawAstro()" title="Binoculars and below">🔭</button>
-      <button class="a-btn${_aEquip===2?' active':''}" onclick="_aEquip=2;_drawAstro()" title="All objects">🔬</button>
-      <button class="a-btn a-horizon${_aHorizon?' active':''}" onclick="_aHorizon=!_aHorizon;_drawAstro()">↑ Horizon</button>
-    </div>
-  </div>`;
-
-  // Tonight's sky
-  if (a.ts) {
-    const darkStr = tw.astronomical_dusk && tw.astronomical_dawn
-      ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}`
-      : '—';
-    const illum = moonInfo.illumination != null ? moonInfo.illumination : 0;
-    const moonUp = moonInfo.is_up;
-    const moonInterf = illum < 25 ? ['Low','var(--green)'] : illum < 60 ? ['Moderate','var(--amber)'] : ['High','var(--red)'];
-    const moonLine = moonUp
-      ? `${moonInterf[0]} (up · ${illum}%)`
-      : (moonInfo.rise_ts ? `${moonInterf[0]} · rises ${fmtTs(moonInfo.rise_ts)}` : `${moonInterf[0]} (below horizon)`);
-    const activeMeteors = (a.meteor_showers||[]).filter(s=>s.active);
-    const upPlanets = (a.planets||[]).filter(p=>p.is_up).length;
-    const visibleDSO = (a.dso||[]).filter(d=>d.is_up&&(_ETIER[d.equipment]||0)<=_aEquip).length;
-
-    html += `<div class="astro-tonight">
-      <div class="at-row"><span class="at-lbl">🌃 Dark window</span><span class="at-val">${darkStr}</span></div>
-      ${tw.sunset ? `<div class="at-row"><span class="at-lbl">🌅 Sun</span><span class="at-val">Sets ${fmtTs(tw.sunset)} · Rises ${fmtTs(tw.sunrise)}</span></div>` : ''}
-      ${a.bortle ? `<div class="at-row"><span class="at-lbl">💡 Light pollution</span><span class="at-val">Bortle ${a.bortle.class} · ${a.bortle.description}</span></div>` : ''}
-      <div class="at-row"><span class="at-lbl">🌙 Moon</span><span class="at-val" style="color:${moonInterf[1]}">${moonLine}</span></div>
-      <div class="at-hi">${upPlanets} planet${upPlanets!==1?'s':''} visible${visibleDSO?' · '+visibleDSO+' DSOs in range':''}${activeMeteors.length?' · '+activeMeteors[0].name+' active':''}</div>
-    </div>`;
-  } else {
-    html += `<div class="empty" style="padding:20px">Astronomy data loading…<br><small>Calculates hourly. Check back shortly.</small></div>`;
-  }
-
-  // Planets
-  const pUpTotal = (a.planets||[]).filter(p=>p.is_up).length;
-  html += `<details class="astro-sec" open><summary>Planets <span class="a-count">${planets.length} ${_aHorizon&&pUpTotal?'/ '+pUpTotal:''}</span></summary>`;
-  if (!planets.length) {
-    html += `<div class="astro-empty">${_aHorizon?'No planets above horizon — toggle horizon filter to see all':'No planets match'}</div>`;
-  } else {
-    html += planets.map(p => {
-      const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
-      const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : `↓ below horizon`;
-      const timeStr = p.is_up
-        ? (p.set_ts ? `Sets ${fmtTs(p.set_ts)}` : '')
-        : (p.rise_ts ? `Rises ${fmtTs(p.rise_ts)}` : '');
-      return `<div class="astro-card">
-        <div class="ac-head"><span class="ac-name">${p.name}</span><span class="ac-right" style="color:${upCol}">${altStr}</span></div>
-        <div class="ac-meta">mag ${p.magnitude} · ${p.constellation||''}${p.distance_au?' · '+p.distance_au+' AU':''}</div>
-        ${timeStr ? `<div class="ac-time">${timeStr}${p.transit_ts?' · Transit '+fmtTs(p.transit_ts):''}</div>` : ''}
-      </div>`;
-    }).join('');
-  }
-  html += `</details>`;
-
-  // Meteor showers
-  const activeCount = (a.meteor_showers||[]).filter(s=>s.active).length;
-  html += `<details class="astro-sec" open><summary>Meteor Showers <span class="a-count">${activeCount?'🔥 '+activeCount+' active':meteors.length}</span></summary>`;
-  html += meteors.map(s => {
-    const badge = s.active
-      ? `<span class="a-badge live">ACTIVE</span>`
-      : `<span class="a-badge">${s.days_to_peak<0?'passed':'in '+s.days_to_peak+'d'}</span>`;
+  let html = `<div class="sub-filter">${_searchBar('Search showers…')}</div>`;
+  if (!list.length) return html + `<div class="astro-empty">No showers match</div>`;
+  return html + list.map(s => {
+    const badge = s.active ? `<span class="a-badge live">ACTIVE</span>` : `<span class="a-badge">${s.days_to_peak<0?'passed':'in '+s.days_to_peak+'d'}</span>`;
     return `<div class="astro-card">
       <div class="ac-head"><span class="ac-name">${s.name}</span>${badge}</div>
-      <div class="ac-meta">ZHR ${s.zhr} · ${s.radiant} · ${s.parent}</div>
-      ${s.note ? `<div class="ac-note">${s.note}</div>` : ''}
+      <div class="ac-meta">ZHR ${s.zhr} · Radiant: ${s.radiant} · ${s.parent}</div>
+      ${s.note?`<div class="ac-note">${s.note}</div>`:''}
       <div class="ac-time">Peak: ${s.peak_date}${s.active?' · Active until '+s.active_end:''}</div>
     </div>`;
-  }).join('') || `<div class="astro-empty">No showers match</div>`;
-  html += `</details>`;
+  }).join('');
+}
 
-  // Deep sky objects
-  const dsoUpTotal = (a.dso||[]).filter(d=>d.is_up&&(_ETIER[d.equipment]||0)<=_aEquip).length;
-  html += `<details class="astro-sec" open><summary>Deep Sky Objects <span class="a-count">${dso.length} ${_aHorizon&&dsoUpTotal?'/ '+dsoUpTotal:''}</span></summary>`;
-  if (!dso.length) {
-    html += `<div class="astro-empty">${_aHorizon?'None above horizon with current filter':'No objects match'}</div>`;
-  } else {
-    html += dso.map(d => {
-      const icons = {naked_eye:'👁',binoculars:'🔭',telescope:'🔬'};
-      const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : '↓ below horizon';
-      const upCol = d.is_up ? '' : 'opacity:.55';
-      const moonW = d.moon_warning ? ' · 🌙 moon nearby' : '';
-      return `<div class="astro-card" style="${upCol}">
-        <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${icons[d.equipment]||''} ${d.magnitude}</span></div>
-        <div class="ac-meta">${d.type} · ${d.constellation}</div>
-        <div class="ac-time">${upStr}${d.transit_ts?' · Transit '+fmtTs(d.transit_ts):''}${moonW}</div>
-      </div>`;
-    }).join('');
-  }
-  html += `</details>`;
+function _astroDSO(a) {
+  const q = _aSearch.toLowerCase();
+  const list = (a.dso||[]).filter(d =>
+    (!_aHorizon || d.is_up) &&
+    (_ETIER[d.equipment]||0) <= _aEquip &&
+    (!q || d.label.toLowerCase().includes(q) || (d.type||'').toLowerCase().includes(q) || (d.constellation||'').toLowerCase().includes(q))
+  ).sort((x,y) => y.alt_deg - x.alt_deg);
 
-  // Moon
-  const illum = moonInfo.illumination != null ? moonInfo.illumination : Math.round((moonInfo.phase_pct||0));
-  const r=40, cx=50, cy=50, circ=2*Math.PI*r, dash=(illum/100)*circ;
-  html += `<details class="astro-sec" open><summary>Moon</summary>
-  <div class="astro-moon">
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+  let html = `<div class="sub-filter">${_searchBar('Search DSOs…')}<div style="display:flex;gap:4px;flex-wrap:wrap">${_equipBtns()}${_horizonBtn()}</div></div>`;
+  if (!list.length) return html + `<div class="astro-empty">${_aHorizon?'None above horizon with current filter':'No objects match'}</div>`;
+  return html + list.map(d => {
+    const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : '↓ below horizon';
+    const moonW = d.moon_warning ? ' · 🌙 moon' : '';
+    return `<div class="astro-card" style="${d.is_up?'':'opacity:.55'}">
+      <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
+      <div class="ac-meta">${d.type} · ${d.constellation}</div>
+      <div class="ac-time">${upStr}${d.transit_ts?' · Transit '+fmtTs(d.transit_ts):''}${moonW}</div>
+    </div>`;
+  }).join('');
+}
+
+function _astroMoon(mi) {
+  const illum = mi.illumination != null ? mi.illumination : Math.round(mi.phase_pct||0);
+  const r=40,cx=50,cy=50,c=2*Math.PI*r,d=(illum/100)*c;
+  return `<div class="astro-moon" style="padding-top:4px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
       <svg width="100" height="100" viewBox="0 0 100 100" style="flex-shrink:0">
         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/>
         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f39c12" stroke-width="7"
-          stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
+          stroke-dasharray="${d.toFixed(1)} ${c.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
         <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="var(--text)" font-size="22" font-weight="700">${illum}%</text>
       </svg>
       <div>
-        <div style="font-size:30px;line-height:1;margin-bottom:4px">${moonInfo.phase_emoji||'🌙'}</div>
-        <div style="font-weight:700;font-size:13px">${moonInfo.phase_name||'—'}</div>
-        <div style="color:var(--muted);font-size:11px;margin-top:3px">${illum}% illuminated · ${moonInfo.age_days||0}d old</div>
-        <div style="font-size:11px;margin-top:3px;color:${moonInfo.is_up?'var(--green)':'var(--muted)'}">${moonInfo.is_up?'↑ '+moonInfo.alt_deg+'° '+moonInfo.az_compass:'Below horizon'}</div>
+        <div style="font-size:30px;line-height:1;margin-bottom:4px">${mi.phase_emoji||'🌙'}</div>
+        <div style="font-weight:700;font-size:13px">${mi.phase_name||'—'}</div>
+        <div style="color:var(--muted);font-size:11px;margin-top:3px">${illum}% illuminated · ${mi.age_days||0}d old</div>
+        <div style="font-size:11px;margin-top:3px;color:${mi.is_up?'var(--green)':'var(--muted)'}">${mi.is_up?'↑ '+mi.alt_deg+'° '+mi.az_compass:'Below horizon'}</div>
       </div>
     </div>
     <div class="ac-grid2">
-      ${moonInfo.rise_ts ? `<div class="ac-g2-item">🌕 Rises ${fmtTs(moonInfo.rise_ts)}</div>` : ''}
-      ${moonInfo.set_ts  ? `<div class="ac-g2-item">🌑 Sets ${fmtTs(moonInfo.set_ts)}</div>` : ''}
-      ${moonInfo.next_full_moon ? `<div class="ac-g2-item">Full: ${fmtDate(new Date(moonInfo.next_full_moon*1000))}</div>` : ''}
-      ${moonInfo.next_new_moon  ? `<div class="ac-g2-item">New: ${fmtDate(new Date(moonInfo.next_new_moon*1000))}</div>` : ''}
+      ${mi.rise_ts?`<div class="ac-g2-item">Rises ${fmtTs(mi.rise_ts)}</div>`:''}
+      ${mi.set_ts?`<div class="ac-g2-item">Sets ${fmtTs(mi.set_ts)}</div>`:''}
+      ${mi.next_full_moon?`<div class="ac-g2-item">🌕 Full: ${fmtDate(new Date(mi.next_full_moon*1000))}</div>`:''}
+      ${mi.next_new_moon?`<div class="ac-g2-item">🌑 New: ${fmtDate(new Date(mi.next_new_moon*1000))}</div>`:''}
     </div>
-  </div></details>`;
-
-  el.innerHTML = html;
+  </div>`;
 }
 
 // ── Source status bar ─────────────────────────────────────────────────────────
