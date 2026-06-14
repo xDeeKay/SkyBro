@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     volumes:
       - /home/umbrel/umbrel/app-data/skybro-skybro/data:/data
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - skybro-net
 
@@ -14,6 +15,7 @@ services:
     restart: unless-stopped
     volumes:
       - /home/umbrel/umbrel/app-data/skybro-skybro/data:/data
+      - /etc/localtime:/etc/localtime:ro
     depends_on:
       - tracker
     networks:

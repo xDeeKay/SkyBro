@@ -11,6 +11,7 @@ services:
     restart: unless-stopped
     volumes:
       - ${APP_DATA_DIR}/data:/data
+      - /etc/localtime:/etc/localtime:ro
     environment:
       HOME_LAT: "1.3521"
       HOME_LON: "103.8198"
@@ -18,11 +19,12 @@ services:
       - skybro-net
 
   web:
-    image: xdeekay/skybro-dashboard:1.1.0
+    image: xdeekay/skybro-dashboard:1.1.1
     container_name: skybro-web
     restart: unless-stopped
     volumes:
       - ${APP_DATA_DIR}/data:/data
+      - /etc/localtime:/etc/localtime:ro
     environment:
       HOME_LAT: "1.3521"
       HOME_LON: "103.8198"

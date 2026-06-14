@@ -5,6 +5,7 @@ Settings are persisted to /data/config.json (hot-reloaded by tracker).
 """
 
 import os, json, sqlite3, time
+from datetime import datetime
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, abort
 
@@ -104,8 +105,9 @@ def api_stats():
     try:
         conn = db()
         now  = int(time.time())
+        today_start = int(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
         live    = conn.execute("SELECT COUNT(*) FROM live_aircraft").fetchone()[0]
-        today   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen > ?", (now-86400,)).fetchone()[0]
+        today   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen >= ?", (today_start,)).fetchone()[0]
         total   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
         countries = conn.execute("SELECT COUNT(DISTINCT origin_country) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
         cfg = read_config()
