@@ -310,16 +310,16 @@ function debouncedSearch() {
   clearTimeout(_searchTimer);
   const q = document.getElementById('city-search').value.trim();
   if (q.length < 2) { closeDropdown(); return; }
-  _searchTimer = setTimeout(() => fetchSuggestions(q), 300);
+  _searchTimer = setTimeout(() => fetchSuggestions(q), 200);
 }
 
 async function fetchSuggestions(q) {
   try {
     const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6`,
-      {headers:{'Accept-Language':'en'}}
+      `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=en&lat=${pickedLat}&lon=${pickedLon}`
     );
-    _searchResults = await r.json();
+    const data = await r.json();
+    _searchResults = data.features || [];
     renderDropdown();
   } catch(e) {}
 }
@@ -329,14 +329,14 @@ function renderDropdown() {
   if (!_searchResults.length) { dd.classList.remove('open'); return; }
   const input = document.getElementById('city-search');
   const rect = input.getBoundingClientRect();
-  dd.style.top    = (rect.bottom + 3) + 'px';
-  dd.style.left   = rect.left + 'px';
-  dd.style.width  = rect.width + 'px';
+  dd.style.top   = (rect.bottom + 3) + 'px';
+  dd.style.left  = rect.left + 'px';
+  dd.style.width = rect.width + 'px';
   _activeIdx = -1;
-  dd.innerHTML = _searchResults.map((res, i) => {
-    const parts = res.display_name.split(', ');
-    const name  = parts[0];
-    const sub   = parts.slice(1).join(', ');
+  dd.innerHTML = _searchResults.map((f, i) => {
+    const p    = f.properties;
+    const name = p.name || p.street || p.city || '—';
+    const sub  = [p.street && p.name ? p.street : null, p.city, p.state, p.country].filter(Boolean).join(', ');
     return `<div class="search-opt" data-idx="${i}" onmousedown="selectResult(${i})">
       <div class="search-opt-name">${name}</div>
       <div class="search-opt-sub">${sub}</div>
@@ -346,11 +346,12 @@ function renderDropdown() {
 }
 
 function selectResult(i) {
-  const res = _searchResults[i];
-  if (!res) return;
-  pickedLat = parseFloat(res.lat);
-  pickedLon = parseFloat(res.lon);
-  document.getElementById('city-search').value = res.display_name.split(', ').slice(0, 2).join(', ');
+  const f = _searchResults[i];
+  if (!f) return;
+  pickedLon = f.geometry.coordinates[0];
+  pickedLat = f.geometry.coordinates[1];
+  const p   = f.properties;
+  document.getElementById('city-search').value = [p.name || p.street, p.city].filter(Boolean).join(', ');
   document.getElementById('search-err').style.display = 'none';
   pickerMap.setView([pickedLat, pickedLon], 12);
   pickerMarker.setLatLng([pickedLat, pickedLon]);
@@ -388,13 +389,9 @@ async function searchCity() {
   const errEl = document.getElementById('search-err');
   errEl.style.display = 'none';
   if (_searchResults.length) { selectResult(0); return; }
-  try {
-    await fetchSuggestions(q);
-    if (_searchResults.length) selectResult(0);
-    else { errEl.textContent = 'Location not found'; errEl.style.display = 'block'; }
-  } catch(e) {
-    errEl.textContent = 'Search failed'; errEl.style.display = 'block';
-  }
+  await fetchSuggestions(q);
+  if (_searchResults.length) selectResult(0);
+  else { errEl.textContent = 'Location not found'; errEl.style.display = 'block'; }
 }
 
 function confirmMapPicker() {
