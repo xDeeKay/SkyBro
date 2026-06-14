@@ -112,7 +112,9 @@ def process_weather(data, conn):
 
     # Hourly next 24h
     times    = hourly.get("time", [])
-    now_hour = datetime.now().strftime("%Y-%m-%dT%H:00")
+    utc_off  = data.get("utc_offset_seconds", 0)
+    local_tz = timezone(timedelta(seconds=utc_off))
+    now_hour = datetime.now(local_tz).strftime("%Y-%m-%dT%H:00")
     try:
         start_i = times.index(now_hour)
     except ValueError:
