@@ -526,6 +526,9 @@ def check_iss():
         passes = r.json().get("passes") or []
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
+        warn = cfg["iss_warn_mins"] * 60
+        c.execute("DELETE FROM iss_alerts WHERE alerted=0 AND pass_time > ?",
+                  (int(time.time()) + warn,))
         for p in passes:
             c.execute(
                 "INSERT OR IGNORE INTO iss_alerts "
