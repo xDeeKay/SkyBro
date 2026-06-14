@@ -548,7 +548,7 @@ def dispatch_iss_alerts():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     wr = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
-    utc_off = json.loads(wr["data"]).get("utc_offset_seconds", 0) if wr else 0
+    utc_off = json.loads(wr[0]).get("utc_offset_seconds", 0) if wr else 0
     local_tz = timezone(timedelta(seconds=utc_off))
     rows = c.execute(
         "SELECT pass_time, duration FROM iss_alerts WHERE alerted=0 AND pass_time BETWEEN ? AND ?",
