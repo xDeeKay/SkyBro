@@ -79,6 +79,8 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .lb-credit{font-size:11px;color:rgba(255,255,255,.45)}
 .lb-credit a{color:rgba(255,255,255,.65);text-decoration:none}
 .lb-credit a:hover{text-decoration:underline}
+@keyframes ghost-pulse{0%,100%{opacity:.55}50%{opacity:.2}}
+.ghost-plane{animation:ghost-pulse 2s ease-in-out infinite}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
 .src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
 .src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border)}
@@ -182,6 +184,8 @@ const radiusCircle = L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'
 map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 
 const markers = {};
+let historyData = [];
+let ghostMarker = null;
 
 function planeIcon(heading, alert) {
   const col = alert ? '#4f7cff' : '#f39c12';
@@ -192,6 +196,24 @@ function planeIcon(heading, alert) {
       <path d="M14,23.5 L8,29 L15,27 L22,29 L16,23.5 Z" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"/>
     </g></svg>`;
   return L.divIcon({html:svg, className:'', iconSize:[30,30], iconAnchor:[15,15]});
+}
+
+function ghostIcon() {
+  const svg = `<svg class="ghost-plane" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 30 30">
+    <ellipse cx="15" cy="15" rx="2.5" ry="13" fill="white" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+    <path d="M15,11 L2,21 L13,18.5 L17,18.5 L28,21 Z" fill="white" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>
+    <path d="M14,23.5 L8,29 L15,27 L22,29 L16,23.5 Z" fill="white" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>
+  </svg>`;
+  return L.divIcon({html:svg, className:'', iconSize:[36,36], iconAnchor:[18,18]});
+}
+
+function showHistoryPin(r) {
+  if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
+  ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon()})
+    .addTo(map)
+    .bindPopup(`<b>✈ ${r.callsign}</b><br><span style="color:#7b7f9e;font-size:11px">${r.model || 'Unknown'}</span>`)
+    .openPopup();
+  map.flyTo([r.lat, r.lon], 12);
 }
 
 function updateMap(aircraft) {
@@ -269,19 +291,19 @@ function renderISS(passes) {
 }
 
 function renderHistory(rows) {
+  historyData = rows;
   const el = document.getElementById('pane-history');
   if (!rows.length) { el.innerHTML = '<div class="empty">No alerts yet<br><small>Alerts appear here once triggered</small></div>'; return; }
-  el.innerHTML = rows.map(r => {
+  el.innerHTML = rows.map((r, i) => {
     const dt = fmtDateTime(new Date(r.last_seen * 1000));
     const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
-    const flyTo = (r.lat && r.lon) ? `map.flyTo([${r.lat},${r.lon}],12)` : '';
     const thumb = r.thumb_url
       ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" loading="lazy" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
       : '';
     const locLine = (r.lat && r.lon)
       ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
       : '';
-    return `<div class="hist-card"${flyTo ? ` onclick="${flyTo}"` : ''}>
+    return `<div class="hist-card" data-idx="${i}">
       <div class="hc-top">
         ${thumb}
         <div class="hc-body">
@@ -504,6 +526,13 @@ async function refresh() {
     document.getElementById('last-upd').textContent    = fmtTime(new Date());
   } catch(e) { console.error('Refresh error:', e); }
 }
+
+document.getElementById('pane-history').addEventListener('click', e => {
+  const card = e.target.closest('.hist-card');
+  if (!card) return;
+  const r = historyData[+card.dataset.idx];
+  if (r && r.lat && r.lon) showHistoryPin(r);
+});
 
 refresh();
 setInterval(refresh, 15000);
