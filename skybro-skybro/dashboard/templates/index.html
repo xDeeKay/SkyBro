@@ -212,7 +212,8 @@ function showHistoryPin(r) {
   ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon()})
     .addTo(map)
     .bindPopup(`<b>✈ ${r.callsign}</b><br><span style="color:#7b7f9e;font-size:11px">${r.model || 'Unknown'}</span>`)
-    .openPopup();
+    .openPopup()
+    .on('popupclose', () => { map.removeLayer(ghostMarker); ghostMarker = null; });
   map.flyTo([r.lat, r.lon], 12);
 }
 
