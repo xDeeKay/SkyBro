@@ -60,7 +60,13 @@ input:checked+.slider:before{transform:translateX(18px)}
 .modal-hdr-coords{font-size:12px;color:var(--muted);margin-top:2px}
 .modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:2px 6px;line-height:1}
 .modal-close:hover{color:var(--text)}
-.modal-map{height:380px;flex-shrink:0}
+.modal-search{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.modal-search-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.modal-search-input:focus{border-color:var(--accent)}
+.modal-search-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.modal-search-btn:hover{opacity:.85}
+.modal-search-err{font-size:11px;color:var(--red);padding:0 16px 8px;flex-shrink:0;display:none}
+.modal-map{height:340px;flex-shrink:0}
 .modal-ftr{padding:12px 16px;display:flex;gap:10px;border-top:1px solid var(--border);flex-shrink:0}
 </style>
 </head>
@@ -82,7 +88,7 @@ input:checked+.slider:before{transform:translateX(18px)}
       <div><label>Home Longitude</label><input type="number" id="home_lon" step="0.0001" value="{{ cfg.home_lon }}"></div>
     </div>
     <div style="margin-bottom:14px">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="openMapPicker()">🗺 Pick on map</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="openMapPicker()">📍 Drop a pin</button>
     </div>
     <div class="form-row">
       <div>
@@ -189,6 +195,11 @@ input:checked+.slider:before{transform:translateX(18px)}
       </div>
       <button class="modal-close" onclick="closeMapPicker()">✕</button>
     </div>
+    <div class="modal-search">
+      <input class="modal-search-input" id="city-search" type="text" placeholder="Search city or address…" onkeydown="if(event.key==='Enter')searchCity()">
+      <button class="modal-search-btn" onclick="searchCity()">Search</button>
+    </div>
+    <div class="modal-search-err" id="search-err"></div>
     <div class="modal-map" id="picker-map"></div>
     <div class="modal-ftr">
       <button class="btn btn-primary" onclick="confirmMapPicker()">Use this location</button>
@@ -282,6 +293,28 @@ function openMapPicker() {
 
 function closeMapPicker() {
   document.getElementById('map-modal').classList.remove('open');
+}
+
+async function searchCity() {
+  const q = document.getElementById('city-search').value.trim();
+  if (!q) return;
+  const errEl = document.getElementById('search-err');
+  errEl.style.display = 'none';
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
+      {headers:{'Accept-Language':'en'}}
+    );
+    const data = await r.json();
+    if (!data.length) { errEl.textContent = 'Location not found'; errEl.style.display = 'block'; return; }
+    pickedLat = parseFloat(data[0].lat);
+    pickedLon = parseFloat(data[0].lon);
+    pickerMap.setView([pickedLat, pickedLon], 12);
+    pickerMarker.setLatLng([pickedLat, pickedLon]);
+    showPickerCoords();
+  } catch(e) {
+    errEl.textContent = 'Search failed'; errEl.style.display = 'block';
+  }
 }
 
 function confirmMapPicker() {
