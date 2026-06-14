@@ -607,12 +607,24 @@ def main():
         try:
             states = fetch_states()
             process_states(states)
+        except Exception as e:
+            log.error(f"Aircraft error: {e}", exc_info=True)
+            update_source_status('opensky', False, str(e))
+        try:
             check_iss()
             dispatch_iss_alerts()
+        except Exception as e:
+            log.error(f"ISS error: {e}", exc_info=True)
+            update_source_status('iss', False, str(e))
+        try:
             maybe_update_weather()
+        except Exception as e:
+            log.error(f"Weather error: {e}", exc_info=True)
+            update_source_status('weather', False, str(e))
+        try:
             maybe_update_moon()
         except Exception as e:
-            log.error(f"Loop error: {e}", exc_info=True)
+            log.error(f"Moon error: {e}", exc_info=True)
         time.sleep(cfg["poll_interval"])
 
 if __name__ == "__main__":
