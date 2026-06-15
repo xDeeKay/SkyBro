@@ -82,7 +82,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .lb-credit a:hover{text-decoration:underline}
 @keyframes ghost-pulse{0%,100%{opacity:.55}50%{opacity:.2}}
 .ghost-plane{animation:ghost-pulse 2s ease-in-out infinite}
-.sub-tabs{display:flex;justify-content:center;border-bottom:1px solid var(--border);margin:0 -12px 10px;padding:0 8px;overflow-x:auto;flex-shrink:0;background:var(--surface)}
+.sub-tabs{display:none}
 .sub-tab{padding:8px 10px;font-size:11px;font-weight:500;line-height:1;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:all .15s}
 .sub-tab.active{color:var(--text);border-bottom-color:var(--accent)}
 .sub-tab:hover:not(.active){color:var(--text)}
@@ -188,6 +188,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
       <div class="tab" data-tab="weather">☁ Weather</div>
       <div class="tab" data-tab="astronomy">✨ Astronomy</div>
     </div>
+    <div class="tabs" id="sidebar-sub-tabs" style="display:none"></div>
     <div class="tab-pane active" id="pane-aircraft"></div>
     <div class="tab-pane" id="pane-satellites"></div>
     <div class="tab-pane" id="pane-history"></div>
@@ -335,6 +336,7 @@ function renderSatellites(passes) { _satPasses = passes; _drawSatellites(); }
 
 function _drawSatellites() {
   const el = document.getElementById('pane-satellites');
+  const subEl = document.getElementById('sidebar-sub-tabs');
   const col = SAT_COLORS[_satSubTab] || '#7b7f9e';
   const filtered = _satPasses.filter(p => (p.sat_name||'ISS') === _satSubTab);
 
@@ -343,7 +345,9 @@ function _drawSatellites() {
     return `<div class="sub-tab${_satSubTab===n?' active':''}" onclick="_satSubTab='${n}';_drawSatellites()">${n}${count?' ('+count+')':''}</div>`;
   }).join('');
 
-  let html = `<div class="sub-tabs">${tabsHtml}</div>`;
+  if (el.classList.contains('active')) { subEl.innerHTML = tabsHtml; subEl.style.display = ''; }
+
+  let html = ``;
 
   if (!filtered.length) {
     html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>Fetches every 2h — check n2yo key in Settings</small></div>`;
@@ -504,6 +508,7 @@ function renderAstronomy(astro) { _aData = astro; _drawAstro(); }
 
 function _drawAstro() {
   const el = document.getElementById('pane-astronomy');
+  const subEl = document.getElementById('sidebar-sub-tabs');
   const a = _aData || {};
 
   // Capture focus state before clobbering DOM
@@ -511,9 +516,11 @@ function _drawAstro() {
   const cursor = wasSearch ? document.activeElement.selectionStart : null;
 
   const TABS = [['tonight','🌃 Tonight'],['moon','🌙 Moon'],['planets','🪐 Planets'],['meteors','☄️ Meteors'],['dso','🔭 DSOs']];
-  const tabBar = `<div class="sub-tabs">${TABS.map(([id,lbl])=>
+  const tabBarHtml = TABS.map(([id,lbl])=>
     `<div class="sub-tab${_astroTab===id?' active':''}" onclick="_astroTab='${id}';_aSearch='';_drawAstro()">${lbl}</div>`
-  ).join('')}</div>`;
+  ).join('');
+
+  if (el.classList.contains('active')) { subEl.innerHTML = tabBarHtml; subEl.style.display = ''; }
 
   let body = '';
   if      (_astroTab === 'tonight') body = _astroTonight(a);
@@ -522,7 +529,7 @@ function _drawAstro() {
   else if (_astroTab === 'dso')     body = _astroDSO(a);
   else if (_astroTab === 'moon')    body = _astroMoon(a.moon||{});
 
-  el.innerHTML = tabBar + body;
+  el.innerHTML = body;
 
   // Restore focus to search bar after re-render
   if (wasSearch || _aSearch) {
@@ -768,6 +775,10 @@ document.querySelectorAll('.tab').forEach(t => {
     document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById('pane-'+t.dataset.tab).classList.add('active');
+    const subEl = document.getElementById('sidebar-sub-tabs');
+    if (t.dataset.tab === 'satellites') { _drawSatellites(); }
+    else if (t.dataset.tab === 'astronomy') { _drawAstro(); }
+    else { subEl.style.display = 'none'; subEl.innerHTML = ''; }
   });
 });
 
