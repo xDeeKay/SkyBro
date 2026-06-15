@@ -322,8 +322,9 @@ def _meteor_showers():
 
 
 def _fetch_wiki_thumbs(queries):
-    """Batch-fetch Wikipedia page thumbnails (50 per request). Returns {query: thumb_url}."""
-    result = {q: "" for q in queries}
+    """Batch-fetch Wikipedia thumbnails (50 per request).
+    Returns {query: {"thumb": url, "article": url}}."""
+    result = {q: {"thumb": "", "article": ""} for q in queries}
     headers = {"User-Agent": "SkyBro/1.0 (https://github.com/xDeeKay/SkyBro)"}
     for i in range(0, len(queries), 50):
         batch = queries[i:i+50]
@@ -354,8 +355,9 @@ def _fetch_wiki_thumbs(queries):
             for page in data.get("pages", {}).values():
                 title = page.get("title", "")
                 thumb = (page.get("thumbnail") or {}).get("source", "")
-                if thumb and title in inv:
-                    result[inv[title]] = thumb
+                if title in inv:
+                    article = f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                    result[inv[title]] = {"thumb": thumb, "article": article if thumb else ""}
         except Exception as e:
             log.warning(f"Wikipedia thumbs batch ({len(batch)} items): {e}")
     return result
@@ -447,7 +449,9 @@ def process_astronomy(lat, lon, conn):
         p_titles = [_PLANET_WIKI.get(n, n) for n, _ in PLANETS]
         p_thumbs = _fetch_wiki_thumbs(p_titles)
         for p in planets:
-            p["wiki_thumb"] = p_thumbs.get(_PLANET_WIKI.get(p["name"], p["name"]), "")
+            info = p_thumbs.get(_PLANET_WIKI.get(p["name"], p["name"]), {})
+            p["wiki_thumb"] = info.get("thumb", "")
+            p["wiki_url"]   = info.get("article", "")
     except Exception as e:
         log.warning(f"Planet wiki thumbs: {e}")
 
@@ -455,7 +459,9 @@ def process_astronomy(lat, lon, conn):
         d_titles = [f"Messier {row[0]}" for row in MESSIER]
         d_thumbs = _fetch_wiki_thumbs(d_titles)
         for d in dso:
-            d["wiki_thumb"] = d_thumbs.get(f"Messier {d['id']}", "")
+            info = d_thumbs.get(f"Messier {d['id']}", {})
+            d["wiki_thumb"] = info.get("thumb", "")
+            d["wiki_url"]   = info.get("article", "")
     except Exception as e:
         log.warning(f"DSO wiki thumbs: {e}")
 
@@ -463,7 +469,9 @@ def process_astronomy(lat, lon, conn):
         s_titles = [s[0] for s in METEOR_SHOWERS]
         s_thumbs = _fetch_wiki_thumbs(s_titles)
         for m in meteors:
-            m["wiki_thumb"] = s_thumbs.get(m["name"], "")
+            info = s_thumbs.get(m["name"], {})
+            m["wiki_thumb"] = info.get("thumb", "")
+            m["wiki_url"]   = info.get("article", "")
     except Exception as e:
         log.warning(f"Shower wiki thumbs: {e}")
 

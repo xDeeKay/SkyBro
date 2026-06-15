@@ -13,7 +13,7 @@
   --text:#e2e4f0;--muted:#7b7f9e;--accent:#4f7cff;
   --green:#2ecc71;--amber:#f39c12;--red:#e74c3c;--teal:#1abc9c;
   --font:system-ui,-apple-system,sans-serif;
-  --sidebar-w:clamp(240px,28vw,340px);
+  --sidebar-w:clamp(300px,32vw,420px);
 }
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:16px}
@@ -406,10 +406,15 @@ function renderHistory(rows) {
   }).join('');
 }
 
-function openLightbox(thumbUrl, photoUrl) {
+function openLightbox(thumbUrl, photoUrl, creditLabel) {
   document.getElementById('lb-img').src = thumbUrl;
   const credit = document.getElementById('lb-credit');
-  credit.innerHTML = photoUrl ? `<a href="${photoUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View on Planespotters.net ↗</a>` : '';
+  if (photoUrl) {
+    const label = creditLabel || (photoUrl.includes('wikipedia.org') ? 'View on Wikipedia' : 'View on Planespotters.net');
+    credit.innerHTML = `<a href="${photoUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${label} ↗</a>`;
+  } else {
+    credit.innerHTML = '';
+  }
   document.getElementById('lb').classList.add('open');
 }
 function closeLightbox() {
@@ -501,6 +506,10 @@ function _drawAstro() {
   const el = document.getElementById('pane-astronomy');
   const a = _aData || {};
 
+  // Capture focus state before clobbering DOM
+  const wasSearch = document.activeElement && document.activeElement.classList.contains('astro-search');
+  const cursor = wasSearch ? document.activeElement.selectionStart : null;
+
   const TABS = [['tonight','🌃 Tonight'],['planets','🪐 Planets'],['meteors','☄️ Meteors'],['dso','🔭 DSOs'],['moon','🌙 Moon']];
   const tabBar = `<div class="sub-tabs">${TABS.map(([id,lbl])=>
     `<div class="sub-tab${_astroTab===id?' active':''}" onclick="_astroTab='${id}';_aSearch='';_drawAstro()">${lbl}</div>`
@@ -514,6 +523,12 @@ function _drawAstro() {
   else if (_astroTab === 'moon')    body = _astroMoon(a.moon||{});
 
   el.innerHTML = tabBar + body;
+
+  // Restore focus to search bar after re-render
+  if (wasSearch || _aSearch) {
+    const inp = el.querySelector('.astro-search');
+    if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
+  }
 }
 
 function _searchBar(ph) {
@@ -613,7 +628,7 @@ function _astroPlanets(a) {
     const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
     const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : '↓ below horizon';
     const timeStr = p.is_up ? (p.set_ts?`Sets ${fmtTs(p.set_ts)}`:'') : (p.rise_ts?`Rises ${fmtTs(p.rise_ts)}`:'');
-    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">` : '';
+    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" loading="lazy" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">
         ${img}
@@ -636,7 +651,7 @@ function _astroMeteors(a) {
   if (!list.length) return html + `<div class="astro-empty">No showers match</div>`;
   return html + list.map(s => {
     const badge = s.active ? `<span class="a-badge live">ACTIVE</span>` : `<span class="a-badge">${s.days_to_peak<0?'passed':'in '+s.days_to_peak+'d'}</span>`;
-    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" loading="lazy" onerror="this.style.display='none'">` : '';
+    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" loading="lazy" style="cursor:pointer" data-full="${s.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">
         ${img}
@@ -664,7 +679,7 @@ function _astroDSO(a) {
   return html + list.map(d => {
     const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : '↓ below horizon';
     const moonW = d.moon_warning ? ' · 🌙 moon' : '';
-    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" loading="lazy" onerror="this.style.display='none'">` : '';
+    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" loading="lazy" style="cursor:pointer" data-full="${d.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card" style="${d.is_up?'':'opacity:.55'}">
       <div class="ac-with-img">
         ${img}
