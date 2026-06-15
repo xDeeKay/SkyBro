@@ -307,14 +307,14 @@ function planeIcon(heading, alert, type) {
   const col = alert ? '#4f7cff' : '#f39c12';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
     <g transform="rotate(${heading||0},15,15)">${_planeSVG(col, type||'jet')}</g></svg>`;
-  return L.divIcon({html:svg, className:'', iconSize:[30,30], iconAnchor:[15,15]});
+  return L.divIcon({html:svg, className:'', iconSize:[30,30], iconAnchor:[15,15], popupAnchor:[0,-18]});
 }
 
 function ghostIcon(heading, type) {
   const svg = `<svg class="ghost-plane" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 30 30">
     <g transform="rotate(${heading||0},15,15)">${_planeSVG('white', type||'jet')}</g>
   </svg>`;
-  return L.divIcon({html:svg, className:'', iconSize:[36,36], iconAnchor:[18,18]});
+  return L.divIcon({html:svg, className:'', iconSize:[36,36], iconAnchor:[18,18], popupAnchor:[0,-21]});
 }
 
 function showHistoryPin(r) {
