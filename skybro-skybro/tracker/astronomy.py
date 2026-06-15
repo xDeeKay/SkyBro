@@ -2,7 +2,8 @@
 SkyBro — Astronomy module
 Calculates planet positions, DSO visibility, twilight times, and meteor showers
 using the ephem library. All heavy lifting is local — no API keys needed except
-for the optional Bortle/SQM lookup from lightpollutionmap.info.
+for the optional Bortle/SQM lookup from clearoutside.com (primary) and
+lightpollutionmap.info (fallback).
 """
 
 import math, json, time, logging, requests
@@ -364,28 +365,57 @@ def _fetch_wiki_thumbs(queries):
 
 
 def _bortle(lat, lon):
-    try:
-        import json as _j
-        url = ("https://www.lightpollutionmap.info/QueryRaster/"
-               f"?ql=wa_2015&qt=point&qd={_j.dumps({'lonlat':[lon, lat]})}")
-        r = requests.get(url, timeout=10, headers={"User-Agent": "SkyBro/1.2"})
-        r.raise_for_status()
-        sqm = float(r.text.strip())
-        thresholds = [(21.99,1),(21.89,2),(21.69,3),(20.49,4),
-                      (19.25,5),(18.38,6),(17.50,7),(16.50,8)]
+    import re as _re
+
+    descs = {1:"Darkest skies",2:"Truly dark site",3:"Rural sky",
+             4:"Rural/suburban transition",5:"Suburban sky",
+             6:"Bright suburban sky",7:"Suburban/urban transition",
+             8:"City sky",9:"Inner city sky"}
+    thresholds = [(21.99,1),(21.89,2),(21.69,3),(20.49,4),
+                  (19.25,5),(18.38,6),(17.50,7),(16.50,8)]
+
+    def sqm_to_bortle(sqm):
         cls = 9
         for thresh, b in thresholds:
             if sqm >= thresh:
                 cls = b
                 break
-        descs = {1:"Darkest skies",2:"Truly dark site",3:"Rural sky",
-                 4:"Rural/suburban transition",5:"Suburban sky",
-                 6:"Bright suburban sky",7:"Suburban/urban transition",
-                 8:"City sky",9:"Inner city sky"}
+        return cls
+
+    # Primary: Clear Outside — astronomy forecast site, shows Bortle class
+    try:
+        r = requests.get(
+            f"https://clearoutside.com/forecast/{lat:.4f}/{lon:.4f}",
+            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+        )
+        r.raise_for_status()
+        m = _re.search(r'(?i)bortle[^0-9]{0,30}([1-9])', r.text)
+        if m:
+            cls = int(m.group(1))
+            return {"sqm": None, "class": cls, "description": descs[cls]}
+    except Exception as e:
+        log.warning(f"Bortle (clearoutside): {e}")
+
+    # Fallback: lightpollutionmap.info — fixed to use params= for proper URL encoding
+    try:
+        r = requests.get(
+            "https://www.lightpollutionmap.info/QueryRaster/",
+            params={"ql": "wa_2015", "qt": "point", "qd": json.dumps({"lonlat": [lon, lat]})},
+            timeout=10,
+            headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://www.lightpollutionmap.info/",
+            },
+        )
+        r.raise_for_status()
+        sqm = float(r.text.strip())
+        cls = sqm_to_bortle(sqm)
         return {"sqm": round(sqm, 2), "class": cls, "description": descs[cls]}
     except Exception as e:
-        log.warning(f"Bortle fetch: {e}")
-        return None
+        log.warning(f"Bortle (lightpollutionmap): {e}")
+
+    return None
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
