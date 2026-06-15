@@ -146,7 +146,8 @@ def migrate_db():
                        ("iss_alerts",      "start_az TEXT"),
                        ("iss_alerts",      "max_el INTEGER"),
                        ("iss_alerts",      "end_az TEXT"),
-                       ("iss_alerts",      "sat_name TEXT DEFAULT 'ISS'")]:
+                       ("iss_alerts",      "sat_name TEXT DEFAULT 'ISS'"),
+                       ("seen_aircraft",   "heading INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -506,13 +507,14 @@ def process_states(states):
                 'alt_ft': alt_ft, 'speed_kts': speed_kts, 'vrate': vrate,
                 'vr_str': vr_str, 'dist_km': dist_km, 'country': country,
                 'model': model, 'reg': reg, 'direction': direction,
+                'heading': heading,
             })
             c.execute("""INSERT OR IGNORE INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
-                 lat,lon,origin_country,model,registration,alerted,photo_url)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?)""",
+                 lat,lon,origin_country,model,registration,alerted,photo_url,heading)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
-                 country, model, reg, thumb_url))
+                 country, model, reg, thumb_url, heading))
 
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()

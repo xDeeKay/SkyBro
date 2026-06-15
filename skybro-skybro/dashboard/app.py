@@ -96,7 +96,7 @@ def api_history():
         rows = db().execute("""
             SELECT sa.callsign, sa.model, sa.registration, sa.origin_country,
                    sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
-                   sa.lat, sa.lon,
+                   sa.lat, sa.lon, COALESCE(sa.heading, 0) AS heading,
                    COALESCE(pc.thumb_url, sa.photo_url) AS thumb_url,
                    pc.photo_url AS full_photo_url
             FROM seen_aircraft sa
