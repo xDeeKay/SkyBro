@@ -288,28 +288,45 @@ def get_cached_photo(icao24):
         return ""
 
 def fetch_aircraft_photo(icao24):
-    """Return (photo_url, thumb_url) from cache or Planespotters.net."""
+    """Return (photo_url, thumb_url) from cache or Planespotters.net (hex, then reg fallback)."""
     conn = sqlite3.connect(DB_PATH)
     row = conn.execute("SELECT photo_url, thumb_url FROM photo_cache WHERE icao24=?",
                        (icao24,)).fetchone()
     conn.close()
     if row is not None:
         return row[0] or "", row[1] or ""
+
+    headers = {"User-Agent": "SkyBro/1.0 (Raspberry Pi sky tracker; https://github.com/xDeeKay/SkyBro)"}
+    photo_url, thumb_url = "", ""
+
     try:
         r = requests.get(f"https://api.planespotters.net/pub/photos/hex/{icao24}",
-                         headers={"User-Agent": "SkyBro/1.0 (Raspberry Pi sky tracker; https://github.com/xDeeKay/SkyBro)"},
-                         timeout=5)
+                         headers=headers, timeout=5)
         r.raise_for_status()
         photos = r.json().get("photos", [])
         if photos:
             photo_url = photos[0].get("link", "")
             tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
             thumb_url = tl.get("src", "")
-        else:
-            photo_url, thumb_url = "", ""
     except Exception as e:
-        log.debug(f"Photo fetch {icao24}: {e}")
-        photo_url, thumb_url = "", ""
+        log.debug(f"Photo fetch {icao24} (hex): {e}")
+
+    if not thumb_url:
+        _, reg = lookup(icao24)
+        if reg:
+            try:
+                r = requests.get(f"https://api.planespotters.net/pub/photos/reg/{reg}",
+                                 headers=headers, timeout=5)
+                r.raise_for_status()
+                photos = r.json().get("photos", [])
+                if photos:
+                    photo_url = photos[0].get("link", "")
+                    tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
+                    thumb_url = tl.get("src", "")
+                    log.debug(f"Photo fetch {icao24}: found via reg {reg}")
+            except Exception as e:
+                log.debug(f"Photo fetch {icao24} (reg {reg}): {e}")
+
     conn = sqlite3.connect(DB_PATH)
     conn.execute("INSERT OR REPLACE INTO photo_cache (icao24,photo_url,thumb_url,fetched) VALUES (?,?,?,?)",
                  (icao24, photo_url, thumb_url, int(time.time())))
