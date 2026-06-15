@@ -253,31 +253,64 @@ const markers = {};
 let historyData = [];
 let ghostMarker = null;
 
-function planeIcon(heading, alert) {
+function aircraftType(model) {
+  if (!model) return 'jet';
+  const m = model.toLowerCase();
+  if (/helicopt|eurocopter|sikorsky|robinson|airbus h|leonardo|bell \d|ec\d{3}|h130|h145|h160|aw\d{3}|r22|r44|r66|bo.?105|bk.?117|ka-\d|mi-\d/.test(m)) return 'heli';
+  if (/b74\d|b76\d|b77\d|b78\d|747|767|777|787|a33\d|a34\d|a35\d|a380|dc-10|md-11|dreamliner/.test(m)) return 'widebody';
+  if (/\bf-\d|f\/a-|eurofighter|typhoon|gripen|rafale|hornet|b-52|c-17|c-130|hercules|harrier|su-\d|mig-\d|pc.?21|p-8a|poseidon|globemaster|wedgetail/.test(m)) return 'military';
+  if (/cessna|piper|beechcraft|cirrus sr|diamond da|tecnam|c172|c152|c182|pa-\d|da2\d|da4\d|sr2\d|tbm |pc-12|pc-6|robin/.test(m)) return 'light';
+  return 'jet';
+}
+
+function _planeSVG(col, type) {
+  const fb = `fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.6)" stroke-width="1"`;
+  const fs = `fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"`;
+  const fh = `fill="${col}" fill-opacity=".9"`;
+  switch (type) {
+    case 'widebody': return `
+      <ellipse cx="15" cy="15" rx="3.5" ry="13" ${fb}/>
+      <path d="M15,9 L1,20 L12,18 L18,18 L29,20 Z" ${fs}/>
+      <path d="M12,23.5 L5,29 L15,27 L25,29 L18,23.5 Z" ${fs}/>`;
+    case 'heli': return `
+      <ellipse cx="15" cy="11" rx="13" ry="2.5" fill="${col}" fill-opacity=".45"/>
+      <ellipse cx="15" cy="17" rx="5" ry="7" ${fb}/>
+      <path d="M13.5,23 L13,29 L17,29 L16.5,23 Z" ${fh}/>
+      <rect x="9" y="27" width="12" height="2.5" rx="1" ${fh}/>`;
+    case 'light': return `
+      <ellipse cx="15" cy="15" rx="2.2" ry="10" ${fb}/>
+      <path d="M15,12 L3,16 L13,15.5 L17,15.5 L27,16 Z" ${fs}/>
+      <path d="M14,22 L10,27 L15,25.5 L20,27 L16,22 Z" ${fh}/>
+      <rect x="11" y="4.5" width="8" height="2" rx="1" fill="${col}" fill-opacity=".8"/>`;
+    case 'military': return `
+      <path d="M15,3 L3,27 L15,22 L27,27 Z" ${fs}/>
+      <ellipse cx="15" cy="13" rx="2" ry="10" fill="${col}" fill-opacity=".95"/>
+      <path d="M11.5,23 L9,28 L14,25.5 Z" fill="${col}" fill-opacity=".85"/>
+      <path d="M18.5,23 L21,28 L16,25.5 Z" fill="${col}" fill-opacity=".85"/>`;
+    default: return `
+      <ellipse cx="15" cy="15" rx="2.5" ry="13" ${fb}/>
+      <path d="M15,11 L2,21 L13,18.5 L17,18.5 L28,21 Z" ${fs}/>
+      <path d="M14,23.5 L8,29 L15,27 L22,29 L16,23.5 Z" ${fs}/>`;
+  }
+}
+
+function planeIcon(heading, alert, type) {
   const col = alert ? '#4f7cff' : '#f39c12';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
-    <g transform="rotate(${heading},15,15)">
-      <ellipse cx="15" cy="15" rx="2.5" ry="13" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.6)" stroke-width="1"/>
-      <path d="M15,11 L2,21 L13,18.5 L17,18.5 L28,21 Z" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"/>
-      <path d="M14,23.5 L8,29 L15,27 L22,29 L16,23.5 Z" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"/>
-    </g></svg>`;
+    <g transform="rotate(${heading||0},15,15)">${_planeSVG(col, type||'jet')}</g></svg>`;
   return L.divIcon({html:svg, className:'', iconSize:[30,30], iconAnchor:[15,15]});
 }
 
-function ghostIcon(heading) {
+function ghostIcon(heading, type) {
   const svg = `<svg class="ghost-plane" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 30 30">
-    <g transform="rotate(${heading||0},15,15)">
-      <ellipse cx="15" cy="15" rx="2.5" ry="13" fill="white" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
-      <path d="M15,11 L2,21 L13,18.5 L17,18.5 L28,21 Z" fill="white" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>
-      <path d="M14,23.5 L8,29 L15,27 L22,29 L16,23.5 Z" fill="white" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>
-    </g>
+    <g transform="rotate(${heading||0},15,15)">${_planeSVG('white', type||'jet')}</g>
   </svg>`;
   return L.divIcon({html:svg, className:'', iconSize:[36,36], iconAnchor:[18,18]});
 }
 
 function showHistoryPin(r) {
   if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
-  ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading)})
+  ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, aircraftType(r.model))})
     .addTo(map)
     .bindPopup(`<b>✈ ${r.callsign}</b><br><span style="color:#7b7f9e;font-size:11px">${r.model || 'Unknown'}</span>`)
     .openPopup()
@@ -290,7 +323,7 @@ function updateMap(aircraft) {
   for (const ac of aircraft) {
     seen.add(ac.icao24);
     const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
-    const icon = planeIcon(ac.heading, isAlert);
+    const icon = planeIcon(ac.heading, isAlert, aircraftType(ac.model));
     const vr = ac.vertical_rate;
     const vrStr = vr > .5 ? `↑${(Math.abs(vr)*196.85).toFixed(0)} fpm`
                 : vr < -.5 ? `↓${(Math.abs(vr)*196.85).toFixed(0)} fpm` : 'level';
