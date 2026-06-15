@@ -24,6 +24,16 @@ PLANETS = [
     ("Neptune", ephem.Neptune),
 ]
 
+_PLANET_WIKI = {
+    "Mercury": "Mercury (planet)",
+    "Venus":   "Venus",
+    "Mars":    "Mars",
+    "Jupiter": "Jupiter",
+    "Saturn":  "Saturn",
+    "Uranus":  "Uranus",
+    "Neptune": "Neptune",
+}
+
 # (number, common_name, type, ra_hours, dec_degrees, magnitude, constellation, size_arcmin, equip)
 # equip: 0=naked eye  1=binoculars  2=telescope
 MESSIER = [
@@ -311,6 +321,46 @@ def _meteor_showers():
     return result
 
 
+def _fetch_wiki_thumbs(queries):
+    """Batch-fetch Wikipedia page thumbnails (50 per request). Returns {query: thumb_url}."""
+    result = {q: "" for q in queries}
+    headers = {"User-Agent": "SkyBro/1.0 (https://github.com/xDeeKay/SkyBro)"}
+    for i in range(0, len(queries), 50):
+        batch = queries[i:i+50]
+        try:
+            r = requests.get(
+                "https://en.wikipedia.org/w/api.php",
+                params={
+                    "action":      "query",
+                    "prop":        "pageimages",
+                    "titles":      "|".join(batch),
+                    "pithumbsize": 200,
+                    "redirects":   "1",
+                    "format":      "json",
+                },
+                headers=headers,
+                timeout=15,
+            )
+            r.raise_for_status()
+            data = r.json().get("query", {})
+            chain = {q: q for q in batch}
+            for n in data.get("normalized", []):
+                chain[n["from"]] = n["to"]
+            for rd in data.get("redirects", []):
+                for k in list(chain):
+                    if chain[k] == rd["from"]:
+                        chain[k] = rd["to"]
+            inv = {v: k for k, v in chain.items()}
+            for page in data.get("pages", {}).values():
+                title = page.get("title", "")
+                thumb = (page.get("thumbnail") or {}).get("source", "")
+                if thumb and title in inv:
+                    result[inv[title]] = thumb
+        except Exception as e:
+            log.warning(f"Wikipedia thumbs batch ({len(batch)} items): {e}")
+    return result
+
+
 def _bortle(lat, lon):
     try:
         import json as _j
@@ -391,6 +441,31 @@ def process_astronomy(lat, lon, conn):
 
     bortle  = _bortle(lat, lon)
     meteors = _meteor_showers()
+
+    # Wikipedia thumbnails — batched, one call per 50 items
+    try:
+        p_titles = [_PLANET_WIKI.get(n, n) for n, _ in PLANETS]
+        p_thumbs = _fetch_wiki_thumbs(p_titles)
+        for p in planets:
+            p["wiki_thumb"] = p_thumbs.get(_PLANET_WIKI.get(p["name"], p["name"]), "")
+    except Exception as e:
+        log.warning(f"Planet wiki thumbs: {e}")
+
+    try:
+        d_titles = [f"Messier {row[0]}" for row in MESSIER]
+        d_thumbs = _fetch_wiki_thumbs(d_titles)
+        for d in dso:
+            d["wiki_thumb"] = d_thumbs.get(f"Messier {d['id']}", "")
+    except Exception as e:
+        log.warning(f"DSO wiki thumbs: {e}")
+
+    try:
+        s_titles = [s[0] for s in METEOR_SHOWERS]
+        s_thumbs = _fetch_wiki_thumbs(s_titles)
+        for m in meteors:
+            m["wiki_thumb"] = s_thumbs.get(m["name"], "")
+    except Exception as e:
+        log.warning(f"Shower wiki thumbs: {e}")
 
     up_planets = sum(1 for p in planets if p["is_up"])
     up_dso     = sum(1 for d in dso     if d["is_up"])
