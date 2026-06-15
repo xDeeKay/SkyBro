@@ -94,7 +94,8 @@ def init_db():
             alt_ft REAL, speed_kts REAL, heading REAL,
             vertical_rate REAL, origin_country TEXT,
             model TEXT, registration TEXT,
-            dist_km REAL, updated INTEGER, photo_url TEXT
+            dist_km REAL, updated INTEGER, photo_url TEXT,
+            category INTEGER DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS seen_aircraft (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,7 +148,9 @@ def migrate_db():
                        ("iss_alerts",      "max_el INTEGER"),
                        ("iss_alerts",      "end_az TEXT"),
                        ("iss_alerts",      "sat_name TEXT DEFAULT 'ISS'"),
-                       ("seen_aircraft",   "heading INTEGER DEFAULT 0")]:
+                       ("seen_aircraft",   "heading INTEGER DEFAULT 0"),
+                       ("live_aircraft",   "category INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "category INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -485,14 +488,15 @@ def process_states(states):
         heading   = round(s[10] or 0)
         vrate     = s[11] or 0
         country   = s[2] or ""
+        category  = int(s[17]) if len(s) > 17 and s[17] is not None else 0
         dist_km   = round(haversine(cfg["home_lat"], cfg["home_lon"], lat, lon), 2)
         model, reg = lookup(icao24)
         thumb_url  = photo_cache_map.get(icao24, "")
 
         c.execute("""INSERT OR REPLACE INTO live_aircraft VALUES
-            (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (icao24, callsign, lat, lon, alt_ft, speed_kts, heading,
-             vrate, country, model, reg, dist_km, now, thumb_url))
+             vrate, country, model, reg, dist_km, now, thumb_url, category))
 
         if (dist_km <= cfg["radius_km"] and
                 alt_ft <= cfg["alt_threshold_ft"] and
@@ -511,10 +515,10 @@ def process_states(states):
             })
             c.execute("""INSERT OR IGNORE INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
-                 lat,lon,origin_country,model,registration,alerted,photo_url,heading)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?)""",
+                 lat,lon,origin_country,model,registration,alerted,photo_url,heading,category)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
-                 country, model, reg, thumb_url, heading))
+                 country, model, reg, thumb_url, heading, category))
 
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()

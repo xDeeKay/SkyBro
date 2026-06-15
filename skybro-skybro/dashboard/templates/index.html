@@ -253,8 +253,9 @@ const markers = {};
 let historyData = [];
 let ghostMarker = null;
 
-function aircraftType(model) {
-  if (!model) return 'jet';
+function aircraftType(model, category) {
+  if (category === 8) return 'heli';
+  if (!model || model === 'Unknown') return 'jet';
   const m = model.toLowerCase();
   if (/helicopt|eurocopter|sikorsky|robinson|airbus h|leonardo|bell \d|ec\d{3}|h130|h145|h160|aw\d{3}|r22|r44|r66|bo.?105|bk.?117|ka-\d|mi-\d/.test(m)) return 'heli';
   if (/b74\d|b76\d|b77\d|b78\d|747|767|777|787|a33\d|a34\d|a35\d|a380|dc-10|md-11|dreamliner/.test(m)) return 'widebody';
@@ -310,7 +311,7 @@ function ghostIcon(heading, type) {
 
 function showHistoryPin(r) {
   if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
-  ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, aircraftType(r.model))})
+  ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, aircraftType(r.model, r.category))})
     .addTo(map)
     .bindPopup(`<b>✈ ${r.callsign}</b><br><span style="color:#7b7f9e;font-size:11px">${r.model || 'Unknown'}</span>`)
     .openPopup()
@@ -323,7 +324,7 @@ function updateMap(aircraft) {
   for (const ac of aircraft) {
     seen.add(ac.icao24);
     const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
-    const icon = planeIcon(ac.heading, isAlert, aircraftType(ac.model));
+    const icon = planeIcon(ac.heading, isAlert, aircraftType(ac.model, ac.category));
     const vr = ac.vertical_rate;
     const vrStr = vr > .5 ? `↑${(Math.abs(vr)*196.85).toFixed(0)} fpm`
                 : vr < -.5 ? `↓${(Math.abs(vr)*196.85).toFixed(0)} fpm` : 'level';
