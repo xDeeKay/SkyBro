@@ -500,7 +500,13 @@ function renderWeather(cur, hourly, daily) {
 // ── Astronomy tab ─────────────────────────────────────────────────────────────
 let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '', _astroTab = 'tonight';
 const _ETIER = {naked_eye:0, binoculars:1, telescope:2};
-const _EICON = {naked_eye:'👁', binoculars:'🔭', telescope:'🔬'};
+const _EICON = {naked_eye:'👁', binoculars:'🔭', telescope:'⭐'};
+const _CONST = {And:'Andromeda',Aqr:'Aquarius',Aur:'Auriga',Cap:'Capricornus',Cas:'Cassiopeia',
+  Cet:'Cetus',CMa:'Canis Major',Cnc:'Cancer',Com:'Coma Berenices',CVn:'Canes Venatici',
+  Cyg:'Cygnus',Dra:'Draco',Gem:'Gemini',Her:'Hercules',Hya:'Hydra',Leo:'Leo',Lep:'Lepus',
+  Lyr:'Lyra',Mon:'Monoceros',Oph:'Ophiuchus',Ori:'Orion',Peg:'Pegasus',Per:'Perseus',
+  Psc:'Pisces',Pup:'Puppis',Sco:'Scorpius',Sct:'Scutum',Sge:'Sagitta',Sgr:'Sagittarius',
+  Ser:'Serpens',Tau:'Taurus',Tri:'Triangulum',UMa:'Ursa Major',Vir:'Virgo',Vul:'Vulpecula'};
 
 function fmtTs(ts) { return ts ? fmtTime(new Date(ts * 1000)) : '—'; }
 
@@ -545,7 +551,7 @@ function _horizonBtn() {
   return `<button class="a-btn a-horizon${_aHorizon?' active':''}" onclick="_aHorizon=!_aHorizon;_drawAstro()">↑ Horizon</button>`;
 }
 function _equipBtns() {
-  return [['👁 Naked eye',0],['🔭 Binoculars',1],['🔬 All',2]].map(([l,v])=>
+  return [['👁 Naked eye',0],['🔭 Binoculars',1],['⭐ All',2]].map(([l,v])=>
     `<button class="a-btn${_aEquip===v?' active':''}" onclick="_aEquip=${v};_drawAstro()">${l}</button>`
   ).join('');
 }
@@ -692,7 +698,7 @@ function _astroDSO(a) {
         ${img}
         <div class="ac-thumb-body">
           <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
-          <div class="ac-meta">${d.type} · ${d.constellation}</div>
+          <div class="ac-meta">${d.type} · ${_CONST[d.constellation]||d.constellation}</div>
           <div class="ac-time">${upStr}${d.transit_ts?' · Transit '+fmtTs(d.transit_ts):''}${moonW}</div>
         </div>
       </div>
