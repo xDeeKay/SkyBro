@@ -287,8 +287,40 @@ def get_cached_photo(icao24):
     except Exception:
         return ""
 
+def _wikipedia_type_photo(model):
+    """Return (photo_url, thumb_url) from Wikipedia for this aircraft type name.
+    photo_url is the Wikipedia article; thumb_url is a 300px image."""
+    if not model or model.lower() == "unknown" or len(model) < 5:
+        return "", ""
+    try:
+        r = requests.get(
+            "https://en.wikipedia.org/w/api.php",
+            params={
+                "action": "query",
+                "generator": "search",
+                "gsrsearch": model,
+                "gsrlimit": 1,
+                "prop": "pageimages",
+                "pithumbsize": 300,
+                "format": "json",
+            },
+            headers={"User-Agent": "SkyBro/1.0 (https://github.com/xDeeKay/SkyBro)"},
+            timeout=5,
+        )
+        r.raise_for_status()
+        pages = r.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            thumb = page.get("thumbnail", {}).get("source", "")
+            if thumb:
+                title = page.get("title", "")
+                wiki_url = f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                return wiki_url, thumb
+    except Exception as e:
+        log.debug(f"Wikipedia type photo ({model}): {e}")
+    return "", ""
+
 def fetch_aircraft_photo(icao24):
-    """Return (photo_url, thumb_url) from cache or Planespotters.net (hex, then reg fallback)."""
+    """Return (photo_url, thumb_url) from cache, Planespotters (hex+reg), or Wikipedia type photo."""
     conn = sqlite3.connect(DB_PATH)
     row = conn.execute("SELECT photo_url, thumb_url FROM photo_cache WHERE icao24=?",
                        (icao24,)).fetchone()
@@ -298,6 +330,7 @@ def fetch_aircraft_photo(icao24):
 
     headers = {"User-Agent": "SkyBro/1.0 (Raspberry Pi sky tracker; https://github.com/xDeeKay/SkyBro)"}
     photo_url, thumb_url = "", ""
+    model_name, reg = lookup(icao24)
 
     try:
         r = requests.get(f"https://api.planespotters.net/pub/photos/hex/{icao24}",
@@ -311,21 +344,24 @@ def fetch_aircraft_photo(icao24):
     except Exception as e:
         log.debug(f"Photo fetch {icao24} (hex): {e}")
 
+    if not thumb_url and reg:
+        try:
+            r = requests.get(f"https://api.planespotters.net/pub/photos/reg/{reg}",
+                             headers=headers, timeout=5)
+            r.raise_for_status()
+            photos = r.json().get("photos", [])
+            if photos:
+                photo_url = photos[0].get("link", "")
+                tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
+                thumb_url = tl.get("src", "")
+                log.debug(f"Photo fetch {icao24}: found via reg {reg}")
+        except Exception as e:
+            log.debug(f"Photo fetch {icao24} (reg {reg}): {e}")
+
     if not thumb_url:
-        _, reg = lookup(icao24)
-        if reg:
-            try:
-                r = requests.get(f"https://api.planespotters.net/pub/photos/reg/{reg}",
-                                 headers=headers, timeout=5)
-                r.raise_for_status()
-                photos = r.json().get("photos", [])
-                if photos:
-                    photo_url = photos[0].get("link", "")
-                    tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
-                    thumb_url = tl.get("src", "")
-                    log.debug(f"Photo fetch {icao24}: found via reg {reg}")
-            except Exception as e:
-                log.debug(f"Photo fetch {icao24} (reg {reg}): {e}")
+        photo_url, thumb_url = _wikipedia_type_photo(model_name)
+        if thumb_url:
+            log.debug(f"Photo fetch {icao24}: Wikipedia type photo for {model_name}")
 
     conn = sqlite3.connect(DB_PATH)
     conn.execute("INSERT OR REPLACE INTO photo_cache (icao24,photo_url,thumb_url,fetched) VALUES (?,?,?,?)",
