@@ -674,8 +674,14 @@ def maybe_update_astronomy():
         return
     _astronomy_last = time.time()
     conn = sqlite3.connect(DB_PATH)
-    process_astronomy(cfg["home_lat"], cfg["home_lon"], conn)
-    conn.close()
+    try:
+        process_astronomy(cfg["home_lat"], cfg["home_lon"], conn)
+        update_source_status('astronomy', True)
+    except Exception as e:
+        log.error(f"Astronomy error: {e}", exc_info=True)
+        update_source_status('astronomy', False, str(e))
+    finally:
+        conn.close()
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
