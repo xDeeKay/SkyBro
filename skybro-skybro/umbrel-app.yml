@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro-skybro
 category: networking
 name: SkyBro
-version: "1.2.0"
+version: "1.3.0"
 tagline: Live aircraft, ISS, weather & moon tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
@@ -48,8 +48,10 @@ path: ""
 defaultUsername: ""
 defaultPassword: ""
 releaseNotes: >-
-  v1.2.0 — History tab redesign with GPS coordinates, aircraft photos, and
-  map ghost marker. Location name shown in header. City search with
-  autocomplete on the location picker. ISS alerts now show correct local
-  time. Hourly weather strip starts from the current hour. Tracker loop
-  isolated so one data source failure no longer blocks the others.
+  v1.3.0 — Astronomy tab with Tonight highlights, Planets, DSOs (all 110
+  Messier objects), Meteor showers, and Moon sub-tabs powered by ephem.
+  Satellites tab now covers ISS, Hubble, and Tiangong. History moved into
+  the Aircraft tab with search and favourite/star button. Per-airframe map
+  icons (jet, widebody, helicopter, light prop, military). Metric/Aviation
+  units toggle for altitude/speed and temperature separately. Aircraft cards
+  show blue accent when in alert range.
