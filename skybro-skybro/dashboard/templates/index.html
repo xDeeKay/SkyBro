@@ -13,7 +13,7 @@
   --text:#e2e4f0;--muted:#7b7f9e;--accent:#4f7cff;
   --green:#2ecc71;--amber:#f39c12;--red:#e74c3c;--teal:#1abc9c;
   --font:system-ui,-apple-system,sans-serif;
-  --sidebar-w:clamp(240px,28vw,340px);
+  --sidebar-w:clamp(300px,32vw,420px);
 }
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:16px}
@@ -34,15 +34,15 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .sidebar-tab{position:absolute;right:var(--sidebar-w);top:50%;transform:translateY(-50%);width:18px;height:44px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;z-index:500;transition:right .2s ease;padding:0;line-height:1;user-select:none}
 .sidebar-tab:hover{color:var(--text);background:var(--surface2)}
 .sidebar.collapsed~.sidebar-tab{right:0}
-.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
-.tab{flex:1;min-width:max-content;padding:9px 6px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
+.tabs{display:flex;justify-content:center;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+.tab{min-width:max-content;padding:8px 10px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;line-height:1;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
 .tab.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab:hover:not(.active){color:var(--text)}
 .tab-pane{flex:1;overflow-y:auto;padding:12px;display:none}
 .tab-pane.active{display:block}
-.plane-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.plane-card{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
 .plane-card:hover{border-color:var(--accent)}
-.plane-card.alert{border-left:3px solid var(--amber)}
+.plane-card.alert{border-left:3px solid var(--accent)}
 .pc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .pc-call{font-weight:700;font-size:14px}.pc-dist{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2px 7px;font-size:11px;color:var(--muted)}
 .pc-model{color:var(--muted);font-size:11px;margin-bottom:8px}
@@ -70,8 +70,14 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .hc-model{font-size:11px;color:var(--muted);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hc-tags{display:flex;flex-wrap:wrap;gap:3px}
 .hc-tag{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--muted)}
-.hc-loc{display:block;margin-top:7px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--accent);text-decoration:none}
+.hc-loc{display:inline-block;font-size:10px;color:var(--accent);text-decoration:none}
+.hc-loc-row{margin-top:7px;padding-top:6px;border-top:1px solid var(--border)}
 .hc-loc:hover{text-decoration:underline}
+.fav-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:0;opacity:.3;transition:opacity .15s;line-height:1;flex-shrink:0}
+.fav-btn.active,.fav-btn:hover{opacity:1}
+.fav-filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:13px;transition:border-color .15s,background .15s;flex-shrink:0}
+.fav-filter-btn.active{background:rgba(243,156,18,.15);border-color:var(--amber)}
+.fav-filter-btn:hover:not(.active){border-color:var(--accent)}
 .lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:pointer;flex-direction:column;gap:12px}
 .lb.open{display:flex}
 .lb img{max-width:90vw;max-height:80vh;border-radius:8px;object-fit:contain;cursor:default}
@@ -82,15 +88,75 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .lb-credit a:hover{text-decoration:underline}
 @keyframes ghost-pulse{0%,100%{opacity:.55}50%{opacity:.2}}
 .ghost-plane{animation:ghost-pulse 2s ease-in-out infinite}
+.sub-tabs{display:none}
+.sub-tab{padding:8px 10px;font-size:11px;font-weight:500;line-height:1;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;user-select:none;transition:all .15s}
+.sub-tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.sub-tab:hover:not(.active){color:var(--text)}
+.sub-filter{display:flex;gap:4px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.astro-topbar{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:8px 12px;z-index:10;margin:-12px -12px 8px}
+.astro-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 9px;color:var(--text);font-size:12px;outline:none}
+.astro-search:focus{border-color:var(--accent)}
+.a-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.a-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.a-horizon{margin-left:auto}
+.astro-tonight{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.at-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:5px;font-size:11px}
+.at-row:last-child{margin-bottom:0}
+.at-lbl{color:var(--muted);flex-shrink:0;white-space:nowrap}
+.at-val{text-align:right;font-weight:500;font-size:11px}
+.at-hi{margin-top:8px;padding-top:7px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+.astro-sec{border:none;margin-bottom:2px}
+.astro-sec summary{list-style:none;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:9px 2px 5px;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.astro-sec summary::-webkit-details-marker{display:none}
+.a-count{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--text)}
+.astro-card{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;margin-bottom:5px}
+.ac-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.ac-name{font-weight:600;font-size:12px}
+.ac-right{font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.ac-meta{font-size:10px;color:var(--muted);margin-bottom:2px}
+.ac-time{font-size:10px;color:var(--muted)}
+.ac-note{font-size:10px;color:var(--amber);margin-bottom:2px}
+.a-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--muted)}
+.a-badge.live{background:rgba(46,204,113,.15);border-color:var(--green);color:var(--green)}
+.astro-empty{color:var(--muted);font-size:12px;padding:8px 0;text-align:center}
+.astro-moon{padding:4px 0 6px}
+.ac-grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.ac-g2-item{background:var(--surface);border-radius:4px;padding:5px 7px;font-size:10px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
 .src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
-.src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border)}
+.src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border);position:relative}
 .src-item:last-child{border-right:none}
+.src-item[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;line-height:1.4;padding:5px 9px;border-radius:6px;width:220px;white-space:normal;z-index:200;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.5)}
 .src-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border)}
 .src-dot.ok{background:var(--green)}.src-dot.error{background:var(--red)}.src-dot.backoff{background:var(--amber)}.src-dot.no_key{background:var(--amber)}
 .src-info{min-width:0;overflow:hidden;flex:1}
 .src-name{font-weight:600;white-space:nowrap}.src-detail{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .pc-photo{width:100%;height:80px;object-fit:cover;border-radius:5px;margin-bottom:7px;display:block}
+/* Sky timeline bar */
+.sky-bar{height:22px;border-radius:5px;overflow:hidden;position:relative;background:#050b1e;border:1px solid var(--border);margin:4px 0 2px}
+.sky-seg{position:absolute;top:0;height:100%}
+.sky-now-line{position:absolute;top:0;width:2px;height:100%;background:rgba(255,255,255,.75);border-radius:1px}
+/* Tonight metric grid */
+.at-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.at-metric{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.at-metric-icon{font-size:16px;margin-bottom:5px;line-height:1}
+.at-metric-val{font-weight:700;font-size:12px;line-height:1.3;margin-bottom:1px}
+.at-metric-sub{font-size:10px;color:var(--muted)}
+/* Moon hero */
+.moon-hero{text-align:center;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:12px}
+.moon-big-emoji{font-size:52px;line-height:1;margin-bottom:8px}
+.moon-big-pct{font-size:30px;font-weight:700;line-height:1;margin-bottom:3px}
+.moon-big-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.moon-big-sub{font-size:11px;color:var(--muted);margin-bottom:4px}
+.moon-big-pos{font-size:12px}
+.moon-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.moon-stat{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px}
+.moon-stat-lbl{font-size:10px;color:var(--muted);margin-bottom:3px}
+.moon-stat-val{font-size:12px;font-weight:600}
+/* Card thumbnails for planets/meteors/DSOs */
+.ac-with-img{display:flex;gap:8px;align-items:flex-start}
+.ac-thumb{width:60px;height:45px;object-fit:cover;border-radius:5px;flex-shrink:0;background:var(--border)}
+.ac-thumb-body{flex:1;min-width:0}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 @media (max-width:600px){
   .sidebar{position:absolute;right:0;top:0;height:100%;z-index:400;width:80vw;max-width:300px;transition:transform .2s ease;transform:translateX(0)}
@@ -123,21 +189,21 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
   <div id="map"></div>
   <div class="sidebar">
     <div class="tabs">
-      <div class="tab active" data-tab="aircraft">✈  Aircraft</div>
-      <div class="tab" data-tab="iss">🛰️ ISS</div>
-      <div class="tab" data-tab="history">📋 History</div>
-      <div class="tab" data-tab="weather">☁  Weather</div>
-      <div class="tab" data-tab="moon">🌙 Moon</div>
+      <div class="tab active" data-tab="aircraft">✈ Aircraft</div>
+      <div class="tab" data-tab="satellites">🛰️ Satellites</div>
+      <div class="tab" data-tab="weather">☁ Weather</div>
+      <div class="tab" data-tab="astronomy">✨ Astronomy</div>
     </div>
+    <div class="tabs" id="sidebar-sub-tabs" style="display:none"></div>
     <div class="tab-pane active" id="pane-aircraft"></div>
-    <div class="tab-pane" id="pane-iss"></div>
-    <div class="tab-pane" id="pane-history"></div>
+    <div class="tab-pane" id="pane-satellites"></div>
     <div class="tab-pane" id="pane-weather"></div>
-    <div class="tab-pane" id="pane-moon"></div>
+    <div class="tab-pane" id="pane-astronomy"></div>
     <div class="src-bar" id="src-bar">
-      <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div class="src-info"><div class="src-name">OpenSky</div><div class="src-detail" id="st-opensky">—</div></div></div>
-      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">ISS</div><div class="src-detail" id="st-iss">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div class="src-info"><div class="src-name">Aircraft</div><div class="src-detail" id="st-opensky">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">Satellites</div><div class="src-detail" id="st-iss">—</div></div></div>
       <div class="src-item"><div class="src-dot" id="sd-weather"></div><div class="src-info"><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
+      <div class="src-item"><div class="src-dot" id="sd-astronomy"></div><div class="src-info"><div class="src-name">Astronomy</div><div class="src-detail" id="st-astronomy">—</div></div></div>
     </div>
   </div>
   <button class="sidebar-tab" id="sidebar-tab" title="Toggle sidebar">›</button>
@@ -150,6 +216,8 @@ const RADIUS     = {{ cfg.radius_km }};
 const ALT_THR    = {{ cfg.alt_threshold_ft }};
 let USE_LOC_TZ = {{ 'true' if cfg.use_location_time else 'false' }};
 let TIME_24H   = {{ 'true' if cfg.time_format == '24h' else 'false' }};
+const UNITS_SPEED = '{{ cfg.units_speed }}';
+const UNITS_TEMP  = '{{ cfg.units_temp }}';
 let locationTZ = '';
 
 function _tz() { return (USE_LOC_TZ && locationTZ) ? locationTZ : undefined; }
@@ -176,6 +244,29 @@ function fmtHourStr(s) {
   return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit', hour12:true});
 }
 
+function fmtAlt(ft) {
+  if (UNITS_SPEED === 'metric') return Math.round(ft * 0.3048).toLocaleString() + ' m';
+  return Math.round(ft).toLocaleString() + ' ft';
+}
+function fmtSpeed(kts) {
+  if (UNITS_SPEED === 'metric') return Math.round(kts * 1.852) + ' km/h';
+  return kts + ' kts';
+}
+function fmtTemp(c) {
+  if (UNITS_TEMP === 'metric') return c + '°C';
+  return ((c * 9/5) + 32).toFixed(1) + '°F';
+}
+function fmtTempBare(c) {
+  if (UNITS_TEMP === 'metric') return c + '°';
+  return Math.round(c * 9/5 + 32) + '°';
+}
+function fmtVR(ms) {
+  if (Math.abs(ms) <= 0.5) return '→ level';
+  const up = ms > 0;
+  if (UNITS_SPEED === 'metric') return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 60)) + ' m/min';
+  return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 196.85)) + ' fpm';
+}
+
 // ── Map ───────────────────────────────────────────────────────────────────────
 const map = L.map('map', {zoomControl:true}).setView([HOME_LAT, HOME_LON], 11);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -188,37 +279,83 @@ const radiusCircle = L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'
 map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 
 const markers = {};
-let historyData = [];
+let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false;
 let ghostMarker = null;
 
-function planeIcon(heading, alert) {
-  const col = alert ? '#4f7cff' : '#f39c12';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
-    <g transform="rotate(${heading},15,15)">
-      <ellipse cx="15" cy="15" rx="2.5" ry="13" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.6)" stroke-width="1"/>
-      <path d="M15,11 L2,21 L13,18.5 L17,18.5 L28,21 Z" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"/>
-      <path d="M14,23.5 L8,29 L15,27 L22,29 L16,23.5 Z" fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"/>
-    </g></svg>`;
-  return L.divIcon({html:svg, className:'', iconSize:[30,30], iconAnchor:[15,15]});
+function aircraftType(model, category, callsign) {
+  // ADS-B category is authoritative when set (non-zero)
+  if (category === 8) return 'heli';
+  if (category === 6) return 'widebody'; // Heavy (>300k lbs) = widebody in practice
+  // Callsign hints for legacy/unknown-model entries
+  if ((!model || model === 'Unknown') && callsign) {
+    const cs = callsign.toUpperCase();
+    if (/^(RSCU|TIGR|HEMS|LIFEF|HELIAIR|POLAIR|NGAIR|CHC|PHG)/.test(cs)) return 'heli';
+    return 'jet';
+  }
+  if (!model || model === 'Unknown') return 'jet';
+  const m = model.toLowerCase();
+  if (/helicopt|eurocopter|sikorsky|robinson|airbus h|leonardo|bell \d|ec\d{3}|h130|h145|h160|aw\d{3}|r22|r44|r66|bo.?105|bk.?117|ka-\d|mi-\d/.test(m)) return 'heli';
+  if (/b74\d|b76\d|b77\d|b78\d|747|767|777|787|a33\d|a34\d|a35\d|a380|dc-10|md-11|dreamliner/.test(m)) return 'widebody';
+  if (/\bf-\d|f\/a-|eurofighter|typhoon|gripen|rafale|hornet|b-52|c-17|c-130|hercules|harrier|su-\d|mig-\d|pc.?21|p-8a|poseidon|globemaster|wedgetail/.test(m)) return 'military';
+  if (/cessna|piper|beechcraft|cirrus sr|diamond da|tecnam|c172|c152|c182|pa-\d|da2\d|da4\d|sr2\d|tbm |pc-12|pc-6|robin/.test(m)) return 'light';
+  return 'jet';
 }
 
-function ghostIcon() {
+function _planeSVG(col, type) {
+  const fb = `fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.6)" stroke-width="1"`;
+  const fs = `fill="${col}" fill-opacity=".9" stroke="rgba(255,255,255,.5)" stroke-width=".5"`;
+  const fh = `fill="${col}" fill-opacity=".9"`;
+  switch (type) {
+    case 'widebody': return `
+      <ellipse cx="15" cy="14" rx="3" ry="12" ${fb}/>
+      <path d="M15,9 L1,21 L13,17.5 L17,17.5 L29,21 Z" ${fs}/>
+      <path d="M13,24 L5,28.5 L15,27 L25,28.5 L17,24 Z" ${fs}/>`;
+    case 'heli': return `
+      <rect x="0" y="9.5" width="30" height="3" rx="1.5" fill="${col}" fill-opacity=".9" transform="rotate(45 15 11)"/>
+      <rect x="0" y="9.5" width="30" height="3" rx="1.5" fill="${col}" fill-opacity=".9" transform="rotate(-45 15 11)"/>
+      <ellipse cx="15" cy="14" rx="3" ry="10" ${fh}/>
+      <rect x="13.5" y="22" width="3" height="5" fill="${col}"/>
+      <rect x="11" y="26.5" width="8" height="2" rx="1" fill="${col}" fill-opacity=".85"/>
+      <rect x="12.5" y="9" width="5" height="4" rx="1" fill="${col}"/>`;
+    case 'light': return `
+      <ellipse cx="15" cy="17" rx="2.2" ry="8.5" ${fb}/>
+      <ellipse cx="15" cy="7" rx="5.5" ry="1.5" fill="${col}" fill-opacity=".8"/>
+      <path d="M13,13.5 L5,15 L5,17.5 L13,17 L17,17 L25,17.5 L25,15 L17,13.5 Z" ${fs}/>
+      <path d="M13,24 L9,27 L15,25.5 L21,27 L17,24 Z" ${fh}/>`;
+    case 'military': return `
+      <ellipse cx="15" cy="13" rx="1.8" ry="12" ${fb}/>
+      <path d="M15,5 L3,26 L14,21 L16,21 L27,26 Z" ${fs}/>
+      <path d="M13,22 L10.5,28.5 L14.5,26 Z" fill="${col}" fill-opacity=".85"/>
+      <path d="M17,22 L19.5,28.5 L15.5,26 Z" fill="${col}" fill-opacity=".85"/>`;
+    default: return `
+      <ellipse cx="15" cy="14" rx="2" ry="12" ${fb}/>
+      <path d="M15,10 L4,20 L13,17.5 L17,17.5 L26,20 Z" ${fs}/>
+      <path d="M13,24.5 L8,28 L15,26.5 L22,28 L17,24.5 Z" ${fs}/>`;
+  }
+}
+
+function planeIcon(heading, alert, type) {
+  const col = alert ? '#4f7cff' : '#f39c12';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+    <g transform="rotate(${heading||0},15,15)">${_planeSVG(col, type||'jet')}</g></svg>`;
+  return L.divIcon({html:svg, className:'', iconSize:[30,30], iconAnchor:[15,15], popupAnchor:[0,-18]});
+}
+
+function ghostIcon(heading, type) {
   const svg = `<svg class="ghost-plane" xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 30 30">
-    <ellipse cx="15" cy="15" rx="2.5" ry="13" fill="white" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
-    <path d="M15,11 L2,21 L13,18.5 L17,18.5 L28,21 Z" fill="white" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>
-    <path d="M14,23.5 L8,29 L15,27 L22,29 L16,23.5 Z" fill="white" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>
+    <g transform="rotate(${heading||0},15,15)">${_planeSVG('white', type||'jet')}</g>
   </svg>`;
-  return L.divIcon({html:svg, className:'', iconSize:[36,36], iconAnchor:[18,18]});
+  return L.divIcon({html:svg, className:'', iconSize:[36,36], iconAnchor:[18,18], popupAnchor:[0,-21]});
 }
 
 function showHistoryPin(r) {
   if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
-  ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon()})
+  ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, aircraftType(r.model, r.category, r.callsign))})
     .addTo(map)
     .bindPopup(`<b>✈ ${r.callsign}</b><br><span style="color:#7b7f9e;font-size:11px">${r.model || 'Unknown'}</span>`)
     .openPopup()
     .on('popupclose', () => { map.removeLayer(ghostMarker); ghostMarker = null; });
-  map.flyTo([r.lat, r.lon], 12);
+  map.flyTo([r.lat, r.lon], Math.max(map.getZoom(), 12));
 }
 
 function updateMap(aircraft) {
@@ -226,13 +363,12 @@ function updateMap(aircraft) {
   for (const ac of aircraft) {
     seen.add(ac.icao24);
     const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
-    const icon = planeIcon(ac.heading, isAlert);
+    const icon = planeIcon(ac.heading, isAlert, aircraftType(ac.model, ac.category, ac.callsign));
     const vr = ac.vertical_rate;
-    const vrStr = vr > .5 ? `↑${(Math.abs(vr)*196.85).toFixed(0)} fpm`
-                : vr < -.5 ? `↓${(Math.abs(vr)*196.85).toFixed(0)} fpm` : 'level';
+    const vrStr = fmtVR(vr);
     const popup = `<b>${ac.callsign}</b>${ac.registration ? ' ('+ac.registration+')' : ''}<br>
       ${ac.model || 'Unknown'}<br>
-      ${(ac.alt_ft||0).toLocaleString()} ft &bull; ${ac.speed_kts} kts &bull; ${vrStr}<br>
+      ${fmtAlt(ac.alt_ft||0)} &bull; ${fmtSpeed(ac.speed_kts)} &bull; ${vrStr}<br>
       ${ac.dist_km} km away &bull; ${ac.origin_country}`;
     if (markers[ac.icao24])
       markers[ac.icao24].setLatLng([ac.lat,ac.lon]).setIcon(icon).setPopupContent(popup);
@@ -246,93 +382,176 @@ function updateMap(aircraft) {
 
 // ── Sidebar rendering ─────────────────────────────────────────────────────────
 function renderNearby(aircraft) {
-  const el = document.getElementById('pane-aircraft');
-  if (!aircraft.length) { el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+ALT_THR.toLocaleString()+' ft</small></div>'; return; }
-  el.innerHTML = aircraft.map(ac => {
-    const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
-    const vr = ac.vertical_rate;
-    const vrStr = vr > .5 ? `↑ ${(Math.abs(vr)*196.85).toFixed(0)} fpm`
-                : vr < -.5 ? `↓ ${(Math.abs(vr)*196.85).toFixed(0)} fpm` : '→ level';
-    return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
-      ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" loading="lazy" onerror="this.style.display='none'">` : ''}
-      <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
-      <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
-      <div class="pc-grid">
-        <div class="pstat"><div class="pstat-val">${(ac.alt_ft||0).toLocaleString()}</div><div class="pstat-lbl">Feet</div></div>
-        <div class="pstat"><div class="pstat-val">${ac.speed_kts}</div><div class="pstat-lbl">Knots</div></div>
-        <div class="pstat"><div class="pstat-val" style="font-size:11px">${vrStr}</div><div class="pstat-lbl">V/S</div></div>
-      </div>
-    </div>`;
-  }).join('');
+  _liveAircraft = aircraft;
+  if (_aircraftTab === 'live') _drawAircraft();
 }
 
-function renderISS(passes) {
-  const el = document.getElementById('pane-iss');
-  if (!passes.length) { el.innerHTML = '<div class="empty">No upcoming ISS passes found<br><small>Check back later</small></div>'; return; }
-  el.innerHTML = passes.map(p => {
-    const dt  = new Date(p.pass_time * 1000);
-    const timeStr = fmtTime(dt);
-    const dateStr = fmtDate(dt);
-    const soon = p.mins_away < 30;
-    const countdownStr = p.mins_away < 60 ? p.mins_away+' min' : Math.round(p.mins_away/60)+'h';
-    const durationStr  = p.duration >= 60
-      ? Math.floor(p.duration/60)+'m '+(p.duration%60)+'s'
-      : p.duration+'s';
-    return `<div class="iss-card">
-      <div class="iss-head">
-        <span class="iss-title">🛰️ ISS Flyover &mdash; ${dateStr}</span>
-        ${soon ? `<span class="iss-soon">In ${countdownStr}</span>` : ''}
-      </div>
-      <div class="iss-grid">
-        <div class="pstat"><div class="pstat-val">${timeStr}</div><div class="pstat-lbl">Time</div></div>
-        <div class="pstat"><div class="pstat-val">${countdownStr}</div><div class="pstat-lbl">From now</div></div>
-        <div class="pstat"><div class="pstat-val">${durationStr}</div><div class="pstat-lbl">Duration</div></div>
-        <div class="pstat"><div class="pstat-val">${p.start_az || '—'}</div><div class="pstat-lbl">Appears</div></div>
-        <div class="pstat"><div class="pstat-val">${p.max_el != null ? p.max_el+'°' : '—'}</div><div class="pstat-lbl">Max height</div></div>
-        <div class="pstat"><div class="pstat-val">${p.end_az || '—'}</div><div class="pstat-lbl">Disappears</div></div>
-      </div>
+function _drawAircraft() {
+  const el = document.getElementById('pane-aircraft');
+  const subEl = document.getElementById('sidebar-sub-tabs');
+
+  const tabsHtml = [['live','✈ Live'],['history','📋 History']].map(([id,lbl]) =>
+    `<div class="sub-tab${_aircraftTab===id?' active':''}" onclick="_aircraftTab='${id}';_histSearch='';_drawAircraft()">${lbl}</div>`
+  ).join('');
+  if (el.classList.contains('active')) { subEl.innerHTML = tabsHtml; subEl.style.display = ''; }
+
+  if (_aircraftTab === 'live') {
+    if (!_liveAircraft.length) {
+      el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+fmtAlt(ALT_THR)+'</small></div>';
+      return;
+    }
+    el.innerHTML = _liveAircraft.map(ac => {
+      const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
+      const vr = ac.vertical_rate;
+      const vrStr = fmtVR(vr);
+      return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
+        ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" loading="lazy" onerror="this.style.display='none'">` : ''}
+        <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
+        <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
+        <div class="pc-grid">
+          <div class="pstat"><div class="pstat-val">${fmtAlt(ac.alt_ft||0)}</div><div class="pstat-lbl">${UNITS_SPEED==='metric'?'Metres':'Feet'}</div></div>
+          <div class="pstat"><div class="pstat-val">${fmtSpeed(ac.speed_kts)}</div><div class="pstat-lbl">${UNITS_SPEED==='metric'?'km/h':'Knots'}</div></div>
+          <div class="pstat"><div class="pstat-val" style="font-size:11px">${vrStr}</div><div class="pstat-lbl">V/S</div></div>
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    const wasSearch = document.activeElement && document.activeElement.classList.contains('hist-search');
+    const cursor = wasSearch ? document.activeElement.selectionStart : null;
+
+    const q = _histSearch.toLowerCase();
+    const filtered = historyData
+      .map((r, i) => ({r, i}))
+      .filter(({r}) => !_histFavOnly || r.favourited)
+      .filter(({r}) => !q ||
+        (r.callsign||'').toLowerCase().includes(q) ||
+        (r.model||'').toLowerCase().includes(q) ||
+        (r.registration||'').toLowerCase().includes(q) ||
+        (r.origin_country||'').toLowerCase().includes(q)
+      );
+
+    let html = `<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <input class="hist-search astro-search" type="text" placeholder="Search history…" value="${_histSearch.replace(/"/g,'&quot;')}" oninput="_histSearch=this.value;_drawAircraft()" style="flex:1;min-width:0">
+      <button class="fav-filter-btn${_histFavOnly?' active':''}" onclick="_histFavOnly=!_histFavOnly;_drawAircraft()" title="${_histFavOnly?'Show all':'Show favourites only'}">⭐</button>
     </div>`;
+
+    if (!filtered.length) {
+      html += `<div class="empty">${q ? 'No matches' : 'No alerts yet<br><small>Alerts appear here once triggered</small>'}</div>`;
+    } else {
+      html += filtered.map(({r, i}) => {
+        const dt = fmtDateTime(new Date(r.last_seen * 1000));
+        const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
+        const thumb = r.thumb_url
+          ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" loading="lazy" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
+          : '';
+        const locLine = (r.lat && r.lon)
+          ? `<div class="hc-loc-row"><a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a></div>`
+          : '';
+        return `<div class="hist-card" data-idx="${i}">
+          <div class="hc-top">
+            ${thumb}
+            <div class="hc-body">
+              <div class="hc-row">
+                <span class="hc-call">✈ ${r.callsign}</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span class="hc-time">${dt}</span>
+                  <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav('${r.icao24}',${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
+                </span>
+              </div>
+              <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
+              <div class="hc-tags">
+                ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
+                <span class="hc-tag">↕ ${fmtAlt(r.min_alt_ft||0)}</span>
+                <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
+              </div>
+            </div>
+          </div>
+          ${locLine}
+        </div>`;
+      }).join('');
+    }
+    el.innerHTML = html;
+    if (wasSearch || _histSearch) {
+      const inp = el.querySelector('.hist-search');
+      if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
+    }
+  }
+}
+
+const SAT_COLORS = {ISS:'#1abc9c', Hubble:'#9b59b6', Tiangong:'#e74c3c'};
+const SAT_NAMES  = ['ISS', 'Hubble', 'Tiangong'];
+let _satPasses = [], _satSubTab = 'ISS';
+
+function renderSatellites(passes) { _satPasses = passes; _drawSatellites(); }
+
+function _drawSatellites() {
+  const el = document.getElementById('pane-satellites');
+  const subEl = document.getElementById('sidebar-sub-tabs');
+  const col = SAT_COLORS[_satSubTab] || '#7b7f9e';
+  const filtered = _satPasses.filter(p => (p.sat_name||'ISS') === _satSubTab);
+
+  const tabsHtml = SAT_NAMES.map(n => {
+    const count = _satPasses.filter(p=>(p.sat_name||'ISS')===n).length;
+    return `<div class="sub-tab${_satSubTab===n?' active':''}" onclick="_satSubTab='${n}';_drawSatellites()">${n}${count?' ('+count+')':''}</div>`;
   }).join('');
+
+  if (el.classList.contains('active')) { subEl.innerHTML = tabsHtml; subEl.style.display = ''; }
+
+  let html = ``;
+
+  if (!filtered.length) {
+    html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>Fetches every 2h — check n2yo key in Settings</small></div>`;
+  } else {
+    html += filtered.map(p => {
+      const dt = new Date(p.pass_time * 1000);
+      const soon = p.mins_away < 30;
+      const cd = p.mins_away < 60 ? p.mins_away+' min' : Math.floor(p.mins_away/60)+'h '+(p.mins_away%60)+'m';
+      const dur = p.duration >= 60 ? Math.floor(p.duration/60)+'m '+(p.duration%60)+'s' : p.duration+'s';
+      return `<div class="iss-card" style="border-color:${col}55">
+        <div class="iss-head">
+          <span class="iss-title" style="color:${col}">${_satSubTab} — ${fmtDate(dt)}</span>
+          ${soon ? `<span class="iss-soon" style="background:${col};color:#000">In ${cd}</span>` : ''}
+        </div>
+        <div class="iss-grid">
+          <div class="pstat"><div class="pstat-val">${fmtTime(dt)}</div><div class="pstat-lbl">Time</div></div>
+          <div class="pstat"><div class="pstat-val">${cd}</div><div class="pstat-lbl">From now</div></div>
+          <div class="pstat"><div class="pstat-val">${dur}</div><div class="pstat-lbl">Duration</div></div>
+          <div class="pstat"><div class="pstat-val">${p.start_az||'—'}</div><div class="pstat-lbl">Appears</div></div>
+          <div class="pstat"><div class="pstat-val">${p.max_el!=null?p.max_el+'°':'—'}</div><div class="pstat-lbl">Max height</div></div>
+          <div class="pstat"><div class="pstat-val">${p.end_az||'—'}</div><div class="pstat-lbl">Disappears</div></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML = html;
 }
 
 function renderHistory(rows) {
   historyData = rows;
-  const el = document.getElementById('pane-history');
-  if (!rows.length) { el.innerHTML = '<div class="empty">No alerts yet<br><small>Alerts appear here once triggered</small></div>'; return; }
-  el.innerHTML = rows.map((r, i) => {
-    const dt = fmtDateTime(new Date(r.last_seen * 1000));
-    const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
-    const thumb = r.thumb_url
-      ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" loading="lazy" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
-      : '';
-    const locLine = (r.lat && r.lon)
-      ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
-      : '';
-    return `<div class="hist-card" data-idx="${i}">
-      <div class="hc-top">
-        ${thumb}
-        <div class="hc-body">
-          <div class="hc-row">
-            <span class="hc-call">✈ ${r.callsign}</span>
-            <span class="hc-time">${dt}</span>
-          </div>
-          <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
-          <div class="hc-tags">
-            ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
-            <span class="hc-tag">↕ ${(r.min_alt_ft||0).toLocaleString()} ft</span>
-            <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
-          </div>
-        </div>
-      </div>
-      ${locLine}
-    </div>`;
-  }).join('');
+  if (_aircraftTab === 'history') _drawAircraft();
 }
 
-function openLightbox(thumbUrl, photoUrl) {
+function toggleFav(icao24, idx) {
+  fetch('/api/history/favourite', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({icao24})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) { historyData[idx].favourited = d.favourited; _drawAircraft(); }
+  });
+}
+
+function openLightbox(thumbUrl, photoUrl, creditLabel) {
   document.getElementById('lb-img').src = thumbUrl;
   const credit = document.getElementById('lb-credit');
-  credit.innerHTML = photoUrl ? `<a href="${photoUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View on Planespotters.net ↗</a>` : '';
+  if (photoUrl) {
+    const label = creditLabel || (photoUrl.includes('wikipedia.org') ? 'View on Wikipedia' : 'View on Planespotters.net');
+    credit.innerHTML = `<a href="${photoUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${label} ↗</a>`;
+  } else {
+    credit.innerHTML = '';
+  }
   document.getElementById('lb').classList.add('open');
 }
 function closeLightbox() {
@@ -372,10 +591,10 @@ function renderWeather(cur, hourly, daily) {
   <div class="plane-card" style="border-left:3px solid ${astroCol}">
     <div class="pc-header"><span class="pc-call" style="font-size:20px">${wmoEmoji(cur.weather_code)} ${cur.description}</span></div>
     <div class="pc-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px">
-      <div class="pstat"><div class="pstat-val">${cur.temp}°C</div><div class="pstat-lbl">Temp</div></div>
-      <div class="pstat"><div class="pstat-val">${cur.feels_like}°C</div><div class="pstat-lbl">Feels like</div></div>
+      <div class="pstat"><div class="pstat-val">${fmtTemp(cur.temp)}</div><div class="pstat-lbl">Temp</div></div>
+      <div class="pstat"><div class="pstat-val">${fmtTemp(cur.feels_like)}</div><div class="pstat-lbl">Feels like</div></div>
       <div class="pstat"><div class="pstat-val">${cur.humidity}%</div><div class="pstat-lbl">Humidity</div></div>
-      <div class="pstat"><div class="pstat-val">${cur.wind_speed_kts}kt ${windDir(cur.wind_direction||0)}</div><div class="pstat-lbl">Wind</div></div>
+      <div class="pstat"><div class="pstat-val">${fmtSpeed(cur.wind_speed_kts)} ${windDir(cur.wind_direction||0)}</div><div class="pstat-lbl">Wind</div></div>
       <div class="pstat"><div class="pstat-val" style="color:${uvCol}">${cur.uv_index} ${uvLbl}</div><div class="pstat-lbl">UV Index</div></div>
       <div class="pstat"><div class="pstat-val">${cur.cloud_cover_pct}%</div><div class="pstat-lbl">Cloud cover</div></div>
     </div>
@@ -391,9 +610,9 @@ function renderWeather(cur, hourly, daily) {
     html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 6px;text-align:center;min-width:54px">
       <div style="font-size:10px;color:var(--muted)">${fmtHourStr(hTime)}</div>
       <div style="font-size:16px;margin:3px 0">${wmoEmoji(h.weather_code)}</div>
-      <div style="font-size:12px;font-weight:600">${h.temp}°</div>
+      <div style="font-size:12px;font-weight:600">${fmtTempBare(h.temp)}</div>
       <div style="font-size:10px;color:#4f7cff">${h.precip_prob||0}%</div>
-      <div style="font-size:10px;color:var(--muted)">${h.wind_kts}kt</div>
+      <div style="font-size:10px;color:var(--muted)">${fmtSpeed(h.wind_kts)}</div>
     </div>`;
   });
   html += `</div></div>`;
@@ -405,43 +624,321 @@ function renderWeather(cur, hourly, daily) {
         <span style="font-size:18px">${wmoEmoji(d.weather_code)}</span>
         <div><div class="hist-call">${day}</div><div class="hist-sub">${d.description}</div></div>
       </div>
-      <div class="hist-meta">${d.temp_min}° – ${d.temp_max}°C<br>💧${d.precip_prob||0}% · ☁ ${d.astronomy_score}</div>
+      <div class="hist-meta">${fmtTempBare(d.temp_min)} – ${fmtTemp(d.temp_max)}<br>💧${d.precip_prob||0}% · ☁ ${d.astronomy_score}</div>
     </div>`;
   });
   el.innerHTML = html;
 }
 
-function renderMoon(moon) {
-  const el = document.getElementById('pane-moon');
-  if (!moon || !moon.phase_name) { el.innerHTML = '<div class="empty">Moon data loading…</div>'; return; }
-  const nextFull = fmtDate(new Date(moon.next_full_moon * 1000));
-  const nextNew  = fmtDate(new Date(moon.next_new_moon  * 1000));
-  const pct = moon.illumination;
-  const r = 54, cx = 70, cy = 70;
-  const circumference = 2 * Math.PI * r;
-  const dash = (pct / 100) * circumference;
-  el.innerHTML = `
-  <div class="plane-card" style="text-align:center;padding:20px">
-    <div style="font-size:72px;line-height:1;margin-bottom:8px">${moon.phase_emoji}</div>
-    <div style="font-size:18px;font-weight:700;margin-bottom:4px">${moon.phase_name}</div>
-    <div style="color:var(--muted);font-size:13px;margin-bottom:16px">${moon.illumination}% illuminated · ${moon.age_days} days old</div>
-    <svg width="140" height="140" viewBox="0 0 140 140" style="margin:0 auto 16px;display:block">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="8"/>
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f39c12" stroke-width="8"
-        stroke-dasharray="${dash.toFixed(1)} ${circumference.toFixed(1)}"
-        stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
-      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
-        fill="var(--text)" font-size="18" font-weight="700">${pct}%</text>
-    </svg>
+// ── Astronomy tab ─────────────────────────────────────────────────────────────
+let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '', _astroTab = 'tonight';
+const _ETIER = {naked_eye:0, binoculars:1, telescope:2};
+const _EICON = {naked_eye:'👁', binoculars:'🔭', telescope:'⭐'};
+const _CONST = {And:'Andromeda',Aqr:'Aquarius',Aur:'Auriga',Cap:'Capricornus',Cas:'Cassiopeia',
+  Cet:'Cetus',CMa:'Canis Major',Cnc:'Cancer',Com:'Coma Berenices',CVn:'Canes Venatici',
+  Cyg:'Cygnus',Dra:'Draco',Gem:'Gemini',Her:'Hercules',Hya:'Hydra',Leo:'Leo',Lep:'Lepus',
+  Lyr:'Lyra',Mon:'Monoceros',Oph:'Ophiuchus',Ori:'Orion',Peg:'Pegasus',Per:'Perseus',
+  Psc:'Pisces',Pup:'Puppis',Sco:'Scorpius',Sct:'Scutum',Sge:'Sagitta',Sgr:'Sagittarius',
+  Ser:'Serpens',Tau:'Taurus',Tri:'Triangulum',UMa:'Ursa Major',Vir:'Virgo',Vul:'Vulpecula'};
+
+function fmtTs(ts) { return ts ? fmtTime(new Date(ts * 1000)) : '—'; }
+
+function renderAstronomy(astro) { _aData = astro; _drawAstro(); }
+
+function _drawAstro() {
+  const el = document.getElementById('pane-astronomy');
+  const subEl = document.getElementById('sidebar-sub-tabs');
+  const a = _aData || {};
+
+  // Capture focus state before clobbering DOM
+  const wasSearch = document.activeElement && document.activeElement.classList.contains('astro-search');
+  const cursor = wasSearch ? document.activeElement.selectionStart : null;
+
+  const TABS = [['tonight','🌃 Tonight'],['moon','🌙 Moon'],['planets','🪐 Planets'],['dso','🔭 DSOs'],['meteors','☄️ Meteors']];
+  const tabBarHtml = TABS.map(([id,lbl])=>
+    `<div class="sub-tab${_astroTab===id?' active':''}" onclick="_astroTab='${id}';_aSearch='';_drawAstro()">${lbl}</div>`
+  ).join('');
+
+  if (el.classList.contains('active')) { subEl.innerHTML = tabBarHtml; subEl.style.display = ''; }
+
+  let body = '';
+  if      (_astroTab === 'tonight') body = _astroTonight(a);
+  else if (_astroTab === 'planets') body = _astroPlanets(a);
+  else if (_astroTab === 'meteors') body = _astroMeteors(a);
+  else if (_astroTab === 'dso')     body = _astroDSO(a);
+  else if (_astroTab === 'moon')    body = _astroMoon(a.moon||{});
+
+  el.innerHTML = body;
+
+  // Restore focus to search bar after re-render
+  if (wasSearch || _aSearch) {
+    const inp = el.querySelector('.astro-search');
+    if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
+  }
+}
+
+function _searchBar(ph) {
+  return `<input class="astro-search" placeholder="${ph}" value="${_aSearch.replace(/"/g,'&quot;')}" oninput="_aSearch=this.value;_drawAstro()" style="margin-bottom:8px">`;
+}
+function _horizonBtn() {
+  return `<button class="a-btn a-horizon${_aHorizon?' active':''}" onclick="_aHorizon=!_aHorizon;_drawAstro()">↑ Horizon</button>`;
+}
+function _equipBtns() {
+  return [['👁 Naked eye',0],['🔭 Binoculars',1],['⭐ All',2]].map(([l,v])=>
+    `<button class="a-btn${_aEquip===v?' active':''}" onclick="_aEquip=${v};_drawAstro()">${l}</button>`
+  ).join('');
+}
+
+function _skyBar(tw) {
+  const t0 = tw.sunset, t1 = tw.sunrise;
+  if (!t0 || !t1 || t1 <= t0) return '';
+  const span = t1 - t0;
+  const pct = ts => Math.max(0, Math.min(100, (ts - t0) / span * 100)).toFixed(1);
+  const now = Math.floor(Date.now() / 1000);
+  const segs = [
+    [tw.sunset,           tw.civil_dusk,        '#2d5a9e'],
+    [tw.civil_dusk,       tw.nautical_dusk,      '#1a3870'],
+    [tw.nautical_dusk,    tw.astronomical_dusk,  '#0e2050'],
+    [tw.astronomical_dawn,tw.nautical_dawn,      '#0e2050'],
+    [tw.nautical_dawn,    tw.civil_dawn,         '#1a3870'],
+    [tw.civil_dawn,       tw.sunrise,            '#2d5a9e'],
+  ].filter(([a,b]) => a && b && b > a && a >= t0 && b <= t1);
+  const nowPct = now >= t0 && now <= t1 ? ((now-t0)/span*100).toFixed(1) : null;
+  return `<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px">
+    <span>🌅 ${fmtTs(t0)}</span><span>🌄 ${fmtTs(t1)}</span>
   </div>
-  <div class="plane-card">
-    <div class="pc-grid" style="grid-template-columns:1fr 1fr">
-      <div class="pstat"><div class="pstat-val" style="font-size:13px">${nextFull}</div><div class="pstat-lbl">Next full moon</div></div>
-      <div class="pstat"><div class="pstat-val" style="font-size:13px">${nextNew}</div><div class="pstat-lbl">Next new moon</div></div>
-      <div class="pstat"><div class="pstat-val">${moon.age_days}d</div><div class="pstat-lbl">Moon age</div></div>
-      <div class="pstat"><div class="pstat-val">${(moon.fraction * 100).toFixed(0)}%</div><div class="pstat-lbl">Cycle complete</div></div>
-    </div>
+  <div class="sky-bar">
+    ${segs.map(([a,b,c])=>`<div class="sky-seg" style="left:${pct(a)}%;width:${(pct(b)-pct(a)).toFixed(1)}%;background:${c}"></div>`).join('')}
+    ${nowPct!==null?`<div class="sky-now-line" style="left:${nowPct}%"></div>`:''}
+  </div>
+  <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:2px">
+    ${tw.astronomical_dusk?`<span>Dark ${fmtTs(tw.astronomical_dusk)}</span>`:'<span></span>'}
+    ${tw.astronomical_dawn?`<span>Dawn ${fmtTs(tw.astronomical_dawn)}</span>`:'<span></span>'}
   </div>`;
+}
+
+function _astroTonight(a) {
+  if (!a.ts) return `<div class="empty" style="padding:24px">Astronomy data loading…<br><small>Calculates on first startup — check back shortly.</small></div>`;
+  const tw = a.twilight || {}, mi = a.moon || {};
+  const illum = mi.illumination != null ? mi.illumination : 0;
+  const [ifLabel, ifCol] = illum < 25 ? ['Low','var(--green)'] : illum < 60 ? ['Moderate','var(--amber)'] : ['High','var(--red)'];
+  const bortleCol = a.bortle ? (a.bortle.class <= 4 ? 'var(--green)' : a.bortle.class <= 6 ? 'var(--amber)' : 'var(--red)') : 'var(--muted)';
+  const moonLine = mi.is_up ? `↑ ${mi.alt_deg}° · ${illum}% lit` : (mi.rise_ts ? `Rises ${fmtTs(mi.rise_ts)}` : 'Below horizon');
+  const darkStr = tw.astronomical_dusk && tw.astronomical_dawn ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}` : '—';
+  const bar = _skyBar(tw);
+
+  // "Visible tonight" = above horizon at some point during astronomical darkness [dusk → dawn].
+  // ephem next_setting(sun) returns tomorrow's dusk when called after dark, so detect that
+  // case (dawn < dusk) and subtract 24h to recover tonight's actual dark-start.
+  const dusk = tw.astronomical_dusk || tw.sunset;
+  const dawn = tw.astronomical_dawn || tw.sunrise;
+  const darkStart = (dusk && dawn && dawn < dusk) ? dusk - 86400 : dusk;
+  const _upAtDusk = p => p.is_up && (!darkStart || !p.set_ts || p.set_ts > darkStart);
+  const tonightPlanets = (a.planets||[])
+    .filter(p => _upAtDusk(p) || (dawn && p.rise_ts && p.rise_ts < dawn))
+    .sort((x,y) => (_upAtDusk(y) - _upAtDusk(x)) || (y.alt_deg - x.alt_deg));
+  const tonightDSO = (a.dso||[])
+    .filter(d => {
+      if ((_ETIER[d.equipment]||0) > _aEquip) return false;
+      if (d.transit_ts && darkStart && dawn)
+        return d.transit_ts > darkStart - 2 * 3600 && d.transit_ts < dawn;
+      return d.is_up;
+    })
+    .sort((x,y) => {
+      if (x.is_up !== y.is_up) return y.is_up - x.is_up;
+      if (x.is_up) return y.alt_deg - x.alt_deg;
+      return (x.transit_ts||0) - (y.transit_ts||0);
+    });
+  const activeMeteors = (a.meteor_showers||[]).filter(s => s.active);
+
+  const planetCards = tonightPlanets.map(p => {
+    const upAtDusk = _upAtDusk(p);
+    const upCol = upAtDusk ? 'var(--green)' : 'var(--muted)';
+    const altStr = upAtDusk ? `↑ ${p.alt_deg}° ${p.az_compass}` : (p.rise_ts ? `Rises ${fmtTs(p.rise_ts)}` : '↓');
+    const timeStr = upAtDusk
+      ? (p.set_ts ? `Sets ${fmtTs(p.set_ts)}${p.transit_ts?' · Transit '+fmtTs(p.transit_ts):''}` : (p.transit_ts?`Transit ${fmtTs(p.transit_ts)}`:''))
+      : (p.transit_ts ? `Transit ${fmtTs(p.transit_ts)}` : '');
+    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" loading="lazy" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card">
+      <div class="ac-with-img">${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">${p.name}</span><span class="ac-right" style="color:${upCol}">${altStr}</span></div>
+          <div class="ac-meta">mag ${p.magnitude} · ${p.constellation||''}${p.distance_au?' · '+p.distance_au+' AU':''}</div>
+          ${timeStr?`<div class="ac-time">${timeStr}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const dsoCards = tonightDSO.map(d => {
+    const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : (d.transit_ts ? `Transit ${fmtTs(d.transit_ts)}` : '—');
+    const moonW = d.moon_warning ? ' · 🌙 moon' : '';
+    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" loading="lazy" style="cursor:pointer" data-full="${d.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card">
+      <div class="ac-with-img">${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
+          <div class="ac-meta">${d.type} · ${_CONST[d.constellation]||d.constellation}</div>
+          <div class="ac-time">${upStr}${moonW}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const meteorCards = activeMeteors.map(s => {
+    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" loading="lazy" style="cursor:pointer" data-full="${s.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card">
+      <div class="ac-with-img">${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">${s.name}</span><span class="a-badge live">ACTIVE</span></div>
+          <div class="ac-meta">ZHR ${s.zhr} · Radiant: ${s.radiant} · ${s.parent}</div>
+          ${s.note?`<div class="ac-note">${s.note}</div>`:''}
+          <div class="ac-time">Peak: ${s.peak_date} · Active until ${s.active_end}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    ${bar ? `<div style="margin-bottom:10px">${bar}</div>` : ''}
+    <div class="at-grid">
+      <div class="at-metric">
+        <div class="at-metric-icon">🌑</div>
+        <div class="at-metric-val">${darkStr}</div>
+        <div class="at-metric-sub">Astronomical dark</div>
+      </div>
+      <div class="at-metric">
+        <div class="at-metric-icon">💡</div>
+        <div class="at-metric-val" style="color:${bortleCol}">${a.bortle ? 'Class '+a.bortle.class : '—'}</div>
+        <div class="at-metric-sub">${a.bortle ? a.bortle.description : 'Light pollution'}</div>
+      </div>
+      <div class="at-metric">
+        <div class="at-metric-icon">${mi.phase_emoji||'🌙'}</div>
+        <div class="at-metric-val" style="color:${ifCol}">${ifLabel} interference</div>
+        <div class="at-metric-sub">${moonLine}</div>
+      </div>
+      <div class="at-metric">
+        <div class="at-metric-icon">🌅</div>
+        <div class="at-metric-val">${tw.sunset?fmtTs(tw.sunset):'—'} – ${tw.sunrise?fmtTs(tw.sunrise):'—'}</div>
+        <div class="at-metric-sub">Sunset / Sunrise</div>
+      </div>
+    </div>
+    ${tonightPlanets.length ? `
+    <details class="astro-sec" open>
+      <summary>🪐 Planets tonight <span style="font-weight:400;font-size:10px;color:var(--muted)">(${tonightPlanets.length})</span></summary>
+      ${planetCards}
+    </details>` : ''}
+    <details class="astro-sec" open>
+      <summary>🔭 DSOs tonight <span style="font-weight:400;font-size:10px;color:var(--muted)">(${tonightDSO.length})</span></summary>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${_equipBtns()}</div>
+      ${tonightDSO.length ? dsoCards : `<div class="astro-empty">No DSOs visible with current equipment filter</div>`}
+    </details>
+    ${activeMeteors.length ? `
+    <details class="astro-sec" open>
+      <summary>☄️ Active meteor showers <span style="font-weight:400;font-size:10px;color:var(--muted)">(${activeMeteors.length})</span></summary>
+      ${meteorCards}
+    </details>` : ''}
+    ${!tonightPlanets.length && !tonightDSO.length && !activeMeteors.length ? `<div class="astro-empty" style="padding:24px">Nothing found — check back after dusk</div>` : ''}`;
+}
+
+function _astroPlanets(a) {
+  const q = _aSearch.toLowerCase();
+  const list = (a.planets||[]).filter(p =>
+    (!_aHorizon || p.is_up) &&
+    (!q || p.name.toLowerCase().includes(q) || (p.constellation||'').toLowerCase().includes(q))
+  ).sort((x,y) => y.alt_deg - x.alt_deg);
+
+  let html = `<div class="sub-filter">${_searchBar('Search planets…')}<div style="display:flex;gap:4px">${_horizonBtn()}</div></div>`;
+  if (!list.length) return html + `<div class="astro-empty">${_aHorizon?'No planets above horizon — disable Horizon filter to see all':'No planets match'}</div>`;
+  return html + list.map(p => {
+    const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
+    const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : '↓ below horizon';
+    const timeStr = p.is_up ? (p.set_ts?`Sets ${fmtTs(p.set_ts)}`:'') : (p.rise_ts?`Rises ${fmtTs(p.rise_ts)}`:'');
+    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" loading="lazy" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card">
+      <div class="ac-with-img">
+        ${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">${p.name}</span><span class="ac-right" style="color:${upCol}">${altStr}</span></div>
+          <div class="ac-meta">mag ${p.magnitude} · ${p.constellation||''}${p.distance_au?' · '+p.distance_au+' AU':''}</div>
+          ${timeStr?`<div class="ac-time">${timeStr}${p.transit_ts?' · Transit '+fmtTs(p.transit_ts):''}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _astroMeteors(a) {
+  const q = _aSearch.toLowerCase();
+  const list = (a.meteor_showers||[]).filter(s =>
+    !q || s.name.toLowerCase().includes(q) || (s.parent||'').toLowerCase().includes(q)
+  );
+  let html = `<div class="sub-filter">${_searchBar('Search showers…')}</div>`;
+  if (!list.length) return html + `<div class="astro-empty">No showers match</div>`;
+  return html + list.map(s => {
+    const badge = s.active ? `<span class="a-badge live">ACTIVE</span>` : `<span class="a-badge">${s.days_to_peak<0?'passed':'in '+s.days_to_peak+'d'}</span>`;
+    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" loading="lazy" style="cursor:pointer" data-full="${s.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card">
+      <div class="ac-with-img">
+        ${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">${s.name}</span>${badge}</div>
+          <div class="ac-meta">ZHR ${s.zhr} · Radiant: ${s.radiant} · ${s.parent}</div>
+          ${s.note?`<div class="ac-note">${s.note}</div>`:''}
+          <div class="ac-time">Peak: ${s.peak_date}${s.active?' · Active until '+s.active_end:''}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _astroDSO(a) {
+  const q = _aSearch.toLowerCase();
+  const list = (a.dso||[]).filter(d =>
+    (!_aHorizon || d.is_up) &&
+    (_ETIER[d.equipment]||0) <= _aEquip &&
+    (!q || d.label.toLowerCase().includes(q) || (d.type||'').toLowerCase().includes(q) || (d.constellation||'').toLowerCase().includes(q))
+  ).sort((x,y) => y.alt_deg - x.alt_deg);
+
+  let html = `<div class="sub-filter">${_searchBar('Search DSOs…')}<div style="display:flex;gap:4px;flex-wrap:wrap">${_equipBtns()}${_horizonBtn()}</div></div>`;
+  if (!list.length) return html + `<div class="astro-empty">${_aHorizon?'None above horizon with current filter':'No objects match'}</div>`;
+  return html + list.map(d => {
+    const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : '↓ below horizon';
+    const moonW = d.moon_warning ? ' · 🌙 moon' : '';
+    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" loading="lazy" style="cursor:pointer" data-full="${d.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card" style="${d.is_up?'':'opacity:.55'}">
+      <div class="ac-with-img">
+        ${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
+          <div class="ac-meta">${d.type} · ${_CONST[d.constellation]||d.constellation}</div>
+          <div class="ac-time">${upStr}${d.transit_ts?' · Transit '+fmtTs(d.transit_ts):''}${moonW}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _astroMoon(mi) {
+  const illum = mi.illumination != null ? mi.illumination : Math.round(mi.phase_pct||0);
+  const posStr = mi.is_up ? `↑ ${mi.alt_deg}° ${mi.az_compass}` : 'Below horizon';
+  const posCol = mi.is_up ? 'var(--green)' : 'var(--muted)';
+  return `
+    <div class="moon-hero">
+      <div class="moon-big-emoji">${mi.phase_emoji||'🌙'}</div>
+      <div class="moon-big-pct">${illum}%</div>
+      <div class="moon-big-name">${mi.phase_name||'—'}</div>
+      <div class="moon-big-sub">${mi.age_days||0} days old</div>
+      <div class="moon-big-pos" style="color:${posCol}">${posStr}</div>
+    </div>
+    <div class="moon-grid">
+      <div class="moon-stat"><div class="moon-stat-lbl">Moonrise</div><div class="moon-stat-val">${mi.rise_ts?fmtTs(mi.rise_ts):'—'}</div></div>
+      <div class="moon-stat"><div class="moon-stat-lbl">Moonset</div><div class="moon-stat-val">${mi.set_ts?fmtTs(mi.set_ts):'—'}</div></div>
+      <div class="moon-stat"><div class="moon-stat-lbl">Position</div><div class="moon-stat-val">${mi.alt_deg||'—'}° ${mi.az_compass||''}</div></div>
+      <div class="moon-stat"><div class="moon-stat-lbl">Illumination</div><div class="moon-stat-val">${illum}%</div></div>
+      ${mi.next_full_moon?`<div class="moon-stat"><div class="moon-stat-lbl">🌕 Full moon</div><div class="moon-stat-val">${fmtDate(new Date(mi.next_full_moon*1000))}</div></div>`:''}
+      ${mi.next_new_moon?`<div class="moon-stat"><div class="moon-stat-lbl">🌑 New moon</div><div class="moon-stat-val">${fmtDate(new Date(mi.next_new_moon*1000))}</div></div>`:''}
+    </div>`;
 }
 
 // ── Source status bar ─────────────────────────────────────────────────────────
@@ -456,10 +953,12 @@ function agoStr(ts) {
 function renderStatus(rows) {
   const map = {};
   (rows||[]).forEach(r => map[r.source] = r);
-  ['opensky','iss','weather'].forEach(src => {
-    const r = map[src];
+  ['opensky','iss','weather','astronomy'].forEach(src => {
+    const r    = map[src];
     const dot  = document.getElementById('sd-'+src);
     const lbl  = document.getElementById('st-'+src);
+    const item = dot ? dot.closest('.src-item') : null;
+    if (item) delete item.dataset.tip;
     if (!r) { dot.className='src-dot'; lbl.textContent='no data'; return; }
     dot.className = 'src-dot ' + r.status;
     if (r.status === 'ok') {
@@ -469,8 +968,10 @@ function renderStatus(rows) {
     } else if (r.status === 'backoff') {
       const m = (r.detail||'').match(/(\d+)\s*min/);
       lbl.textContent = m ? `retry ${m[1]}m` : 'rate limited';
+      if (item && r.detail) item.dataset.tip = r.detail;
     } else {
-      lbl.textContent = r.detail ? r.detail.slice(0,20) : 'error';
+      lbl.textContent = 'error';
+      if (item && r.detail) item.dataset.tip = r.detail;
     }
   });
 }
@@ -497,21 +998,26 @@ document.querySelectorAll('.tab').forEach(t => {
     document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById('pane-'+t.dataset.tab).classList.add('active');
+    const subEl = document.getElementById('sidebar-sub-tabs');
+    if (t.dataset.tab === 'aircraft') { _drawAircraft(); }
+    else if (t.dataset.tab === 'satellites') { _drawSatellites(); }
+    else if (t.dataset.tab === 'astronomy') { _drawAstro(); }
+    else { subEl.style.display = 'none'; subEl.innerHTML = ''; }
   });
 });
 
 // ── Single refresh function ───────────────────────────────────────────────────
 async function refresh() {
   try {
-    const [aircraft, iss, history, stats, cur, hourly, daily, moon, status] = await Promise.all([
+    const [aircraft, satellites, history, stats, cur, hourly, daily, astronomy, status] = await Promise.all([
       fetch('/api/live').then(r=>r.json()),
-      fetch('/api/iss').then(r=>r.json()),
+      fetch('/api/satellites').then(r=>r.json()),
       fetch('/api/history').then(r=>r.json()),
       fetch('/api/stats').then(r=>r.json()),
       fetch('/api/weather/current').then(r=>r.json()),
       fetch('/api/weather/hourly').then(r=>r.json()),
       fetch('/api/weather/daily').then(r=>r.json()),
-      fetch('/api/moon').then(r=>r.json()),
+      fetch('/api/astronomy').then(r=>r.json()),
       fetch('/api/status').then(r=>r.json()),
     ]);
     if (cur && cur.timezone) locationTZ = cur.timezone;
@@ -519,10 +1025,10 @@ async function refresh() {
     if (stats.time_format) TIME_24H = (stats.time_format === '24h');
     updateMap(aircraft);
     renderNearby(aircraft);
-    renderISS(iss);
+    renderSatellites(satellites);
     renderHistory(history);
     renderWeather(cur, hourly, daily);
-    renderMoon(moon);
+    renderAstronomy(astronomy);
     renderStatus(status);
     document.getElementById('s-live').textContent      = stats.live;
     document.getElementById('s-today').textContent     = stats.today;
@@ -532,7 +1038,7 @@ async function refresh() {
   } catch(e) { console.error('Refresh error:', e); }
 }
 
-document.getElementById('pane-history').addEventListener('click', e => {
+document.getElementById('pane-aircraft').addEventListener('click', e => {
   const card = e.target.closest('.hist-card');
   if (!card) return;
   const r = historyData[+card.dataset.idx];

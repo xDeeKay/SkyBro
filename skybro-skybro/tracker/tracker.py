@@ -9,6 +9,7 @@ import time, math, json, logging, sqlite3, requests, os, csv, io
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from weather import fetch_weather, process_weather, process_moon
+from astronomy import process_astronomy
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,10 +23,19 @@ DB_PATH   = DATA_DIR / "skybro.db"
 AC_DB     = DATA_DIR / "aircraft_db.json"
 CFG_PATH  = DATA_DIR / "config.json"
 
-WEATHER_INTERVAL = 900   # 15 minutes
-_weather_last    = 0.0
-MOON_INTERVAL    = 3600  # 1 hour
-_moon_last       = 0.0
+WEATHER_INTERVAL   = 900    # 15 minutes
+_weather_last      = 0.0
+MOON_INTERVAL      = 3600   # 1 hour
+_moon_last         = 0.0
+ASTRONOMY_INTERVAL = 3600   # 1 hour
+_astronomy_last    = 0.0
+
+# Satellites to track in addition to ISS (name, NORAD ID, send_alert)
+SATELLITES = [
+    ("ISS",      25544, True),
+    ("Hubble",   20580, False),
+    ("Tiangong", 48274, False),
+]
 
 # ── Default config ────────────────────────────────────────────────────────────
 DEFAULTS = {
@@ -84,7 +94,8 @@ def init_db():
             alt_ft REAL, speed_kts REAL, heading REAL,
             vertical_rate REAL, origin_country TEXT,
             model TEXT, registration TEXT,
-            dist_km REAL, updated INTEGER, photo_url TEXT
+            dist_km REAL, updated INTEGER, photo_url TEXT,
+            category INTEGER DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS seen_aircraft (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,10 +114,11 @@ def init_db():
             max_el INTEGER,
             end_az TEXT
         );
-        CREATE TABLE IF NOT EXISTS weather_current (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS weather_hourly  (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS weather_daily   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
-        CREATE TABLE IF NOT EXISTS moon_phase      (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS weather_current  (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS weather_hourly   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS weather_daily    (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS moon_phase       (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
+        CREATE TABLE IF NOT EXISTS astronomy_data   (id INTEGER PRIMARY KEY, ts INTEGER, data TEXT);
         CREATE TABLE IF NOT EXISTS source_status (
             source TEXT PRIMARY KEY,
             last_success INTEGER DEFAULT 0,
@@ -134,7 +146,12 @@ def migrate_db():
                        ("seen_aircraft",   "lon REAL"),
                        ("iss_alerts",      "start_az TEXT"),
                        ("iss_alerts",      "max_el INTEGER"),
-                       ("iss_alerts",      "end_az TEXT")]:
+                       ("iss_alerts",      "end_az TEXT"),
+                       ("iss_alerts",      "sat_name TEXT DEFAULT 'ISS'"),
+                       ("seen_aircraft",   "heading INTEGER DEFAULT 0"),
+                       ("live_aircraft",   "category INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "category INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "favourited INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -275,29 +292,82 @@ def get_cached_photo(icao24):
     except Exception:
         return ""
 
+def _wikipedia_type_photo(model):
+    """Return (photo_url, thumb_url) from Wikipedia for this aircraft type name.
+    photo_url is the Wikipedia article; thumb_url is a 300px image."""
+    if not model or model.lower() == "unknown" or len(model) < 5:
+        return "", ""
+    try:
+        r = requests.get(
+            "https://en.wikipedia.org/w/api.php",
+            params={
+                "action": "query",
+                "generator": "search",
+                "gsrsearch": model,
+                "gsrlimit": 1,
+                "prop": "pageimages",
+                "pithumbsize": 300,
+                "format": "json",
+            },
+            headers={"User-Agent": "SkyBro/1.0 (https://github.com/xDeeKay/SkyBro)"},
+            timeout=5,
+        )
+        r.raise_for_status()
+        pages = r.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            thumb = page.get("thumbnail", {}).get("source", "")
+            if thumb:
+                title = page.get("title", "")
+                wiki_url = f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                return wiki_url, thumb
+    except Exception as e:
+        log.debug(f"Wikipedia type photo ({model}): {e}")
+    return "", ""
+
 def fetch_aircraft_photo(icao24):
-    """Return (photo_url, thumb_url) from cache or Planespotters.net."""
+    """Return (photo_url, thumb_url) from cache, Planespotters (hex+reg), or Wikipedia type photo."""
     conn = sqlite3.connect(DB_PATH)
     row = conn.execute("SELECT photo_url, thumb_url FROM photo_cache WHERE icao24=?",
                        (icao24,)).fetchone()
     conn.close()
     if row is not None:
         return row[0] or "", row[1] or ""
+
+    headers = {"User-Agent": "SkyBro/1.0 (Raspberry Pi sky tracker; https://github.com/xDeeKay/SkyBro)"}
+    photo_url, thumb_url = "", ""
+    model_name, reg = lookup(icao24)
+
     try:
         r = requests.get(f"https://api.planespotters.net/pub/photos/hex/{icao24}",
-                         headers={"User-Agent": "SkyBro/1.0 (Raspberry Pi sky tracker; https://github.com/xDeeKay/SkyBro)"},
-                         timeout=5)
+                         headers=headers, timeout=5)
         r.raise_for_status()
         photos = r.json().get("photos", [])
         if photos:
             photo_url = photos[0].get("link", "")
             tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
             thumb_url = tl.get("src", "")
-        else:
-            photo_url, thumb_url = "", ""
     except Exception as e:
-        log.debug(f"Photo fetch {icao24}: {e}")
-        photo_url, thumb_url = "", ""
+        log.debug(f"Photo fetch {icao24} (hex): {e}")
+
+    if not thumb_url and reg:
+        try:
+            r = requests.get(f"https://api.planespotters.net/pub/photos/reg/{reg}",
+                             headers=headers, timeout=5)
+            r.raise_for_status()
+            photos = r.json().get("photos", [])
+            if photos:
+                photo_url = photos[0].get("link", "")
+                tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
+                thumb_url = tl.get("src", "")
+                log.debug(f"Photo fetch {icao24}: found via reg {reg}")
+        except Exception as e:
+            log.debug(f"Photo fetch {icao24} (reg {reg}): {e}")
+
+    if not thumb_url:
+        photo_url, thumb_url = _wikipedia_type_photo(model_name)
+        if thumb_url:
+            log.debug(f"Photo fetch {icao24}: Wikipedia type photo for {model_name}")
+
     conn = sqlite3.connect(DB_PATH)
     conn.execute("INSERT OR REPLACE INTO photo_cache (icao24,photo_url,thumb_url,fetched) VALUES (?,?,?,?)",
                  (icao24, photo_url, thumb_url, int(time.time())))
@@ -419,35 +489,38 @@ def process_states(states):
         heading   = round(s[10] or 0)
         vrate     = s[11] or 0
         country   = s[2] or ""
+        category  = int(s[17]) if len(s) > 17 and s[17] is not None else 0
         dist_km   = round(haversine(cfg["home_lat"], cfg["home_lon"], lat, lon), 2)
         model, reg = lookup(icao24)
         thumb_url  = photo_cache_map.get(icao24, "")
 
         c.execute("""INSERT OR REPLACE INTO live_aircraft VALUES
-            (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (icao24, callsign, lat, lon, alt_ft, speed_kts, heading,
-             vrate, country, model, reg, dist_km, now, thumb_url))
+             vrate, country, model, reg, dist_km, now, thumb_url, category))
 
         if (dist_km <= cfg["radius_km"] and
                 alt_ft <= cfg["alt_threshold_ft"] and
                 icao24 not in _alerted):
             _alerted.add(icao24)
             direction = bearing_to_compass(bearing_from_home(lat, lon))
-            vr_str = (f"↑ {abs(vrate*196.85):.0f} fpm" if vrate > 0.5
-                      else f"↓ {abs(vrate*196.85):.0f} fpm" if vrate < -0.5
+            _metric = cfg.get("units_speed", "aviation") == "metric"
+            vr_str = (f"↑ {abs(vrate*(60 if _metric else 196.85)):.0f} {'m/min' if _metric else 'fpm'}" if vrate > 0.5
+                      else f"↓ {abs(vrate*(60 if _metric else 196.85)):.0f} {'m/min' if _metric else 'fpm'}" if vrate < -0.5
                       else "level")
             alert_queue.append({
                 'icao24': icao24, 'callsign': callsign, 'lat': lat, 'lon': lon,
                 'alt_ft': alt_ft, 'speed_kts': speed_kts, 'vrate': vrate,
                 'vr_str': vr_str, 'dist_km': dist_km, 'country': country,
                 'model': model, 'reg': reg, 'direction': direction,
+                'heading': heading,
             })
             c.execute("""INSERT OR IGNORE INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
-                 lat,lon,origin_country,model,registration,alerted,photo_url)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?)""",
+                 lat,lon,origin_country,model,registration,alerted,photo_url,heading,category)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
-                 country, model, reg, thumb_url))
+                 country, model, reg, thumb_url, heading, category))
 
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()
@@ -484,15 +557,18 @@ def process_states(states):
         icao24    = alert['icao24']
         photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
         title = f"✈ {alert['callsign']} overhead"
+        _metric = cfg.get("units_speed", "aviation") == "metric"
+        alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
+        spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
         body  = (f"{alert['model']} • {alert['direction']} at {alert['dist_km']} km\n"
-                 f"{alert['alt_ft']:,} ft • {alert['speed_kts']} kts • {alert['vr_str']}")
-        notify(title, body, color=0xE67E22, thumb_url=photo_url, fields=[
+                 f"{alt_str} • {spd_str} • {alert['vr_str']}")
+        notify(title, body, color=0x4f7cff, thumb_url=photo_url, fields=[
             {"name": "Callsign",     "value": alert['callsign'],                            "inline": True},
             {"name": "Registration", "value": alert['reg'] or "N/A",                        "inline": True},
             {"name": "Model",        "value": alert['model'],                               "inline": True},
             {"name": "Distance",     "value": f"{alert['dist_km']} km {alert['direction']}", "inline": True},
-            {"name": "Altitude",     "value": f"{alert['alt_ft']:,} ft",                    "inline": True},
-            {"name": "Speed",        "value": f"{alert['speed_kts']} kts",                  "inline": True},
+            {"name": "Altitude",     "value": alt_str,                                      "inline": True},
+            {"name": "Speed",        "value": spd_str,                                      "inline": True},
             {"name": "V/S",          "value": alert['vr_str'],                              "inline": True},
             {"name": "Country",      "value": alert['country'],                             "inline": True},
         ])
@@ -502,46 +578,49 @@ def process_states(states):
         if icao not in live_icaos:
             _alerted.discard(icao)
 
-# ── ISS ───────────────────────────────────────────────────────────────────────
-_iss_last_check = 0.0
+# ── Satellites ────────────────────────────────────────────────────────────────
+_sat_last_check = 0.0
 
-def check_iss():
-    global _iss_last_check
-    if not cfg.get("iss_alerts_enabled", True):
+def check_satellites():
+    global _sat_last_check
+    if time.time() - _sat_last_check < cfg["iss_check_hours"] * 3600:
         return
-    if time.time() - _iss_last_check < cfg["iss_check_hours"] * 3600:
-        return
-    _iss_last_check = time.time()
+    _sat_last_check = time.time()
     api_key = cfg.get("n2yo_api_key", "")
     if not api_key:
-        log.info("ISS: n2yo API key not configured — skipping")
+        log.info("Satellites: n2yo API key not configured — skipping")
         update_source_status('iss', False, "No API key configured", 'no_key')
         return
-    try:
-        lat, lon = cfg["home_lat"], cfg["home_lon"]
-        url = (f"https://api.n2yo.com/rest/v1/satellite/visualpasses/"
-               f"25544/{lat}/{lon}/0/10/60/&apiKey={api_key}")
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-        passes = r.json().get("passes") or []
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        warn = cfg["iss_warn_mins"] * 60
-        c.execute("DELETE FROM iss_alerts WHERE alerted=0 AND pass_time > ?",
-                  (int(time.time()) + warn,))
-        for p in passes:
-            c.execute(
-                "INSERT OR IGNORE INTO iss_alerts "
-                "(pass_time,duration,alerted,start_az,max_el,end_az) VALUES (?,?,0,?,?,?)",
-                (p["startUTC"], p["duration"],
-                 p.get("startAzCompass"), p.get("maxEl"), p.get("endAzCompass"))
-            )
-        conn.commit(); conn.close()
-        update_source_status('iss', True)
-        log.info(f"ISS: {len(passes)} passes fetched from n2yo")
-    except Exception as e:
-        log.warning(f"ISS fetch error: {e}")
-        update_source_status('iss', False, str(e))
+    lat, lon = cfg["home_lat"], cfg["home_lon"]
+    warn = cfg["iss_warn_mins"] * 60
+    total = 0
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    for sat_name, norad_id, _ in SATELLITES:
+        try:
+            url = (f"https://api.n2yo.com/rest/v1/satellite/visualpasses/"
+                   f"{norad_id}/{lat}/{lon}/0/10/60/&apiKey={api_key}")
+            r = requests.get(url, timeout=15)
+            r.raise_for_status()
+            passes = r.json().get("passes") or []
+            c.execute("DELETE FROM iss_alerts WHERE alerted=0 AND sat_name=? AND pass_time > ?",
+                      (sat_name, int(time.time()) + warn))
+            for p in passes:
+                c.execute(
+                    "INSERT OR IGNORE INTO iss_alerts "
+                    "(pass_time,duration,alerted,start_az,max_el,end_az,sat_name) "
+                    "VALUES (?,?,0,?,?,?,?)",
+                    (p["startUTC"], p["duration"],
+                     p.get("startAzCompass"), p.get("maxEl"), p.get("endAzCompass"),
+                     sat_name)
+                )
+            total += len(passes)
+            log.info(f"Satellites: {sat_name} — {len(passes)} passes fetched")
+        except Exception as e:
+            log.warning(f"Satellites fetch error ({sat_name}): {e}")
+    conn.commit(); conn.close()
+    update_source_status('iss', True)
+    log.info(f"Satellites: {total} total passes across {len(SATELLITES)} objects")
 
 def dispatch_iss_alerts():
     if not cfg.get("iss_alerts_enabled", True):
@@ -554,7 +633,8 @@ def dispatch_iss_alerts():
     utc_off = json.loads(wr[0]).get("utc_offset_seconds", 0) if wr else 0
     local_tz = timezone(timedelta(seconds=utc_off))
     rows = c.execute(
-        "SELECT pass_time, duration FROM iss_alerts WHERE alerted=0 AND pass_time BETWEEN ? AND ?",
+        "SELECT pass_time, duration FROM iss_alerts "
+        "WHERE alerted=0 AND sat_name='ISS' AND pass_time BETWEEN ? AND ?",
         (now, now + warn)).fetchall()
     for pass_time, duration in rows:
         mins = (pass_time - now) // 60
@@ -596,6 +676,22 @@ def maybe_update_moon():
     process_moon(conn)
     conn.close()
 
+# ── Astronomy ─────────────────────────────────────────────────────────────────
+def maybe_update_astronomy():
+    global _astronomy_last
+    if time.time() - _astronomy_last < ASTRONOMY_INTERVAL:
+        return
+    _astronomy_last = time.time()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        process_astronomy(cfg["home_lat"], cfg["home_lon"], conn)
+        update_source_status('astronomy', True)
+    except Exception as e:
+        log.error(f"Astronomy error: {e}", exc_info=True)
+        update_source_status('astronomy', False, str(e))
+    finally:
+        conn.close()
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -614,10 +710,10 @@ def main():
             log.error(f"Aircraft error: {e}", exc_info=True)
             update_source_status('opensky', False, str(e))
         try:
-            check_iss()
+            check_satellites()
             dispatch_iss_alerts()
         except Exception as e:
-            log.error(f"ISS error: {e}", exc_info=True)
+            log.error(f"Satellites error: {e}", exc_info=True)
             update_source_status('iss', False, str(e))
         try:
             maybe_update_weather()
@@ -628,6 +724,10 @@ def main():
             maybe_update_moon()
         except Exception as e:
             log.error(f"Moon error: {e}", exc_info=True)
+        try:
+            maybe_update_astronomy()
+        except Exception as e:
+            log.error(f"Astronomy error: {e}", exc_info=True)
         time.sleep(cfg["poll_interval"])
 
 if __name__ == "__main__":

@@ -51,6 +51,8 @@ input:checked+.slider:before{transform:translateX(18px)}
 .toast.success{background:var(--green);color:#000;opacity:1}
 .toast.error{background:var(--red);color:#fff;opacity:1}
 .hint{font-size:11px;color:var(--muted);margin-top:4px}
+select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
+select.inline-select:focus{border-color:var(--accent)}
 /* Map modal */
 .modal-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
 .modal-backdrop.open{display:flex}
@@ -113,8 +115,8 @@ input:checked+.slider:before{transform:translateX(18px)}
 
   <!-- Display Time -->
   <div class="card">
-    <div class="card-title">🕐 Display Time</div>
-    <div class="card-desc">Control how times appear across the dashboard.</div>
+    <div class="card-title">🖥️ Display</div>
+    <div class="card-desc">Control how times and units appear across the dashboard.</div>
     <div class="toggle-row">
       <div><div class="toggle-label">Use location time</div><div class="toggle-sub">Show times in the timezone of your set location, not this device's local time</div></div>
       <label class="toggle"><input type="checkbox" id="use_location_time" {% if cfg.use_location_time %}checked{% endif %}><span class="slider"></span></label>
@@ -122,6 +124,20 @@ input:checked+.slider:before{transform:translateX(18px)}
     <div class="toggle-row">
       <div><div class="toggle-label">24-hour clock</div><div class="toggle-sub">Display times as 14:30 instead of 2:30 PM</div></div>
       <label class="toggle"><input type="checkbox" id="time_format_24h" {% if cfg.time_format == '24h' %}checked{% endif %}><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Units for altitude, speed, and vertical rate across the dashboard and alerts</div></div>
+      <select id="units_speed" class="inline-select">
+        <option value="aviation" {% if cfg.units_speed == 'aviation' %}selected{% endif %}>Aviation (ft · kts)</option>
+        <option value="metric" {% if cfg.units_speed == 'metric' %}selected{% endif %}>Metric (m · km/h)</option>
+      </select>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Temperature</div><div class="toggle-sub">Units for temperature in weather forecasts</div></div>
+      <select id="units_temp" class="inline-select">
+        <option value="imperial" {% if cfg.units_temp == 'imperial' %}selected{% endif %}>Fahrenheit (°F)</option>
+        <option value="metric" {% if cfg.units_temp == 'metric' %}selected{% endif %}>Celsius (°C)</option>
+      </select>
     </div>
   </div>
 
@@ -239,7 +255,7 @@ async function save() {
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
    'iss_check_hours','iss_warn_mins','pushover_token','pushover_user',
    'discord_webhook','opensky_client_id','opensky_client_secret','n2yo_api_key',
-   'alerts_enabled','iss_alerts_enabled','use_location_time'].forEach(k => payload[k] = getVal(k));
+   'alerts_enabled','iss_alerts_enabled','use_location_time','units_speed','units_temp'].forEach(k => payload[k] = getVal(k));
   payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
   try {
     const r = await fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});

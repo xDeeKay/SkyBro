@@ -23,6 +23,7 @@ DEFAULTS = {
     "n2yo_api_key": "",
     "alerts_enabled": True, "iss_alerts_enabled": True,
     "use_location_time": False, "time_format": "12h",
+    "units_speed": "aviation", "units_temp": "imperial",
 }
 
 # Fields the UI is allowed to read/write
@@ -71,17 +72,20 @@ def api_live():
     except Exception:
         return jsonify([])
 
-@app.route("/api/iss")
-def api_iss():
+@app.route("/api/satellites")
+@app.route("/api/iss")  # keep as alias
+def api_satellites():
     try:
         now  = int(time.time())
         rows = db().execute(
-            "SELECT *, (pass_time - ?) as mins_away FROM iss_alerts WHERE pass_time > ? ORDER BY pass_time ASC LIMIT 6",
+            "SELECT *, (pass_time - ?) as mins_away FROM iss_alerts "
+            "WHERE pass_time > ? ORDER BY pass_time ASC LIMIT 20",
             (now, now)).fetchall()
         result = []
         for r in rows:
             d = dict(r)
             d["mins_away"] = d["mins_away"] // 60
+            d["sat_name"]  = d.get("sat_name") or "ISS"
             result.append(d)
         return jsonify(result)
     except Exception:
@@ -91,9 +95,11 @@ def api_iss():
 def api_history():
     try:
         rows = db().execute("""
-            SELECT sa.callsign, sa.model, sa.registration, sa.origin_country,
+            SELECT sa.icao24, sa.callsign, sa.model, sa.registration, sa.origin_country,
                    sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
-                   sa.lat, sa.lon,
+                   sa.lat, sa.lon, COALESCE(sa.heading, 0) AS heading,
+                   COALESCE(sa.category, 0) AS category,
+                   COALESCE(sa.favourited, 0) AS favourited,
                    COALESCE(pc.thumb_url, sa.photo_url) AS thumb_url,
                    pc.photo_url AS full_photo_url
             FROM seen_aircraft sa
@@ -105,12 +111,36 @@ def api_history():
     except Exception:
         return jsonify([])
 
+@app.route("/api/history/favourite", methods=["POST"])
+def api_history_favourite():
+    data = request.get_json(force=True)
+    icao24 = (data or {}).get("icao24", "").strip().lower()
+    if not icao24:
+        abort(400)
+    try:
+        conn = db()
+        row = conn.execute("SELECT COALESCE(favourited,0) FROM seen_aircraft WHERE icao24=?", (icao24,)).fetchone()
+        if not row:
+            abort(404)
+        new_val = 0 if row[0] else 1
+        conn.execute("UPDATE seen_aircraft SET favourited=? WHERE icao24=?", (new_val, icao24))
+        conn.commit()
+        return jsonify({"ok": True, "favourited": new_val})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @app.route("/api/stats")
 def api_stats():
     try:
         conn = db()
         now  = int(time.time())
-        today_start = int(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        try:
+            row = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
+            utc_offset = json.loads(row["data"]).get("utc_offset_seconds", 0) if row else 0
+        except Exception:
+            utc_offset = 0
+        local_now   = now + utc_offset
+        today_start = (local_now - local_now % 86400) - utc_offset
         live    = conn.execute("SELECT COUNT(*) FROM live_aircraft").fetchone()[0]
         today   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen >= ?", (today_start,)).fetchone()[0]
         total   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
@@ -207,6 +237,14 @@ def api_weather_daily():
 def api_moon():
     try:
         row = db().execute("SELECT data FROM moon_phase WHERE id=1").fetchone()
+        return jsonify(json.loads(row["data"]) if row else {})
+    except Exception:
+        return jsonify({})
+
+@app.route("/api/astronomy")
+def api_astronomy():
+    try:
+        row = db().execute("SELECT data FROM astronomy_data WHERE id=1").fetchone()
         return jsonify(json.loads(row["data"]) if row else {})
     except Exception:
         return jsonify({})
