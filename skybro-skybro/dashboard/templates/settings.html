@@ -128,7 +128,7 @@ select.inline-select:focus{border-color:var(--accent)}
     <div class="toggle-row">
       <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Units for altitude, speed, and vertical rate across the dashboard and alerts</div></div>
       <select id="units_speed" class="inline-select">
-        <option value="imperial" {% if cfg.units_speed == 'imperial' %}selected{% endif %}>Aviation (ft · kts)</option>
+        <option value="aviation" {% if cfg.units_speed == 'aviation' %}selected{% endif %}>Aviation (ft · kts)</option>
         <option value="metric" {% if cfg.units_speed == 'metric' %}selected{% endif %}>Metric (m · km/h)</option>
       </select>
     </div>
