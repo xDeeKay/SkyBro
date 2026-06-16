@@ -280,10 +280,12 @@ function _planeSVG(col, type) {
       <path d="M15,9 L1,20 L12,18 L18,18 L29,20 Z" ${fs}/>
       <path d="M12,23.5 L5,29 L15,27 L25,29 L18,23.5 Z" ${fs}/>`;
     case 'heli': return `
-      <rect x="1" y="9" width="28" height="2" rx="1" fill="${col}" fill-opacity=".85" transform="rotate(45 15 10)"/>
-      <rect x="1" y="9" width="28" height="2" rx="1" fill="${col}" fill-opacity=".85" transform="rotate(-45 15 10)"/>
-      <path d="M15,4 C17.5,4 18.5,8 18.5,13 C18.5,20 17,25 15,29 C13,25 11.5,20 11.5,13 C11.5,8 12.5,4 15,4 Z" ${fb}/>
-      <circle cx="15" cy="10" r="2" fill="${col}"/>`;
+      <rect x="0" y="8.5" width="30" height="5" rx="2.5" fill="${col}" fill-opacity=".9" transform="rotate(45 15 11)"/>
+      <rect x="0" y="8.5" width="30" height="5" rx="2.5" fill="${col}" fill-opacity=".9" transform="rotate(-45 15 11)"/>
+      <ellipse cx="15" cy="14" rx="10" ry="8" ${fh}/>
+      <rect x="13.5" y="22" width="3" height="5" fill="${col}"/>
+      <rect x="11" y="26.5" width="8" height="2" rx="1" fill="${col}" fill-opacity=".85"/>
+      <rect x="12.5" y="9" width="5" height="4" rx="1" fill="${col}"/>`;
     case 'light': return `
       <ellipse cx="15" cy="15" rx="2.2" ry="10" ${fb}/>
       <path d="M15,12 L3,16 L13,15.5 L17,15.5 L27,16 Z" ${fs}/>
