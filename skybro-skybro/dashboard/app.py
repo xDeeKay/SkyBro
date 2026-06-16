@@ -94,10 +94,11 @@ def api_satellites():
 def api_history():
     try:
         rows = db().execute("""
-            SELECT sa.callsign, sa.model, sa.registration, sa.origin_country,
+            SELECT sa.icao24, sa.callsign, sa.model, sa.registration, sa.origin_country,
                    sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
                    sa.lat, sa.lon, COALESCE(sa.heading, 0) AS heading,
                    COALESCE(sa.category, 0) AS category,
+                   COALESCE(sa.favourited, 0) AS favourited,
                    COALESCE(pc.thumb_url, sa.photo_url) AS thumb_url,
                    pc.photo_url AS full_photo_url
             FROM seen_aircraft sa
@@ -108,6 +109,24 @@ def api_history():
         return jsonify([dict(r) for r in rows])
     except Exception:
         return jsonify([])
+
+@app.route("/api/history/favourite", methods=["POST"])
+def api_history_favourite():
+    data = request.get_json(force=True)
+    icao24 = (data or {}).get("icao24", "").strip().lower()
+    if not icao24:
+        abort(400)
+    try:
+        conn = db()
+        row = conn.execute("SELECT COALESCE(favourited,0) FROM seen_aircraft WHERE icao24=?", (icao24,)).fetchone()
+        if not row:
+            abort(404)
+        new_val = 0 if row[0] else 1
+        conn.execute("UPDATE seen_aircraft SET favourited=? WHERE icao24=?", (new_val, icao24))
+        conn.commit()
+        return jsonify({"ok": True, "favourited": new_val})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/api/stats")
 def api_stats():

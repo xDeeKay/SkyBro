@@ -150,7 +150,8 @@ def migrate_db():
                        ("iss_alerts",      "sat_name TEXT DEFAULT 'ISS'"),
                        ("seen_aircraft",   "heading INTEGER DEFAULT 0"),
                        ("live_aircraft",   "category INTEGER DEFAULT 0"),
-                       ("seen_aircraft",   "category INTEGER DEFAULT 0")]:
+                       ("seen_aircraft",   "category INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "favourited INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
