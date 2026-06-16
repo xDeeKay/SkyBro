@@ -651,7 +651,7 @@ function _astroTonight(a) {
     .filter(d => {
       if ((_ETIER[d.equipment]||0) > _aEquip) return false;
       if (d.transit_ts && dusk && dawn)
-        return d.transit_ts > dusk - 6 * 3600 && d.transit_ts < dawn + 6 * 3600;
+        return d.transit_ts > dusk - 2 * 3600 && d.transit_ts < dawn;
       return d.is_up;
     })
     .sort((x,y) => (y.is_up - x.is_up) || (y.alt_deg - x.alt_deg));
