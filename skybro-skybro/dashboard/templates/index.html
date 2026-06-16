@@ -216,7 +216,8 @@ const RADIUS     = {{ cfg.radius_km }};
 const ALT_THR    = {{ cfg.alt_threshold_ft }};
 let USE_LOC_TZ = {{ 'true' if cfg.use_location_time else 'false' }};
 let TIME_24H   = {{ 'true' if cfg.time_format == '24h' else 'false' }};
-const UNITS    = '{{ cfg.units }}';
+const UNITS_SPEED = '{{ cfg.units_speed }}';
+const UNITS_TEMP  = '{{ cfg.units_temp }}';
 let locationTZ = '';
 
 function _tz() { return (USE_LOC_TZ && locationTZ) ? locationTZ : undefined; }
@@ -244,25 +245,25 @@ function fmtHourStr(s) {
 }
 
 function fmtAlt(ft) {
-  if (UNITS === 'metric') return Math.round(ft * 0.3048).toLocaleString() + ' m';
+  if (UNITS_SPEED === 'metric') return Math.round(ft * 0.3048).toLocaleString() + ' m';
   return Math.round(ft).toLocaleString() + ' ft';
 }
 function fmtSpeed(kts) {
-  if (UNITS === 'metric') return Math.round(kts * 1.852) + ' km/h';
+  if (UNITS_SPEED === 'metric') return Math.round(kts * 1.852) + ' km/h';
   return kts + ' kts';
 }
 function fmtTemp(c) {
-  if (UNITS === 'metric') return c + '°C';
+  if (UNITS_TEMP === 'metric') return c + '°C';
   return ((c * 9/5) + 32).toFixed(1) + '°F';
 }
 function fmtTempBare(c) {
-  if (UNITS === 'metric') return c + '°';
+  if (UNITS_TEMP === 'metric') return c + '°';
   return Math.round(c * 9/5 + 32) + '°';
 }
 function fmtVR(ms) {
   if (Math.abs(ms) <= 0.5) return '→ level';
   const up = ms > 0;
-  if (UNITS === 'metric') return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 60)) + ' m/min';
+  if (UNITS_SPEED === 'metric') return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 60)) + ' m/min';
   return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 196.85)) + ' fpm';
 }
 
@@ -408,8 +409,8 @@ function _drawAircraft() {
         <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
         <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
         <div class="pc-grid">
-          <div class="pstat"><div class="pstat-val">${fmtAlt(ac.alt_ft||0)}</div><div class="pstat-lbl">${UNITS==='metric'?'Metres':'Feet'}</div></div>
-          <div class="pstat"><div class="pstat-val">${fmtSpeed(ac.speed_kts)}</div><div class="pstat-lbl">${UNITS==='metric'?'km/h':'Knots'}</div></div>
+          <div class="pstat"><div class="pstat-val">${fmtAlt(ac.alt_ft||0)}</div><div class="pstat-lbl">${UNITS_SPEED==='metric'?'Metres':'Feet'}</div></div>
+          <div class="pstat"><div class="pstat-val">${fmtSpeed(ac.speed_kts)}</div><div class="pstat-lbl">${UNITS_SPEED==='metric'?'km/h':'Knots'}</div></div>
           <div class="pstat"><div class="pstat-val" style="font-size:11px">${vrStr}</div><div class="pstat-lbl">V/S</div></div>
         </div>
       </div>`;

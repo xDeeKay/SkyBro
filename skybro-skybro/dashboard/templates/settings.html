@@ -126,10 +126,17 @@ select.inline-select:focus{border-color:var(--accent)}
       <label class="toggle"><input type="checkbox" id="time_format_24h" {% if cfg.time_format == '24h' %}checked{% endif %}><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">Units</div><div class="toggle-sub">Altitude, speed, and temperature units across the dashboard and alerts</div></div>
-      <select id="units" class="inline-select">
-        <option value="imperial" {% if cfg.units == 'imperial' %}selected{% endif %}>Imperial (ft · kts · °F)</option>
-        <option value="metric" {% if cfg.units == 'metric' %}selected{% endif %}>Metric (m · km/h · °C)</option>
+      <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Units for altitude, speed, and vertical rate across the dashboard and alerts</div></div>
+      <select id="units_speed" class="inline-select">
+        <option value="imperial" {% if cfg.units_speed == 'imperial' %}selected{% endif %}>Imperial (ft · kts)</option>
+        <option value="metric" {% if cfg.units_speed == 'metric' %}selected{% endif %}>Metric (m · km/h)</option>
+      </select>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Temperature</div><div class="toggle-sub">Units for temperature in weather forecasts</div></div>
+      <select id="units_temp" class="inline-select">
+        <option value="imperial" {% if cfg.units_temp == 'imperial' %}selected{% endif %}>Fahrenheit (°F)</option>
+        <option value="metric" {% if cfg.units_temp == 'metric' %}selected{% endif %}>Celsius (°C)</option>
       </select>
     </div>
   </div>
@@ -248,7 +255,7 @@ async function save() {
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
    'iss_check_hours','iss_warn_mins','pushover_token','pushover_user',
    'discord_webhook','opensky_client_id','opensky_client_secret','n2yo_api_key',
-   'alerts_enabled','iss_alerts_enabled','use_location_time','units'].forEach(k => payload[k] = getVal(k));
+   'alerts_enabled','iss_alerts_enabled','use_location_time','units_speed','units_temp'].forEach(k => payload[k] = getVal(k));
   payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
   try {
     const r = await fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});

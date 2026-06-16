@@ -504,7 +504,7 @@ def process_states(states):
                 icao24 not in _alerted):
             _alerted.add(icao24)
             direction = bearing_to_compass(bearing_from_home(lat, lon))
-            _metric = cfg.get("units", "imperial") == "metric"
+            _metric = cfg.get("units_speed", "imperial") == "metric"
             vr_str = (f"↑ {abs(vrate*(60 if _metric else 196.85)):.0f} {'m/min' if _metric else 'fpm'}" if vrate > 0.5
                       else f"↓ {abs(vrate*(60 if _metric else 196.85)):.0f} {'m/min' if _metric else 'fpm'}" if vrate < -0.5
                       else "level")
@@ -557,7 +557,7 @@ def process_states(states):
         icao24    = alert['icao24']
         photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
         title = f"✈ {alert['callsign']} overhead"
-        _metric = cfg.get("units", "imperial") == "metric"
+        _metric = cfg.get("units_speed", "imperial") == "metric"
         alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
         spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
         body  = (f"{alert['model']} • {alert['direction']} at {alert['dist_km']} km\n"
