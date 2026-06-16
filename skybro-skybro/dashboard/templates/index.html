@@ -565,7 +565,7 @@ function _drawAstro() {
   const wasSearch = document.activeElement && document.activeElement.classList.contains('astro-search');
   const cursor = wasSearch ? document.activeElement.selectionStart : null;
 
-  const TABS = [['tonight','🌃 Tonight'],['moon','🌙 Moon'],['planets','🪐 Planets'],['meteors','☄️ Meteors'],['dso','🔭 DSOs']];
+  const TABS = [['tonight','🌃 Tonight'],['moon','🌙 Moon'],['planets','🪐 Planets'],['dso','🔭 DSOs'],['meteors','☄️ Meteors']];
   const tabBarHtml = TABS.map(([id,lbl])=>
     `<div class="sub-tab${_astroTab===id?' active':''}" onclick="_astroTab='${id}';_aSearch='';_drawAstro()">${lbl}</div>`
   ).join('');
