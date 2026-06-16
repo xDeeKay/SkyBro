@@ -558,7 +558,7 @@ def process_states(states):
         title = f"✈ {alert['callsign']} overhead"
         body  = (f"{alert['model']} • {alert['direction']} at {alert['dist_km']} km\n"
                  f"{alert['alt_ft']:,} ft • {alert['speed_kts']} kts • {alert['vr_str']}")
-        notify(title, body, color=0xE67E22, thumb_url=photo_url, fields=[
+        notify(title, body, color=0x4f7cff, thumb_url=photo_url, fields=[
             {"name": "Callsign",     "value": alert['callsign'],                            "inline": True},
             {"name": "Registration", "value": alert['reg'] or "N/A",                        "inline": True},
             {"name": "Model",        "value": alert['model'],                               "inline": True},
