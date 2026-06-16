@@ -70,7 +70,8 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .hc-model{font-size:11px;color:var(--muted);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hc-tags{display:flex;flex-wrap:wrap;gap:3px}
 .hc-tag{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--muted)}
-.hc-loc{display:block;margin-top:7px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--accent);text-decoration:none}
+.hc-loc{display:inline-block;font-size:10px;color:var(--accent);text-decoration:none}
+.hc-loc-row{margin-top:7px;padding-top:6px;border-top:1px solid var(--border)}
 .hc-loc:hover{text-decoration:underline}
 .fav-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:0;opacity:.3;transition:opacity .15s;line-height:1;flex-shrink:0}
 .fav-btn.active,.fav-btn:hover{opacity:1}
@@ -421,7 +422,7 @@ function _drawAircraft() {
           ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" loading="lazy" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
           : '';
         const locLine = (r.lat && r.lon)
-          ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
+          ? `<div class="hc-loc-row"><a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a></div>`
           : '';
         return `<div class="hist-card" data-idx="${i}">
           <div class="hc-top">
