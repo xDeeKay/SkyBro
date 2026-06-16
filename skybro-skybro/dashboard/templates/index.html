@@ -638,27 +638,39 @@ function _astroTonight(a) {
   const darkStr = tw.astronomical_dusk && tw.astronomical_dawn ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}` : '—';
   const bar = _skyBar(tw);
 
-  // "Visible tonight" = up now OR rises/transits within the next 18h (covers the whole night regardless of check time)
-  const nowSec = Math.floor(Date.now() / 1000);
-  const tonightWindow = nowSec + 18 * 3600;
+  // "Visible tonight" = above horizon at some point during astronomical darkness [dusk → dawn].
+  // Planets currently up but that set before dusk (daytime-only) are excluded.
+  // DSOs use transit_ts ± 6h as a proxy for their up-window.
+  const dusk = tw.astronomical_dusk || tw.sunset;
+  const dawn = tw.astronomical_dawn || tw.sunrise;
+  const _upAtDusk = p => p.is_up && (!dusk || !p.set_ts || p.set_ts > dusk);
   const tonightPlanets = (a.planets||[])
-    .filter(p => p.is_up || (p.rise_ts && p.rise_ts < tonightWindow))
-    .sort((x,y) => (y.is_up - x.is_up) || (y.alt_deg - x.alt_deg));
+    .filter(p => _upAtDusk(p) || (dawn && p.rise_ts && p.rise_ts < dawn))
+    .sort((x,y) => (_upAtDusk(y) - _upAtDusk(x)) || (y.alt_deg - x.alt_deg));
   const tonightDSO = (a.dso||[])
-    .filter(d => (_ETIER[d.equipment]||0) <= _aEquip && (d.is_up || (d.transit_ts && d.transit_ts < tonightWindow)))
+    .filter(d => {
+      if ((_ETIER[d.equipment]||0) > _aEquip) return false;
+      if (d.transit_ts && dusk && dawn)
+        return d.transit_ts > dusk - 6 * 3600 && d.transit_ts < dawn + 6 * 3600;
+      return d.is_up;  // fallback when no twilight data
+    })
     .sort((x,y) => (y.is_up - x.is_up) || (y.alt_deg - x.alt_deg));
   const activeMeteors = (a.meteor_showers||[]).filter(s => s.active);
 
   const planetCards = tonightPlanets.map(p => {
-    const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
-    const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : (p.rise_ts ? `Rises ${fmtTs(p.rise_ts)}` : '↓');
+    const upAtDusk = _upAtDusk(p);
+    const upCol = upAtDusk ? 'var(--green)' : 'var(--muted)';
+    const altStr = upAtDusk ? `↑ ${p.alt_deg}° ${p.az_compass}` : (p.rise_ts ? `Rises ${fmtTs(p.rise_ts)}` : '↓');
+    const timeStr = upAtDusk
+      ? (p.set_ts ? `Sets ${fmtTs(p.set_ts)}${p.transit_ts?' · Transit '+fmtTs(p.transit_ts):''}` : (p.transit_ts?`Transit ${fmtTs(p.transit_ts)}`:''))
+      : (p.transit_ts ? `Transit ${fmtTs(p.transit_ts)}` : '');
     const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" loading="lazy" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">${img}
         <div class="ac-thumb-body">
           <div class="ac-head"><span class="ac-name">${p.name}</span><span class="ac-right" style="color:${upCol}">${altStr}</span></div>
           <div class="ac-meta">mag ${p.magnitude} · ${p.constellation||''}${p.distance_au?' · '+p.distance_au+' AU':''}</div>
-          ${p.transit_ts?`<div class="ac-time">Transit ${fmtTs(p.transit_ts)}${p.set_ts?' · Sets '+fmtTs(p.set_ts):''}</div>`:''}
+          ${timeStr?`<div class="ac-time">${timeStr}</div>`:''}
         </div>
       </div>
     </div>`;
