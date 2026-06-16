@@ -655,7 +655,11 @@ function _astroTonight(a) {
         return d.transit_ts > darkStart - 2 * 3600 && d.transit_ts < dawn;
       return d.is_up;
     })
-    .sort((x,y) => (y.is_up - x.is_up) || (y.alt_deg - x.alt_deg));
+    .sort((x,y) => {
+      if (x.is_up !== y.is_up) return y.is_up - x.is_up;
+      if (x.is_up) return y.alt_deg - x.alt_deg;
+      return (x.transit_ts||0) - (y.transit_ts||0);
+    });
   const activeMeteors = (a.meteor_showers||[]).filter(s => s.active);
 
   const planetCards = tonightPlanets.map(p => {
