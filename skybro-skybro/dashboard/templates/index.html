@@ -216,6 +216,7 @@ const RADIUS     = {{ cfg.radius_km }};
 const ALT_THR    = {{ cfg.alt_threshold_ft }};
 let USE_LOC_TZ = {{ 'true' if cfg.use_location_time else 'false' }};
 let TIME_24H   = {{ 'true' if cfg.time_format == '24h' else 'false' }};
+const UNITS    = '{{ cfg.units }}';
 let locationTZ = '';
 
 function _tz() { return (USE_LOC_TZ && locationTZ) ? locationTZ : undefined; }
@@ -240,6 +241,29 @@ function fmtHourStr(s) {
   const [h, m] = s.split(':').map(Number);
   const d = new Date(); d.setHours(h, m, 0, 0);
   return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit', hour12:true});
+}
+
+function fmtAlt(ft) {
+  if (UNITS === 'metric') return Math.round(ft * 0.3048).toLocaleString() + ' m';
+  return Math.round(ft).toLocaleString() + ' ft';
+}
+function fmtSpeed(kts) {
+  if (UNITS === 'metric') return Math.round(kts * 1.852) + ' km/h';
+  return kts + ' kts';
+}
+function fmtTemp(c) {
+  if (UNITS === 'metric') return c + '°C';
+  return ((c * 9/5) + 32).toFixed(1) + '°F';
+}
+function fmtTempBare(c) {
+  if (UNITS === 'metric') return c + '°';
+  return Math.round(c * 9/5 + 32) + '°';
+}
+function fmtVR(ms) {
+  if (Math.abs(ms) <= 0.5) return '→ level';
+  const up = ms > 0;
+  if (UNITS === 'metric') return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 60)) + ' m/min';
+  return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 196.85)) + ' fpm';
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
@@ -340,11 +364,10 @@ function updateMap(aircraft) {
     const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
     const icon = planeIcon(ac.heading, isAlert, aircraftType(ac.model, ac.category, ac.callsign));
     const vr = ac.vertical_rate;
-    const vrStr = vr > .5 ? `↑${(Math.abs(vr)*196.85).toFixed(0)} fpm`
-                : vr < -.5 ? `↓${(Math.abs(vr)*196.85).toFixed(0)} fpm` : 'level';
+    const vrStr = fmtVR(vr);
     const popup = `<b>${ac.callsign}</b>${ac.registration ? ' ('+ac.registration+')' : ''}<br>
       ${ac.model || 'Unknown'}<br>
-      ${(ac.alt_ft||0).toLocaleString()} ft &bull; ${ac.speed_kts} kts &bull; ${vrStr}<br>
+      ${fmtAlt(ac.alt_ft||0)} &bull; ${fmtSpeed(ac.speed_kts)} &bull; ${vrStr}<br>
       ${ac.dist_km} km away &bull; ${ac.origin_country}`;
     if (markers[ac.icao24])
       markers[ac.icao24].setLatLng([ac.lat,ac.lon]).setIcon(icon).setPopupContent(popup);
@@ -373,21 +396,20 @@ function _drawAircraft() {
 
   if (_aircraftTab === 'live') {
     if (!_liveAircraft.length) {
-      el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+ALT_THR.toLocaleString()+' ft</small></div>';
+      el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+fmtAlt(ALT_THR)+'</small></div>';
       return;
     }
     el.innerHTML = _liveAircraft.map(ac => {
       const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
       const vr = ac.vertical_rate;
-      const vrStr = vr > .5 ? `↑ ${(Math.abs(vr)*196.85).toFixed(0)} fpm`
-                  : vr < -.5 ? `↓ ${(Math.abs(vr)*196.85).toFixed(0)} fpm` : '→ level';
+      const vrStr = fmtVR(vr);
       return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
         ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" loading="lazy" onerror="this.style.display='none'">` : ''}
         <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
         <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
         <div class="pc-grid">
-          <div class="pstat"><div class="pstat-val">${(ac.alt_ft||0).toLocaleString()}</div><div class="pstat-lbl">Feet</div></div>
-          <div class="pstat"><div class="pstat-val">${ac.speed_kts}</div><div class="pstat-lbl">Knots</div></div>
+          <div class="pstat"><div class="pstat-val">${fmtAlt(ac.alt_ft||0)}</div><div class="pstat-lbl">${UNITS==='metric'?'Metres':'Feet'}</div></div>
+          <div class="pstat"><div class="pstat-val">${fmtSpeed(ac.speed_kts)}</div><div class="pstat-lbl">${UNITS==='metric'?'km/h':'Knots'}</div></div>
           <div class="pstat"><div class="pstat-val" style="font-size:11px">${vrStr}</div><div class="pstat-lbl">V/S</div></div>
         </div>
       </div>`;
@@ -438,7 +460,7 @@ function _drawAircraft() {
               <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
               <div class="hc-tags">
                 ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
-                <span class="hc-tag">↕ ${(r.min_alt_ft||0).toLocaleString()} ft</span>
+                <span class="hc-tag">↕ ${fmtAlt(r.min_alt_ft||0)}</span>
                 <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
               </div>
             </div>
@@ -568,10 +590,10 @@ function renderWeather(cur, hourly, daily) {
   <div class="plane-card" style="border-left:3px solid ${astroCol}">
     <div class="pc-header"><span class="pc-call" style="font-size:20px">${wmoEmoji(cur.weather_code)} ${cur.description}</span></div>
     <div class="pc-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px">
-      <div class="pstat"><div class="pstat-val">${cur.temp}°C</div><div class="pstat-lbl">Temp</div></div>
-      <div class="pstat"><div class="pstat-val">${cur.feels_like}°C</div><div class="pstat-lbl">Feels like</div></div>
+      <div class="pstat"><div class="pstat-val">${fmtTemp(cur.temp)}</div><div class="pstat-lbl">Temp</div></div>
+      <div class="pstat"><div class="pstat-val">${fmtTemp(cur.feels_like)}</div><div class="pstat-lbl">Feels like</div></div>
       <div class="pstat"><div class="pstat-val">${cur.humidity}%</div><div class="pstat-lbl">Humidity</div></div>
-      <div class="pstat"><div class="pstat-val">${cur.wind_speed_kts}kt ${windDir(cur.wind_direction||0)}</div><div class="pstat-lbl">Wind</div></div>
+      <div class="pstat"><div class="pstat-val">${fmtSpeed(cur.wind_speed_kts)} ${windDir(cur.wind_direction||0)}</div><div class="pstat-lbl">Wind</div></div>
       <div class="pstat"><div class="pstat-val" style="color:${uvCol}">${cur.uv_index} ${uvLbl}</div><div class="pstat-lbl">UV Index</div></div>
       <div class="pstat"><div class="pstat-val">${cur.cloud_cover_pct}%</div><div class="pstat-lbl">Cloud cover</div></div>
     </div>
@@ -587,9 +609,9 @@ function renderWeather(cur, hourly, daily) {
     html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 6px;text-align:center;min-width:54px">
       <div style="font-size:10px;color:var(--muted)">${fmtHourStr(hTime)}</div>
       <div style="font-size:16px;margin:3px 0">${wmoEmoji(h.weather_code)}</div>
-      <div style="font-size:12px;font-weight:600">${h.temp}°</div>
+      <div style="font-size:12px;font-weight:600">${fmtTempBare(h.temp)}</div>
       <div style="font-size:10px;color:#4f7cff">${h.precip_prob||0}%</div>
-      <div style="font-size:10px;color:var(--muted)">${h.wind_kts}kt</div>
+      <div style="font-size:10px;color:var(--muted)">${fmtSpeed(h.wind_kts)}</div>
     </div>`;
   });
   html += `</div></div>`;
@@ -601,7 +623,7 @@ function renderWeather(cur, hourly, daily) {
         <span style="font-size:18px">${wmoEmoji(d.weather_code)}</span>
         <div><div class="hist-call">${day}</div><div class="hist-sub">${d.description}</div></div>
       </div>
-      <div class="hist-meta">${d.temp_min}° – ${d.temp_max}°C<br>💧${d.precip_prob||0}% · ☁ ${d.astronomy_score}</div>
+      <div class="hist-meta">${fmtTempBare(d.temp_min)} – ${fmtTemp(d.temp_max)}<br>💧${d.precip_prob||0}% · ☁ ${d.astronomy_score}</div>
     </div>`;
   });
   el.innerHTML = html;

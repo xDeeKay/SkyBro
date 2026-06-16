@@ -504,8 +504,9 @@ def process_states(states):
                 icao24 not in _alerted):
             _alerted.add(icao24)
             direction = bearing_to_compass(bearing_from_home(lat, lon))
-            vr_str = (f"↑ {abs(vrate*196.85):.0f} fpm" if vrate > 0.5
-                      else f"↓ {abs(vrate*196.85):.0f} fpm" if vrate < -0.5
+            _metric = cfg.get("units", "imperial") == "metric"
+            vr_str = (f"↑ {abs(vrate*(60 if _metric else 196.85)):.0f} {'m/min' if _metric else 'fpm'}" if vrate > 0.5
+                      else f"↓ {abs(vrate*(60 if _metric else 196.85)):.0f} {'m/min' if _metric else 'fpm'}" if vrate < -0.5
                       else "level")
             alert_queue.append({
                 'icao24': icao24, 'callsign': callsign, 'lat': lat, 'lon': lon,
@@ -556,15 +557,18 @@ def process_states(states):
         icao24    = alert['icao24']
         photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
         title = f"✈ {alert['callsign']} overhead"
+        _metric = cfg.get("units", "imperial") == "metric"
+        alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
+        spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
         body  = (f"{alert['model']} • {alert['direction']} at {alert['dist_km']} km\n"
-                 f"{alert['alt_ft']:,} ft • {alert['speed_kts']} kts • {alert['vr_str']}")
+                 f"{alt_str} • {spd_str} • {alert['vr_str']}")
         notify(title, body, color=0x4f7cff, thumb_url=photo_url, fields=[
             {"name": "Callsign",     "value": alert['callsign'],                            "inline": True},
             {"name": "Registration", "value": alert['reg'] or "N/A",                        "inline": True},
             {"name": "Model",        "value": alert['model'],                               "inline": True},
             {"name": "Distance",     "value": f"{alert['dist_km']} km {alert['direction']}", "inline": True},
-            {"name": "Altitude",     "value": f"{alert['alt_ft']:,} ft",                    "inline": True},
-            {"name": "Speed",        "value": f"{alert['speed_kts']} kts",                  "inline": True},
+            {"name": "Altitude",     "value": alt_str,                                      "inline": True},
+            {"name": "Speed",        "value": spd_str,                                      "inline": True},
             {"name": "V/S",          "value": alert['vr_str'],                              "inline": True},
             {"name": "Country",      "value": alert['country'],                             "inline": True},
         ])

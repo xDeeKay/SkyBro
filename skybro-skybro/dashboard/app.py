@@ -22,7 +22,7 @@ DEFAULTS = {
     "discord_webhook": "", "opensky_client_id": "", "opensky_client_secret": "",
     "n2yo_api_key": "",
     "alerts_enabled": True, "iss_alerts_enabled": True,
-    "use_location_time": False, "time_format": "12h",
+    "use_location_time": False, "time_format": "12h", "units": "imperial",
 }
 
 # Fields the UI is allowed to read/write
