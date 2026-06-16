@@ -114,7 +114,13 @@ def api_stats():
     try:
         conn = db()
         now  = int(time.time())
-        today_start = int(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        try:
+            row = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
+            utc_offset = json.loads(row["data"]).get("utc_offset_seconds", 0) if row else 0
+        except Exception:
+            utc_offset = 0
+        local_now   = now + utc_offset
+        today_start = (local_now - local_now % 86400) - utc_offset
         live    = conn.execute("SELECT COUNT(*) FROM live_aircraft").fetchone()[0]
         today   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen >= ?", (today_start,)).fetchone()[0]
         total   = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
