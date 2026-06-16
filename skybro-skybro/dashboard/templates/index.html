@@ -638,13 +638,14 @@ function _astroTonight(a) {
   const darkStr = tw.astronomical_dusk && tw.astronomical_dawn ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}` : '—';
   const bar = _skyBar(tw);
 
-  // "Visible tonight" = up now OR rises/transits before astronomical dawn
-  const dawn = tw.astronomical_dawn;
+  // "Visible tonight" = up now OR rises/transits within the next 18h (covers the whole night regardless of check time)
+  const nowSec = Math.floor(Date.now() / 1000);
+  const tonightWindow = nowSec + 18 * 3600;
   const tonightPlanets = (a.planets||[])
-    .filter(p => p.is_up || (dawn && p.rise_ts && p.rise_ts < dawn))
+    .filter(p => p.is_up || (p.rise_ts && p.rise_ts < tonightWindow))
     .sort((x,y) => (y.is_up - x.is_up) || (y.alt_deg - x.alt_deg));
   const tonightDSO = (a.dso||[])
-    .filter(d => (_ETIER[d.equipment]||0) <= _aEquip && (d.is_up || (dawn && d.transit_ts && d.transit_ts < dawn)))
+    .filter(d => (_ETIER[d.equipment]||0) <= _aEquip && (d.is_up || (d.transit_ts && d.transit_ts < tonightWindow)))
     .sort((x,y) => (y.is_up - x.is_up) || (y.alt_deg - x.alt_deg));
   const activeMeteors = (a.meteor_showers||[]).filter(s => s.active);
 
