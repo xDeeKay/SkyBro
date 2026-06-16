@@ -282,8 +282,12 @@ function _planeSVG(col, type) {
   const fh = `fill="${col}" fill-opacity=".9"`;
   switch (type) {
     case 'widebody': return `
-      <ellipse cx="15" cy="14" rx="4.5" ry="12" ${fb}/>
-      <path d="M15,10 L2,22 L13,19 L17,19 L28,22 Z" ${fs}/>
+      <ellipse cx="15" cy="14" rx="3" ry="12" ${fb}/>
+      <path d="M15,11 L1,23 L13,19.5 L17,19.5 L29,23 Z" ${fs}/>
+      <ellipse cx="8" cy="19.5" rx="1.2" ry="2" fill="${col}" fill-opacity=".8"/>
+      <ellipse cx="12" cy="18.5" rx="1.2" ry="2" fill="${col}" fill-opacity=".8"/>
+      <ellipse cx="18" cy="18.5" rx="1.2" ry="2" fill="${col}" fill-opacity=".8"/>
+      <ellipse cx="22" cy="19.5" rx="1.2" ry="2" fill="${col}" fill-opacity=".8"/>
       <path d="M13,24 L5,28.5 L15,27 L25,28.5 L17,24 Z" ${fs}/>`;
     case 'heli': return `
       <rect x="0" y="9.5" width="30" height="3" rx="1.5" fill="${col}" fill-opacity=".9" transform="rotate(45 15 11)"/>
