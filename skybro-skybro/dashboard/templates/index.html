@@ -633,13 +633,65 @@ function _astroTonight(a) {
   const tw = a.twilight || {}, mi = a.moon || {};
   const illum = mi.illumination != null ? mi.illumination : 0;
   const [ifLabel, ifCol] = illum < 25 ? ['Low','var(--green)'] : illum < 60 ? ['Moderate','var(--amber)'] : ['High','var(--red)'];
-  const upPlanets = (a.planets||[]).filter(p => p.is_up);
-  const activeMeteors = (a.meteor_showers||[]).filter(s => s.active);
-  const visibleDSO = (a.dso||[]).filter(d => d.is_up && (_ETIER[d.equipment]||0) <= 2).length;
   const bortleCol = a.bortle ? (a.bortle.class <= 4 ? 'var(--green)' : a.bortle.class <= 6 ? 'var(--amber)' : 'var(--red)') : 'var(--muted)';
   const moonLine = mi.is_up ? `↑ ${mi.alt_deg}° · ${illum}% lit` : (mi.rise_ts ? `Rises ${fmtTs(mi.rise_ts)}` : 'Below horizon');
   const darkStr = tw.astronomical_dusk && tw.astronomical_dawn ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}` : '—';
   const bar = _skyBar(tw);
+
+  // "Visible tonight" = up now OR rises/transits before astronomical dawn
+  const dawn = tw.astronomical_dawn;
+  const tonightPlanets = (a.planets||[])
+    .filter(p => p.is_up || (dawn && p.rise_ts && p.rise_ts < dawn))
+    .sort((x,y) => (y.is_up - x.is_up) || (y.alt_deg - x.alt_deg));
+  const tonightDSO = (a.dso||[])
+    .filter(d => (_ETIER[d.equipment]||0) <= _aEquip && (d.is_up || (dawn && d.transit_ts && d.transit_ts < dawn)))
+    .sort((x,y) => (y.is_up - x.is_up) || (y.alt_deg - x.alt_deg));
+  const activeMeteors = (a.meteor_showers||[]).filter(s => s.active);
+
+  const planetCards = tonightPlanets.map(p => {
+    const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
+    const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : (p.rise_ts ? `Rises ${fmtTs(p.rise_ts)}` : '↓');
+    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" loading="lazy" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card">
+      <div class="ac-with-img">${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">${p.name}</span><span class="ac-right" style="color:${upCol}">${altStr}</span></div>
+          <div class="ac-meta">mag ${p.magnitude} · ${p.constellation||''}${p.distance_au?' · '+p.distance_au+' AU':''}</div>
+          ${p.transit_ts?`<div class="ac-time">Transit ${fmtTs(p.transit_ts)}${p.set_ts?' · Sets '+fmtTs(p.set_ts):''}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const dsoCards = tonightDSO.map(d => {
+    const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : (d.transit_ts ? `Rises — transit ${fmtTs(d.transit_ts)}` : '↓');
+    const moonW = d.moon_warning ? ' · 🌙 moon' : '';
+    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" loading="lazy" style="cursor:pointer" data-full="${d.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card" style="${d.is_up?'':'opacity:.65'}">
+      <div class="ac-with-img">${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
+          <div class="ac-meta">${d.type} · ${_CONST[d.constellation]||d.constellation}</div>
+          <div class="ac-time">${upStr}${moonW}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const meteorCards = activeMeteors.map(s => {
+    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" loading="lazy" style="cursor:pointer" data-full="${s.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    return `<div class="astro-card">
+      <div class="ac-with-img">${img}
+        <div class="ac-thumb-body">
+          <div class="ac-head"><span class="ac-name">${s.name}</span><span class="a-badge live">ACTIVE</span></div>
+          <div class="ac-meta">ZHR ${s.zhr} · Radiant: ${s.radiant} · ${s.parent}</div>
+          ${s.note?`<div class="ac-note">${s.note}</div>`:''}
+          <div class="ac-time">Peak: ${s.peak_date} · Active until ${s.active_end}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
   return `
     ${bar ? `<div style="margin-bottom:10px">${bar}</div>` : ''}
     <div class="at-grid">
@@ -664,12 +716,22 @@ function _astroTonight(a) {
         <div class="at-metric-sub">Sunset / Sunrise</div>
       </div>
     </div>
-    <div class="astro-tonight">
-      ${upPlanets.length ? `<div class="at-row"><span class="at-lbl">🪐 Planets up</span><span class="at-val">${upPlanets.map(p=>p.name).join(', ')}</span></div>` : ''}
-      ${visibleDSO ? `<div class="at-row"><span class="at-lbl">🔭 DSOs visible</span><span class="at-val">${visibleDSO} objects</span></div>` : ''}
-      ${activeMeteors.length ? `<div class="at-row"><span class="at-lbl">☄️ Active showers</span><span class="at-val">${activeMeteors.map(s=>'<b>'+s.name+'</b> ZHR '+s.zhr).join(', ')}</span></div>` : ''}
-      ${tw.civil_dusk ? `<div class="at-row"><span class="at-lbl">🌆 Civil dusk</span><span class="at-val">${fmtTs(tw.civil_dusk)}</span></div>` : ''}
-    </div>`;
+    ${tonightPlanets.length ? `
+    <details class="astro-sec" open>
+      <summary>🪐 Planets tonight <span style="font-weight:400;font-size:10px;color:var(--muted)">(${tonightPlanets.length})</span></summary>
+      ${planetCards}
+    </details>` : ''}
+    <details class="astro-sec" open>
+      <summary>🔭 DSOs tonight <span style="font-weight:400;font-size:10px;color:var(--muted)">(${tonightDSO.length})</span></summary>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${_equipBtns()}</div>
+      ${tonightDSO.length ? dsoCards : `<div class="astro-empty">No DSOs visible with current equipment filter</div>`}
+    </details>
+    ${activeMeteors.length ? `
+    <details class="astro-sec" open>
+      <summary>☄️ Active meteor showers <span style="font-weight:400;font-size:10px;color:var(--muted)">(${activeMeteors.length})</span></summary>
+      ${meteorCards}
+    </details>` : ''}
+    ${!tonightPlanets.length && !tonightDSO.length && !activeMeteors.length ? `<div class="astro-empty" style="padding:24px">Nothing found — check back after dusk</div>` : ''}`;
 }
 
 function _astroPlanets(a) {
