@@ -58,7 +58,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .hist-call{font-weight:600;font-size:13px}
 .hist-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .hist-meta{text-align:right;font-size:11px;color:var(--muted)}
-.hist-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;position:relative}
+.hist-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
 .hist-card:hover{border-color:var(--accent)}
 .hc-top{display:flex;gap:9px;align-items:flex-start}
 .hc-thumb{width:70px;height:52px;object-fit:cover;border-radius:5px;flex-shrink:0;cursor:pointer;transition:opacity .15s}
@@ -72,7 +72,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .hc-tag{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--muted)}
 .hc-loc{display:block;margin-top:7px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--accent);text-decoration:none}
 .hc-loc:hover{text-decoration:underline}
-.fav-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;opacity:.3;transition:opacity .15s;line-height:1;position:absolute;top:7px;right:7px}
+.fav-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:0;opacity:.3;transition:opacity .15s;line-height:1;flex-shrink:0}
 .fav-btn.active,.fav-btn:hover{opacity:1}
 .fav-filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:13px;transition:border-color .15s,background .15s;flex-shrink:0}
 .fav-filter-btn.active{background:rgba(243,156,18,.15);border-color:var(--amber)}
@@ -424,13 +424,15 @@ function _drawAircraft() {
           ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
           : '';
         return `<div class="hist-card" data-idx="${i}">
-          <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav('${r.icao24}',${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
           <div class="hc-top">
             ${thumb}
             <div class="hc-body">
               <div class="hc-row">
                 <span class="hc-call">✈ ${r.callsign}</span>
-                <span class="hc-time">${dt}</span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span class="hc-time">${dt}</span>
+                  <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav('${r.icao24}',${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
+                </span>
               </div>
               <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
               <div class="hc-tags">
