@@ -185,14 +185,12 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tabs">
       <div class="tab active" data-tab="aircraft">✈ Aircraft</div>
       <div class="tab" data-tab="satellites">🛰️ Satellites</div>
-      <div class="tab" data-tab="history">📋 History</div>
       <div class="tab" data-tab="weather">☁ Weather</div>
       <div class="tab" data-tab="astronomy">✨ Astronomy</div>
     </div>
     <div class="tabs" id="sidebar-sub-tabs" style="display:none"></div>
     <div class="tab-pane active" id="pane-aircraft"></div>
     <div class="tab-pane" id="pane-satellites"></div>
-    <div class="tab-pane" id="pane-history"></div>
     <div class="tab-pane" id="pane-weather"></div>
     <div class="tab-pane" id="pane-astronomy"></div>
     <div class="src-bar" id="src-bar">
@@ -250,7 +248,7 @@ const radiusCircle = L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'
 map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 
 const markers = {};
-let historyData = [];
+let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '';
 let ghostMarker = null;
 
 function aircraftType(model, category, callsign) {
@@ -352,24 +350,94 @@ function updateMap(aircraft) {
 
 // ── Sidebar rendering ─────────────────────────────────────────────────────────
 function renderNearby(aircraft) {
+  _liveAircraft = aircraft;
+  if (_aircraftTab === 'live') _drawAircraft();
+}
+
+function _drawAircraft() {
   const el = document.getElementById('pane-aircraft');
-  if (!aircraft.length) { el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+ALT_THR.toLocaleString()+' ft</small></div>'; return; }
-  el.innerHTML = aircraft.map(ac => {
-    const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
-    const vr = ac.vertical_rate;
-    const vrStr = vr > .5 ? `↑ ${(Math.abs(vr)*196.85).toFixed(0)} fpm`
-                : vr < -.5 ? `↓ ${(Math.abs(vr)*196.85).toFixed(0)} fpm` : '→ level';
-    return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
-      ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" loading="lazy" onerror="this.style.display='none'">` : ''}
-      <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
-      <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
-      <div class="pc-grid">
-        <div class="pstat"><div class="pstat-val">${(ac.alt_ft||0).toLocaleString()}</div><div class="pstat-lbl">Feet</div></div>
-        <div class="pstat"><div class="pstat-val">${ac.speed_kts}</div><div class="pstat-lbl">Knots</div></div>
-        <div class="pstat"><div class="pstat-val" style="font-size:11px">${vrStr}</div><div class="pstat-lbl">V/S</div></div>
-      </div>
-    </div>`;
-  }).join('');
+  const subEl = document.getElementById('sidebar-sub-tabs');
+
+  const tabsHtml = [['live','✈ Live'],['history','📋 History']].map(([id,lbl]) =>
+    `<div class="sub-tab${_aircraftTab===id?' active':''}" onclick="_aircraftTab='${id}';_histSearch='';_drawAircraft()">${lbl}</div>`
+  ).join('');
+  if (el.classList.contains('active')) { subEl.innerHTML = tabsHtml; subEl.style.display = ''; }
+
+  if (_aircraftTab === 'live') {
+    if (!_liveAircraft.length) {
+      el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+ALT_THR.toLocaleString()+' ft</small></div>';
+      return;
+    }
+    el.innerHTML = _liveAircraft.map(ac => {
+      const isAlert = ac.dist_km <= RADIUS && ac.alt_ft <= ALT_THR;
+      const vr = ac.vertical_rate;
+      const vrStr = vr > .5 ? `↑ ${(Math.abs(vr)*196.85).toFixed(0)} fpm`
+                  : vr < -.5 ? `↓ ${(Math.abs(vr)*196.85).toFixed(0)} fpm` : '→ level';
+      return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
+        ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" loading="lazy" onerror="this.style.display='none'">` : ''}
+        <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
+        <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
+        <div class="pc-grid">
+          <div class="pstat"><div class="pstat-val">${(ac.alt_ft||0).toLocaleString()}</div><div class="pstat-lbl">Feet</div></div>
+          <div class="pstat"><div class="pstat-val">${ac.speed_kts}</div><div class="pstat-lbl">Knots</div></div>
+          <div class="pstat"><div class="pstat-val" style="font-size:11px">${vrStr}</div><div class="pstat-lbl">V/S</div></div>
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    const wasSearch = document.activeElement && document.activeElement.classList.contains('hist-search');
+    const cursor = wasSearch ? document.activeElement.selectionStart : null;
+
+    const q = _histSearch.toLowerCase();
+    const filtered = historyData
+      .map((r, i) => ({r, i}))
+      .filter(({r}) => !q ||
+        (r.callsign||'').toLowerCase().includes(q) ||
+        (r.model||'').toLowerCase().includes(q) ||
+        (r.registration||'').toLowerCase().includes(q) ||
+        (r.origin_country||'').toLowerCase().includes(q)
+      );
+
+    let html = `<input class="hist-search astro-search" type="text" placeholder="Search history…" value="${_histSearch.replace(/"/g,'&quot;')}" oninput="_histSearch=this.value;_drawAircraft()" style="width:100%;box-sizing:border-box;margin-bottom:8px">`;
+
+    if (!filtered.length) {
+      html += `<div class="empty">${q ? 'No matches' : 'No alerts yet<br><small>Alerts appear here once triggered</small>'}</div>`;
+    } else {
+      html += filtered.map(({r, i}) => {
+        const dt = fmtDateTime(new Date(r.last_seen * 1000));
+        const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
+        const thumb = r.thumb_url
+          ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" loading="lazy" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
+          : '';
+        const locLine = (r.lat && r.lon)
+          ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
+          : '';
+        return `<div class="hist-card" data-idx="${i}">
+          <div class="hc-top">
+            ${thumb}
+            <div class="hc-body">
+              <div class="hc-row">
+                <span class="hc-call">✈ ${r.callsign}</span>
+                <span class="hc-time">${dt}</span>
+              </div>
+              <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
+              <div class="hc-tags">
+                ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
+                <span class="hc-tag">↕ ${(r.min_alt_ft||0).toLocaleString()} ft</span>
+                <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
+              </div>
+            </div>
+          </div>
+          ${locLine}
+        </div>`;
+      }).join('');
+    }
+    el.innerHTML = html;
+    if (wasSearch || _histSearch) {
+      const inp = el.querySelector('.hist-search');
+      if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
+    }
+  }
 }
 
 const SAT_COLORS = {ISS:'#1abc9c', Hubble:'#9b59b6', Tiangong:'#e74c3c'};
@@ -422,36 +490,7 @@ function _drawSatellites() {
 
 function renderHistory(rows) {
   historyData = rows;
-  const el = document.getElementById('pane-history');
-  if (!rows.length) { el.innerHTML = '<div class="empty">No alerts yet<br><small>Alerts appear here once triggered</small></div>'; return; }
-  el.innerHTML = rows.map((r, i) => {
-    const dt = fmtDateTime(new Date(r.last_seen * 1000));
-    const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
-    const thumb = r.thumb_url
-      ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" loading="lazy" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
-      : '';
-    const locLine = (r.lat && r.lon)
-      ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
-      : '';
-    return `<div class="hist-card" data-idx="${i}">
-      <div class="hc-top">
-        ${thumb}
-        <div class="hc-body">
-          <div class="hc-row">
-            <span class="hc-call">✈ ${r.callsign}</span>
-            <span class="hc-time">${dt}</span>
-          </div>
-          <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
-          <div class="hc-tags">
-            ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
-            <span class="hc-tag">↕ ${(r.min_alt_ft||0).toLocaleString()} ft</span>
-            <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
-          </div>
-        </div>
-      </div>
-      ${locLine}
-    </div>`;
-  }).join('');
+  if (_aircraftTab === 'history') _drawAircraft();
 }
 
 function openLightbox(thumbUrl, photoUrl, creditLabel) {
@@ -910,7 +949,8 @@ document.querySelectorAll('.tab').forEach(t => {
     t.classList.add('active');
     document.getElementById('pane-'+t.dataset.tab).classList.add('active');
     const subEl = document.getElementById('sidebar-sub-tabs');
-    if (t.dataset.tab === 'satellites') { _drawSatellites(); }
+    if (t.dataset.tab === 'aircraft') { _drawAircraft(); }
+    else if (t.dataset.tab === 'satellites') { _drawSatellites(); }
     else if (t.dataset.tab === 'astronomy') { _drawAstro(); }
     else { subEl.style.display = 'none'; subEl.innerHTML = ''; }
   });
@@ -948,7 +988,7 @@ async function refresh() {
   } catch(e) { console.error('Refresh error:', e); }
 }
 
-document.getElementById('pane-history').addEventListener('click', e => {
+document.getElementById('pane-aircraft').addEventListener('click', e => {
   const card = e.target.closest('.hist-card');
   if (!card) return;
   const r = historyData[+card.dataset.idx];
