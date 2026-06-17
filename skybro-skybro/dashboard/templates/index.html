@@ -434,6 +434,42 @@ function renderNearby(aircraft) {
   if (_aircraftTab === 'live') _drawAircraft();
 }
 
+function _histCardHtml(r, i) {
+  const dt = fmtDateTime(new Date(r.last_seen * 1000));
+  const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
+  const thumb = r.thumb_url
+    ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" decoding="async" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
+    : '';
+  const locLine = (r.lat && r.lon)
+    ? `<div class="hc-loc-row"><a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a></div>`
+    : '';
+  return `<div class="hist-card" data-idx="${i}">
+    <div class="hc-top">
+      ${thumb}
+      <div class="hc-body">
+        <div class="hc-row">
+          <span class="hc-call">✈ ${r.callsign}</span>
+          <span style="display:flex;align-items:center;gap:6px">
+            <span class="hc-time">${dt}</span>
+            <span class="hc-actions">
+              <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark unseen':'Mark as seen outside'}">👁</button>
+              <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
+              <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
+            </span>
+          </span>
+        </div>
+        <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
+        <div class="hc-tags">
+          ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
+          <span class="hc-tag">↕ ${fmtAlt(r.min_alt_ft||0)}</span>
+          <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
+        </div>
+      </div>
+    </div>
+    ${locLine}
+  </div>`;
+}
+
 function _drawAircraft() {
   const el = document.getElementById('pane-aircraft');
   const subEl = document.getElementById('sidebar-sub-tabs');
@@ -475,41 +511,7 @@ function _drawAircraft() {
     if (!historyData.length) {
       html += `<div class="empty">${_histSearch ? 'No matches' : 'No alerts yet<br><small>Alerts appear here once triggered</small>'}</div>`;
     } else {
-      html += historyData.map((r, i) => {
-        const dt = fmtDateTime(new Date(r.last_seen * 1000));
-        const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
-        const thumb = r.thumb_url
-          ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" decoding="async" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
-          : '';
-        const locLine = (r.lat && r.lon)
-          ? `<div class="hc-loc-row"><a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a></div>`
-          : '';
-        return `<div class="hist-card" data-idx="${i}">
-          <div class="hc-top">
-            ${thumb}
-            <div class="hc-body">
-              <div class="hc-row">
-                <span class="hc-call">✈ ${r.callsign}</span>
-                <span style="display:flex;align-items:center;gap:6px">
-                  <span class="hc-time">${dt}</span>
-                  <span class="hc-actions">
-                    <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark unseen':'Mark as seen outside'}">👁</button>
-                    <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
-                    <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
-                  </span>
-                </span>
-              </div>
-              <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
-              <div class="hc-tags">
-                ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
-                <span class="hc-tag">↕ ${fmtAlt(r.min_alt_ft||0)}</span>
-                <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
-              </div>
-            </div>
-          </div>
-          ${locLine}
-        </div>`;
-      }).join('');
+      html += historyData.map(_histCardHtml).join('');
     }
     if (_histHasMore) {
       html += `<button class="load-more-btn" onclick="loadMoreHistory()">Load more</button>`;
@@ -619,13 +621,15 @@ async function loadMoreHistory() {
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
   try {
     const data = await fetch(_histUrl(_histOffset)).then(r => r.json());
-    historyData = historyData.concat(data.rows || []);
+    const newRows = data.rows || [];
     _histHasMore = data.has_more || false;
+    const startIdx = historyData.length;
+    historyData = historyData.concat(newRows);
     _histOffset = historyData.length;
     const el = document.getElementById('pane-aircraft');
-    const savedScroll = el ? el.scrollTop : 0;
-    _drawAircraft();
-    if (el) el.scrollTop = savedScroll;
+    if (btn) btn.remove();
+    el.insertAdjacentHTML('beforeend', newRows.map((r, j) => _histCardHtml(r, startIdx + j)).join(''));
+    if (_histHasMore) el.insertAdjacentHTML('beforeend', `<button class="load-more-btn" onclick="loadMoreHistory()">Load more</button>`);
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Load more'; }
   }
