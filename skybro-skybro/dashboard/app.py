@@ -166,6 +166,16 @@ def api_history_delete():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
+@app.route("/api/history/<int:row_id>/pings")
+def api_history_pings(row_id):
+    try:
+        rows = db().execute(
+            "SELECT ts, lat, lon, alt_ft, speed_kts, heading, dist_km FROM flight_pings "
+            "WHERE visit_id=? ORDER BY ts ASC", (row_id,)).fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception:
+        return jsonify([])
+
 @app.route("/api/history/reset", methods=["POST"])
 def api_history_reset():
     try:

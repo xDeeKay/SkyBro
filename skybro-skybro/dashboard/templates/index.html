@@ -301,7 +301,7 @@ map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 const markers = {};
 let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false;
 let _histHasMore = false, _histOffset = 0;
-let ghostMarker = null;
+let ghostMarkers = [], ghostPath = null;
 
 function aircraftType(model, category, callsign) {
   // ADS-B category is authoritative when set (non-zero)
@@ -369,14 +369,41 @@ function ghostIcon(heading, type) {
   return L.divIcon({html:svg, className:'', iconSize:[36,36], iconAnchor:[18,18], popupAnchor:[0,-21]});
 }
 
-function showHistoryPin(r) {
-  if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
-  ghostMarker = L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, aircraftType(r.model, r.category, r.callsign))})
-    .addTo(map)
-    .bindPopup(`<b>✈ ${r.callsign}</b><br><span style="color:#7b7f9e;font-size:11px">${r.model || 'Unknown'}</span>`)
-    .openPopup()
-    .on('popupclose', () => { map.removeLayer(ghostMarker); ghostMarker = null; });
-  map.flyTo([r.lat, r.lon], Math.max(map.getZoom(), 12));
+function clearGhostPath() {
+  ghostMarkers.forEach(m => map.removeLayer(m));
+  ghostMarkers = [];
+  if (ghostPath) { map.removeLayer(ghostPath); ghostPath = null; }
+}
+
+async function showHistoryPin(r) {
+  clearGhostPath();
+  const type = aircraftType(r.model, r.category, r.callsign);
+  const pings = r.id
+    ? await fetch(`/api/history/${r.id}/pings`).then(res => res.json()).catch(() => [])
+    : [];
+
+  if (pings.length > 0) {
+    const latlngs = pings.map(p => [p.lat, p.lon]);
+    ghostPath = L.polyline(latlngs, {color: 'rgba(255,255,255,0.3)', weight: 2, dashArray: '5 7'}).addTo(map);
+    pings.forEach((p, i) => {
+      const m = L.marker([p.lat, p.lon], {icon: ghostIcon(p.heading, type)}).addTo(map);
+      if (i === 0) {
+        m.bindPopup(`<b>✈ ${r.callsign}</b><br><span style="color:#7b7f9e;font-size:11px">${r.model || 'Unknown'}</span>`)
+         .on('popupclose', clearGhostPath);
+        m.openPopup();
+      }
+      ghostMarkers.push(m);
+    });
+    map.fitBounds(L.latLngBounds(latlngs), {padding: [60, 60]});
+  } else {
+    const m = L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, type)})
+      .addTo(map)
+      .bindPopup(`<b>✈ ${r.callsign}</b><br><span style="color:#7b7f9e;font-size:11px">${r.model || 'Unknown'}</span>`)
+      .openPopup()
+      .on('popupclose', clearGhostPath);
+    ghostMarkers.push(m);
+    map.flyTo([r.lat, r.lon], Math.max(map.getZoom(), 12));
+  }
 }
 
 function updateMap(aircraft) {
