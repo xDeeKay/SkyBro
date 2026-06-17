@@ -622,7 +622,10 @@ async function loadMoreHistory() {
     historyData = historyData.concat(data.rows || []);
     _histHasMore = data.has_more || false;
     _histOffset = historyData.length;
+    const el = document.getElementById('pane-aircraft');
+    const savedScroll = el ? el.scrollTop : 0;
     _drawAircraft();
+    if (el) el.scrollTop = savedScroll;
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Load more'; }
   }
