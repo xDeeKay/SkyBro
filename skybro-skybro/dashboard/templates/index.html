@@ -464,8 +464,8 @@ function _histCardHtml(r, i) {
     <div class="hc-loc-row">
       ${locAnchor}
       <span class="hc-actions">
-        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark unseen':'Mark as seen outside'}">◉</button>
         <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
+        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Spotted':'Spotted?'}">◉</button>
         <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
       </span>
     </div>
