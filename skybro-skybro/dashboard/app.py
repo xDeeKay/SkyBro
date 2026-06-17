@@ -91,9 +91,12 @@ def api_satellites():
     except Exception:
         return jsonify([])
 
+HISTORY_PAGE = 25
+
 @app.route("/api/history")
 def api_history():
     try:
+        offset = max(0, int(request.args.get('offset', 0)))
         rows = db().execute("""
             SELECT sa.icao24, sa.callsign, sa.model, sa.registration, sa.origin_country,
                    sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
@@ -105,11 +108,13 @@ def api_history():
             FROM seen_aircraft sa
             LEFT JOIN photo_cache pc ON pc.icao24 = sa.icao24
             WHERE sa.alerted=1
-            ORDER BY sa.last_seen DESC LIMIT 100
-        """).fetchall()
-        return jsonify([dict(r) for r in rows])
+            ORDER BY sa.last_seen DESC LIMIT ? OFFSET ?
+        """, (HISTORY_PAGE + 1, offset)).fetchall()
+        rows = [dict(r) for r in rows]
+        has_more = len(rows) > HISTORY_PAGE
+        return jsonify({"rows": rows[:HISTORY_PAGE], "has_more": has_more})
     except Exception:
-        return jsonify([])
+        return jsonify({"rows": [], "has_more": False})
 
 @app.route("/api/history/favourite", methods=["POST"])
 def api_history_favourite():
