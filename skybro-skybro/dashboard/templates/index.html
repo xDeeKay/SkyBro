@@ -516,7 +516,10 @@ function _drawAircraft() {
     if (_histHasMore) {
       html += `<button class="load-more-btn" onclick="loadMoreHistory()">Load more</button>`;
     }
+    const savedScroll = el.scrollTop;
     el.innerHTML = html;
+    void el.scrollHeight; // force layout so scrollTop is settable immediately
+    el.scrollTop = savedScroll;
     if (wasSearch || _histSearch) {
       const inp = el.querySelector('.hist-search');
       if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
