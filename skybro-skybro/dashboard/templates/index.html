@@ -479,7 +479,7 @@ function _drawAircraft() {
         </div>`;
       }).join('');
     }
-    if (_histHasMore && !_histFavOnly) {
+    if (_histHasMore) {
       html += `<button class="load-more-btn" onclick="loadMoreHistory()">Load more</button>`;
     }
     el.innerHTML = html;
@@ -543,6 +543,19 @@ function renderHistory(data) {
   _histHasMore = data.has_more || false;
   _histOffset = historyData.length;
   if (_aircraftTab === 'history') _drawAircraft();
+}
+
+async function toggleHistFav() {
+  _histFavOnly = !_histFavOnly;
+  if (_histFavOnly && _histHasMore) {
+    while (_histHasMore && _histOffset < 500) {
+      const data = await fetch(`/api/history?offset=${_histOffset}`).then(r => r.json());
+      historyData = historyData.concat(data.rows || []);
+      _histHasMore = data.has_more || false;
+      _histOffset = historyData.length;
+    }
+  }
+  _drawAircraft();
 }
 
 async function loadMoreHistory() {
