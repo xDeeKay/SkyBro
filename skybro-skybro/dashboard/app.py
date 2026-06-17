@@ -98,7 +98,9 @@ def api_history():
     try:
         offset = max(0, int(request.args.get('offset', 0)))
         limit  = max(HISTORY_PAGE, min(500, int(request.args.get('limit', HISTORY_PAGE))))
-        rows = db().execute("""
+        only_favs = request.args.get('favourites') == '1'
+        where = "WHERE sa.alerted=1" + (" AND COALESCE(sa.favourited,0)=1" if only_favs else "")
+        rows = db().execute(f"""
             SELECT sa.icao24, sa.callsign, sa.model, sa.registration, sa.origin_country,
                    sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
                    sa.lat, sa.lon, COALESCE(sa.heading, 0) AS heading,
@@ -108,7 +110,7 @@ def api_history():
                    pc.photo_url AS full_photo_url
             FROM seen_aircraft sa
             LEFT JOIN photo_cache pc ON pc.icao24 = sa.icao24
-            WHERE sa.alerted=1
+            {where}
             ORDER BY sa.last_seen DESC LIMIT ? OFFSET ?
         """, (limit + 1, offset)).fetchall()
         rows = [dict(r) for r in rows]

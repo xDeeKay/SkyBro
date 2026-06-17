@@ -431,7 +431,6 @@ function _drawAircraft() {
     const q = _histSearch.toLowerCase();
     const filtered = historyData
       .map((r, i) => ({r, i}))
-      .filter(({r}) => !_histFavOnly || r.favourited)
       .filter(({r}) => !q ||
         (r.callsign||'').toLowerCase().includes(q) ||
         (r.model||'').toLowerCase().includes(q) ||
@@ -441,7 +440,7 @@ function _drawAircraft() {
 
     let html = `<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
       <input class="hist-search astro-search" type="text" placeholder="Search history…" value="${_histSearch.replace(/"/g,'&quot;')}" oninput="_histSearch=this.value;_drawAircraft()" style="flex:1;min-width:0">
-      <button class="fav-filter-btn${_histFavOnly?' active':''}" onclick="_histFavOnly=!_histFavOnly;_drawAircraft()" title="${_histFavOnly?'Show all':'Show favourites only'}">⭐</button>
+      <button class="fav-filter-btn${_histFavOnly?' active':''}" onclick="toggleHistFav()" title="${_histFavOnly?'Show all':'Show favourites only'}">⭐</button>
     </div>`;
 
     if (!filtered.length) {
@@ -545,16 +544,20 @@ function renderHistory(data) {
   if (_aircraftTab === 'history') _drawAircraft();
 }
 
+function _histUrl(offset, limit) {
+  let url = `/api/history?offset=${offset}`;
+  if (limit)        url += `&limit=${limit}`;
+  if (_histFavOnly) url += '&favourites=1';
+  return url;
+}
+
 async function toggleHistFav() {
   _histFavOnly = !_histFavOnly;
-  if (_histFavOnly && _histHasMore) {
-    while (_histHasMore && _histOffset < 500) {
-      const data = await fetch(`/api/history?offset=${_histOffset}`).then(r => r.json());
-      historyData = historyData.concat(data.rows || []);
-      _histHasMore = data.has_more || false;
-      _histOffset = historyData.length;
-    }
-  }
+  historyData = []; _histOffset = 0; _histHasMore = false;
+  const data = await fetch(_histUrl(0)).then(r => r.json());
+  historyData = data.rows || [];
+  _histHasMore = data.has_more || false;
+  _histOffset = historyData.length;
   _drawAircraft();
 }
 
@@ -562,7 +565,7 @@ async function loadMoreHistory() {
   const btn = document.querySelector('.load-more-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
   try {
-    const data = await fetch(`/api/history?offset=${_histOffset}`).then(r => r.json());
+    const data = await fetch(_histUrl(_histOffset)).then(r => r.json());
     historyData = historyData.concat(data.rows || []);
     _histHasMore = data.has_more || false;
     _histOffset = historyData.length;
@@ -1072,7 +1075,7 @@ async function refresh() {
     const [aircraft, satellites, history, stats, cur, hourly, daily, astronomy, status] = await Promise.all([
       fetch('/api/live').then(r=>r.json()),
       fetch('/api/satellites').then(r=>r.json()),
-      fetch(`/api/history?limit=${Math.max(25,_histOffset)}`).then(r=>r.json()),
+      fetch(_histUrl(0, Math.max(25,_histOffset))).then(r=>r.json()),
       fetch('/api/stats').then(r=>r.json()),
       fetch('/api/weather/current').then(r=>r.json()),
       fetch('/api/weather/hourly').then(r=>r.json()),
