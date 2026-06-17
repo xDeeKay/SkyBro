@@ -99,7 +99,17 @@ def api_history():
         offset = max(0, int(request.args.get('offset', 0)))
         limit  = max(HISTORY_PAGE, min(500, int(request.args.get('limit', HISTORY_PAGE))))
         only_favs = request.args.get('favourites') == '1'
-        where = "WHERE sa.alerted=1" + (" AND COALESCE(sa.favourited,0)=1" if only_favs else "")
+        search    = (request.args.get('search') or '').strip()
+        conditions = ["sa.alerted=1"]
+        params = []
+        if only_favs:
+            conditions.append("COALESCE(sa.favourited,0)=1")
+        if search:
+            like = f"%{search}%"
+            conditions.append("(sa.callsign LIKE ? OR sa.model LIKE ? OR sa.registration LIKE ? OR sa.origin_country LIKE ?)")
+            params.extend([like, like, like, like])
+        where = "WHERE " + " AND ".join(conditions)
+        params.extend([limit + 1, offset])
         rows = db().execute(f"""
             SELECT sa.id, sa.icao24, sa.callsign, sa.model, sa.registration, sa.origin_country,
                    sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
@@ -113,7 +123,7 @@ def api_history():
             LEFT JOIN photo_cache pc ON pc.icao24 = sa.icao24
             {where}
             ORDER BY sa.last_seen DESC LIMIT ? OFFSET ?
-        """, (limit + 1, offset)).fetchall()
+        """, params).fetchall()
         rows = [dict(r) for r in rows]
         has_more = len(rows) > limit
         return jsonify({"rows": rows[:limit], "has_more": has_more})
