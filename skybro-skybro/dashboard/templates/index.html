@@ -1059,7 +1059,7 @@ async function refresh() {
     const [aircraft, satellites, history, stats, cur, hourly, daily, astronomy, status] = await Promise.all([
       fetch('/api/live').then(r=>r.json()),
       fetch('/api/satellites').then(r=>r.json()),
-      fetch('/api/history').then(r=>r.json()),
+      fetch(`/api/history?limit=${Math.max(25,_histOffset)}`).then(r=>r.json()),
       fetch('/api/stats').then(r=>r.json()),
       fetch('/api/weather/current').then(r=>r.json()),
       fetch('/api/weather/hourly').then(r=>r.json()),

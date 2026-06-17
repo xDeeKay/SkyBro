@@ -97,6 +97,7 @@ HISTORY_PAGE = 25
 def api_history():
     try:
         offset = max(0, int(request.args.get('offset', 0)))
+        limit  = max(HISTORY_PAGE, min(500, int(request.args.get('limit', HISTORY_PAGE))))
         rows = db().execute("""
             SELECT sa.icao24, sa.callsign, sa.model, sa.registration, sa.origin_country,
                    sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
@@ -109,10 +110,10 @@ def api_history():
             LEFT JOIN photo_cache pc ON pc.icao24 = sa.icao24
             WHERE sa.alerted=1
             ORDER BY sa.last_seen DESC LIMIT ? OFFSET ?
-        """, (HISTORY_PAGE + 1, offset)).fetchall()
+        """, (limit + 1, offset)).fetchall()
         rows = [dict(r) for r in rows]
-        has_more = len(rows) > HISTORY_PAGE
-        return jsonify({"rows": rows[:HISTORY_PAGE], "has_more": has_more})
+        has_more = len(rows) > limit
+        return jsonify({"rows": rows[:limit], "has_more": has_more})
     except Exception:
         return jsonify({"rows": [], "has_more": False})
 
