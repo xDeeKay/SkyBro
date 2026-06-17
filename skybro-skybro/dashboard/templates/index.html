@@ -479,7 +479,7 @@ function _drawAircraft() {
         </div>`;
       }).join('');
     }
-    if (_histHasMore) {
+    if (_histHasMore && !_histFavOnly) {
       html += `<button class="load-more-btn" onclick="loadMoreHistory()">Load more</button>`;
     }
     el.innerHTML = html;
