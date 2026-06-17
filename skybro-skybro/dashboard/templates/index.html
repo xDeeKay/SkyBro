@@ -73,11 +73,13 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .hc-tags{display:flex;flex-wrap:wrap;gap:3px}
 .hc-tag{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--muted)}
 .hc-loc{display:inline-block;font-size:10px;color:var(--accent);text-decoration:none}
-.hc-loc-row{margin-top:7px;padding-top:6px;border-top:1px solid var(--border)}
+.hc-loc-row{margin-top:7px;padding-top:6px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:6px}
 .hc-loc:hover{text-decoration:underline}
 .hc-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
-.fav-btn,.seen-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:.3;transition:opacity .15s;line-height:1;flex-shrink:0}
-.fav-btn.active,.fav-btn:hover,.seen-btn.active,.seen-btn:hover{opacity:1}
+.fav-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:.3;transition:opacity .15s;line-height:1;flex-shrink:0}
+.fav-btn.active,.fav-btn:hover{opacity:1}
+.seen-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px;line-height:1;flex-shrink:0;color:rgba(59,158,255,.3);transition:color .15s}
+.seen-btn.active,.seen-btn:hover{color:#3b9eff}
 .del-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:.25;transition:opacity .15s,color .15s;line-height:1;flex-shrink:0;color:var(--text)}
 .del-btn:hover{opacity:1;color:var(--red)}
 .fav-filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:13px;transition:border-color .15s,background .15s;flex-shrink:0}
@@ -440,23 +442,16 @@ function _histCardHtml(r, i) {
   const thumb = r.thumb_url
     ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" decoding="async" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
     : '';
-  const locLine = (r.lat && r.lon)
-    ? `<div class="hc-loc-row"><a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a></div>`
-    : '';
+  const locAnchor = (r.lat && r.lon)
+    ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
+    : `<span></span>`;
   return `<div class="hist-card" data-idx="${i}">
     <div class="hc-top">
       ${thumb}
       <div class="hc-body">
         <div class="hc-row">
           <span class="hc-call">✈ ${r.callsign}</span>
-          <span style="display:flex;align-items:center;gap:6px">
-            <span class="hc-time">${dt}</span>
-            <span class="hc-actions">
-              <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark unseen':'Mark as seen outside'}">👁</button>
-              <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
-              <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
-            </span>
-          </span>
+          <span class="hc-time">${dt}</span>
         </div>
         <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
         <div class="hc-tags">
@@ -466,7 +461,14 @@ function _histCardHtml(r, i) {
         </div>
       </div>
     </div>
-    ${locLine}
+    <div class="hc-loc-row">
+      ${locAnchor}
+      <span class="hc-actions">
+        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark unseen':'Mark as seen outside'}">◉</button>
+        <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
+        <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
+      </span>
+    </div>
   </div>`;
 }
 
