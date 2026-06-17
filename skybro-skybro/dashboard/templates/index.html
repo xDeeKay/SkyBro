@@ -405,7 +405,7 @@ function _drawAircraft() {
       const vr = ac.vertical_rate;
       const vrStr = fmtVR(vr);
       return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
-        ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" loading="lazy" decoding="async" onerror="this.style.display='none'">` : ''}
+        ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" decoding="async" onerror="this.style.display='none'">` : ''}
         <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
         <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
         <div class="pc-grid">
@@ -442,7 +442,7 @@ function _drawAircraft() {
         const dt = fmtDateTime(new Date(r.last_seen * 1000));
         const durMins = (r.last_seen - r.first_seen) > 60 ? ` · ${Math.round((r.last_seen - r.first_seen) / 60)}m` : '';
         const thumb = r.thumb_url
-          ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" loading="lazy" decoding="async" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
+          ? `<img class="hc-thumb" src="${r.thumb_url}" alt="" decoding="async" onclick="event.stopPropagation();openLightbox('${r.thumb_url}','${r.full_photo_url||''}')">`
           : '';
         const locLine = (r.lat && r.lon)
           ? `<div class="hc-loc-row"><a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a></div>`
@@ -758,7 +758,7 @@ function _astroTonight(a) {
     const timeStr = upAtDusk
       ? (p.set_ts ? `Sets ${fmtTs(p.set_ts)}${p.transit_ts?' · Transit '+fmtTs(p.transit_ts):''}` : (p.transit_ts?`Transit ${fmtTs(p.transit_ts)}`:''))
       : (p.transit_ts ? `Transit ${fmtTs(p.transit_ts)}` : '');
-    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" loading="lazy" decoding="async" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" decoding="async" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">${img}
         <div class="ac-thumb-body">
@@ -773,7 +773,7 @@ function _astroTonight(a) {
   const dsoCards = tonightDSO.map(d => {
     const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : (d.transit_ts ? `Transit ${fmtTs(d.transit_ts)}` : '—');
     const moonW = d.moon_warning ? ' · 🌙 moon' : '';
-    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" loading="lazy" decoding="async" style="cursor:pointer" data-full="${d.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" decoding="async" style="cursor:pointer" data-full="${d.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">${img}
         <div class="ac-thumb-body">
@@ -786,7 +786,7 @@ function _astroTonight(a) {
   }).join('');
 
   const meteorCards = activeMeteors.map(s => {
-    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" loading="lazy" decoding="async" style="cursor:pointer" data-full="${s.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" decoding="async" style="cursor:pointer" data-full="${s.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">${img}
         <div class="ac-thumb-body">
@@ -854,7 +854,7 @@ function _astroPlanets(a) {
     const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
     const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : '↓ below horizon';
     const timeStr = p.is_up ? (p.set_ts?`Sets ${fmtTs(p.set_ts)}`:'') : (p.rise_ts?`Rises ${fmtTs(p.rise_ts)}`:'');
-    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" loading="lazy" decoding="async" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    const img = p.wiki_thumb ? `<img class="ac-thumb" src="${p.wiki_thumb}" alt="${p.name}" decoding="async" style="cursor:pointer" data-full="${p.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">
         ${img}
@@ -877,7 +877,7 @@ function _astroMeteors(a) {
   if (!list.length) return html + `<div class="astro-empty">No showers match</div>`;
   return html + list.map(s => {
     const badge = s.active ? `<span class="a-badge live">ACTIVE</span>` : `<span class="a-badge">${s.days_to_peak<0?'passed':'in '+s.days_to_peak+'d'}</span>`;
-    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" loading="lazy" decoding="async" style="cursor:pointer" data-full="${s.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    const img = s.wiki_thumb ? `<img class="ac-thumb" src="${s.wiki_thumb}" alt="${s.name}" decoding="async" style="cursor:pointer" data-full="${s.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">
         ${img}
@@ -905,7 +905,7 @@ function _astroDSO(a) {
   return html + list.map(d => {
     const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : '↓ below horizon';
     const moonW = d.moon_warning ? ' · 🌙 moon' : '';
-    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" loading="lazy" decoding="async" style="cursor:pointer" data-full="${d.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
+    const img = d.wiki_thumb ? `<img class="ac-thumb" src="${d.wiki_thumb}" alt="${d.label}" decoding="async" style="cursor:pointer" data-full="${d.wiki_url||''}" onclick="openLightbox(this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card" style="${d.is_up?'':'opacity:.55'}">
       <div class="ac-with-img">
         ${img}
