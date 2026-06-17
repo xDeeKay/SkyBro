@@ -99,11 +99,14 @@ def api_history():
         offset = max(0, int(request.args.get('offset', 0)))
         limit  = max(HISTORY_PAGE, min(500, int(request.args.get('limit', HISTORY_PAGE))))
         only_favs = request.args.get('favourites') == '1'
+        only_seen = request.args.get('seen') == '1'
         search    = (request.args.get('search') or '').strip()
         conditions = ["sa.alerted=1"]
         params = []
         if only_favs:
             conditions.append("COALESCE(sa.favourited,0)=1")
+        if only_seen:
+            conditions.append("COALESCE(sa.seen,0)=1")
         if search:
             like = f"%{search}%"
             conditions.append("(sa.callsign LIKE ? OR sa.model LIKE ? OR sa.registration LIKE ? OR sa.origin_country LIKE ?)")

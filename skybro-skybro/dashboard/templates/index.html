@@ -82,9 +82,10 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .seen-btn.active,.seen-btn:hover{color:#3b9eff}
 .del-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:.25;transition:opacity .15s,color .15s;line-height:1;flex-shrink:0;color:var(--text)}
 .del-btn:hover{opacity:1;color:var(--red)}
-.fav-filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:13px;transition:border-color .15s,background .15s;flex-shrink:0}
+.fav-filter-btn,.seen-filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:13px;transition:border-color .15s,background .15s;flex-shrink:0}
 .fav-filter-btn.active{background:rgba(243,156,18,.15);border-color:var(--amber)}
-.fav-filter-btn:hover:not(.active){border-color:var(--accent)}
+.seen-filter-btn.active{background:rgba(59,158,255,.15);border-color:#3b9eff}
+.fav-filter-btn:hover:not(.active),.seen-filter-btn:hover:not(.active){border-color:var(--accent)}
 .load-more-btn{display:block;width:100%;padding:9px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:13px;cursor:pointer;margin-top:8px;transition:border-color .15s,color .15s}
 .load-more-btn:hover{border-color:var(--accent);color:var(--text)}
 .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center}
@@ -301,7 +302,7 @@ const radiusCircle = L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'
 map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 
 const markers = {};
-let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false;
+let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false, _histSeenOnly = false;
 let _histHasMore = false, _histOffset = 0;
 let ghostMarkers = [], ghostPath = null;
 
@@ -465,7 +466,7 @@ function _histCardHtml(r, i) {
       ${locAnchor}
       <span class="hc-actions">
         <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
-        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Spotted':'Spotted?'}">◉</button>
+        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark as unseen':'Mark as seen'}">◉</button>
         <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
       </span>
     </div>
@@ -507,6 +508,7 @@ function _drawAircraft() {
 
     let html = `<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
       <input class="hist-search astro-search" type="text" placeholder="Search history…" value="${_histSearch.replace(/"/g,'&quot;')}" oninput="_histSearch=this.value;searchHistory()" style="flex:1;min-width:0">
+      <button class="seen-filter-btn${_histSeenOnly?' active':''}" onclick="toggleHistSeen()" title="${_histSeenOnly?'Show all':'Show spotted only'}">◉</button>
       <button class="fav-filter-btn${_histFavOnly?' active':''}" onclick="toggleHistFav()" title="${_histFavOnly?'Show all':'Show favourites only'}">⭐</button>
     </div>`;
 
@@ -587,7 +589,8 @@ function renderHistory(data) {
 function _histUrl(offset, limit) {
   let url = `/api/history?offset=${offset}`;
   if (limit)        url += `&limit=${limit}`;
-  if (_histFavOnly) url += '&favourites=1';
+  if (_histFavOnly)  url += '&favourites=1';
+  if (_histSeenOnly) url += '&seen=1';
   if (_histSearch)  url += `&search=${encodeURIComponent(_histSearch)}`;
   return url;
 }
@@ -603,6 +606,18 @@ async function searchHistory() {
 
 async function toggleHistFav() {
   _histFavOnly = !_histFavOnly;
+  _histSeenOnly = false;
+  historyData = []; _histOffset = 0; _histHasMore = false;
+  const data = await fetch(_histUrl(0)).then(r => r.json());
+  historyData = data.rows || [];
+  _histHasMore = data.has_more || false;
+  _histOffset = historyData.length;
+  _drawAircraft();
+}
+
+async function toggleHistSeen() {
+  _histSeenOnly = !_histSeenOnly;
+  _histFavOnly = false;
   historyData = []; _histOffset = 0; _histHasMore = false;
   const data = await fetch(_histUrl(0)).then(r => r.json());
   historyData = data.rows || [];
@@ -613,7 +628,7 @@ async function toggleHistFav() {
 
 async function switchAircraftTab(tab) {
   _aircraftTab = tab;
-  _histSearch = '';
+  _histSearch = ''; _histFavOnly = false; _histSeenOnly = false;
   if (tab === 'history') {
     await searchHistory();
   } else {
