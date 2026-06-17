@@ -201,10 +201,27 @@ select.inline-select:focus{border-color:var(--accent)}
     </div>
   </div>
 
+  <div class="card" style="border-color:#e74c3c22">
+    <div class="card-title" style="color:var(--red)">⚠️ Danger zone</div>
+    <div class="card-desc">These actions cannot be undone.</div>
+    <button class="btn btn-secondary" id="reset-history-btn" onclick="confirmResetHistory()">Reset aircraft history</button>
+    <span id="reset-result" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
+  </div>
+
   <div class="actions">
     <button class="btn btn-primary" onclick="save()">Save settings</button>
     <button class="btn btn-secondary" onclick="testAlert()">Send test alert</button>
     <span id="test-result" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+
+  <div id="reset-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;max-width:300px;width:90%;text-align:center">
+      <p style="font-size:14px;margin-bottom:18px;line-height:1.5">Delete all aircraft history? This cannot be undone.</p>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button onclick="doResetHistory()" style="background:#e74c3c;border:none;color:#fff;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Delete all</button>
+        <button onclick="document.getElementById('reset-confirm').style.display='none'" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 18px;border-radius:6px;font-size:13px;cursor:pointer">Cancel</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -262,6 +279,21 @@ async function save() {
     if (r.ok) showToast('✅ Settings saved');
     else showToast('❌ Save failed', 'error');
   } catch(e) { showToast('❌ '+e.message, 'error'); }
+}
+
+function confirmResetHistory() {
+  document.getElementById('reset-confirm').style.display = 'flex';
+}
+async function doResetHistory() {
+  document.getElementById('reset-confirm').style.display = 'none';
+  const el = document.getElementById('reset-result');
+  el.textContent = 'Deleting…';
+  try {
+    const r = await fetch('/api/history/reset', {method:'POST'});
+    const d = await r.json();
+    el.textContent = d.ok ? '✅ History cleared' : '❌ Failed';
+  } catch(e) { el.textContent = '❌ ' + e.message; }
+  setTimeout(() => { el.textContent = ''; }, 4000);
 }
 
 async function testAlert() {

@@ -106,6 +106,7 @@ def api_history():
                    sa.lat, sa.lon, COALESCE(sa.heading, 0) AS heading,
                    COALESCE(sa.category, 0) AS category,
                    COALESCE(sa.favourited, 0) AS favourited,
+                   COALESCE(sa.seen, 0) AS seen,
                    COALESCE(pc.thumb_url, sa.photo_url) AS thumb_url,
                    pc.photo_url AS full_photo_url
             FROM seen_aircraft sa
@@ -134,6 +135,48 @@ def api_history_favourite():
         conn.execute("UPDATE seen_aircraft SET favourited=? WHERE icao24=?", (new_val, icao24))
         conn.commit()
         return jsonify({"ok": True, "favourited": new_val})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/api/history/seen", methods=["POST"])
+def api_history_seen():
+    data = request.get_json(force=True)
+    icao24 = (data or {}).get("icao24", "").strip().lower()
+    if not icao24:
+        abort(400)
+    try:
+        conn = db()
+        row = conn.execute("SELECT COALESCE(seen,0) FROM seen_aircraft WHERE icao24=?", (icao24,)).fetchone()
+        if not row:
+            abort(404)
+        new_val = 0 if row[0] else 1
+        conn.execute("UPDATE seen_aircraft SET seen=? WHERE icao24=?", (new_val, icao24))
+        conn.commit()
+        return jsonify({"ok": True, "seen": new_val})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/api/history/delete", methods=["POST"])
+def api_history_delete():
+    data = request.get_json(force=True)
+    icao24 = (data or {}).get("icao24", "").strip().lower()
+    if not icao24:
+        abort(400)
+    try:
+        conn = db()
+        conn.execute("DELETE FROM seen_aircraft WHERE icao24=?", (icao24,))
+        conn.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/api/history/reset", methods=["POST"])
+def api_history_reset():
+    try:
+        conn = db()
+        conn.execute("DELETE FROM seen_aircraft")
+        conn.commit()
+        return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

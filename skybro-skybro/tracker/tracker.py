@@ -151,7 +151,8 @@ def migrate_db():
                        ("seen_aircraft",   "heading INTEGER DEFAULT 0"),
                        ("live_aircraft",   "category INTEGER DEFAULT 0"),
                        ("seen_aircraft",   "category INTEGER DEFAULT 0"),
-                       ("seen_aircraft",   "favourited INTEGER DEFAULT 0")]:
+                       ("seen_aircraft",   "favourited INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "seen INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
