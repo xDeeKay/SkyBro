@@ -101,7 +101,7 @@ def api_history():
         only_favs = request.args.get('favourites') == '1'
         where = "WHERE sa.alerted=1" + (" AND COALESCE(sa.favourited,0)=1" if only_favs else "")
         rows = db().execute(f"""
-            SELECT sa.icao24, sa.callsign, sa.model, sa.registration, sa.origin_country,
+            SELECT sa.id, sa.icao24, sa.callsign, sa.model, sa.registration, sa.origin_country,
                    sa.min_alt_ft, sa.min_dist_km, sa.first_seen, sa.last_seen,
                    sa.lat, sa.lon, COALESCE(sa.heading, 0) AS heading,
                    COALESCE(sa.category, 0) AS category,
@@ -123,16 +123,14 @@ def api_history():
 @app.route("/api/history/favourite", methods=["POST"])
 def api_history_favourite():
     data = request.get_json(force=True)
-    icao24 = (data or {}).get("icao24", "").strip().lower()
-    if not icao24:
-        abort(400)
+    row_id = (data or {}).get("id")
+    if not row_id: abort(400)
     try:
         conn = db()
-        row = conn.execute("SELECT COALESCE(favourited,0) FROM seen_aircraft WHERE icao24=?", (icao24,)).fetchone()
-        if not row:
-            abort(404)
+        row = conn.execute("SELECT COALESCE(favourited,0) FROM seen_aircraft WHERE id=?", (row_id,)).fetchone()
+        if not row: abort(404)
         new_val = 0 if row[0] else 1
-        conn.execute("UPDATE seen_aircraft SET favourited=? WHERE icao24=?", (new_val, icao24))
+        conn.execute("UPDATE seen_aircraft SET favourited=? WHERE id=?", (new_val, row_id))
         conn.commit()
         return jsonify({"ok": True, "favourited": new_val})
     except Exception as e:
@@ -141,16 +139,14 @@ def api_history_favourite():
 @app.route("/api/history/seen", methods=["POST"])
 def api_history_seen():
     data = request.get_json(force=True)
-    icao24 = (data or {}).get("icao24", "").strip().lower()
-    if not icao24:
-        abort(400)
+    row_id = (data or {}).get("id")
+    if not row_id: abort(400)
     try:
         conn = db()
-        row = conn.execute("SELECT COALESCE(seen,0) FROM seen_aircraft WHERE icao24=?", (icao24,)).fetchone()
-        if not row:
-            abort(404)
+        row = conn.execute("SELECT COALESCE(seen,0) FROM seen_aircraft WHERE id=?", (row_id,)).fetchone()
+        if not row: abort(404)
         new_val = 0 if row[0] else 1
-        conn.execute("UPDATE seen_aircraft SET seen=? WHERE icao24=?", (new_val, icao24))
+        conn.execute("UPDATE seen_aircraft SET seen=? WHERE id=?", (new_val, row_id))
         conn.commit()
         return jsonify({"ok": True, "seen": new_val})
     except Exception as e:
@@ -159,12 +155,12 @@ def api_history_seen():
 @app.route("/api/history/delete", methods=["POST"])
 def api_history_delete():
     data = request.get_json(force=True)
-    icao24 = (data or {}).get("icao24", "").strip().lower()
-    if not icao24:
-        abort(400)
+    row_id = (data or {}).get("id")
+    if not row_id: abort(400)
     try:
         conn = db()
-        conn.execute("DELETE FROM seen_aircraft WHERE icao24=?", (icao24,))
+        conn.execute("DELETE FROM flight_pings WHERE visit_id=?", (row_id,))
+        conn.execute("DELETE FROM seen_aircraft WHERE id=?", (row_id,))
         conn.commit()
         return jsonify({"ok": True})
     except Exception as e:

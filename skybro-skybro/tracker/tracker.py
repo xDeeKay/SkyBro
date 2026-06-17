@@ -106,6 +106,14 @@ def init_db():
             origin_country TEXT, model TEXT, registration TEXT,
             alerted INTEGER DEFAULT 0, photo_url TEXT
         );
+        CREATE TABLE IF NOT EXISTS flight_pings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            visit_id INTEGER,
+            icao24 TEXT,
+            ts INTEGER,
+            lat REAL, lon REAL,
+            alt_ft REAL, speed_kts REAL, heading INTEGER, dist_km REAL
+        );
         CREATE TABLE IF NOT EXISTS iss_alerts (
             pass_time INTEGER PRIMARY KEY,
             duration INTEGER,
@@ -377,7 +385,7 @@ def fetch_aircraft_photo(icao24):
     return photo_url, thumb_url
 
 # ── OpenSky ───────────────────────────────────────────────────────────────────
-_alerted = set()
+_alerted = {}  # icao24 → seen_aircraft.id of current visit
 _opensky_backoff_until = 0.0
 _opensky_backoff_step  = 300  # 5 min starting step, doubles on each 429 up to 1 hr
 _opensky_token         = None
@@ -500,10 +508,9 @@ def process_states(states):
             (icao24, callsign, lat, lon, alt_ft, speed_kts, heading,
              vrate, country, model, reg, dist_km, now, thumb_url, category))
 
-        if (dist_km <= cfg["radius_km"] and
-                alt_ft <= cfg["alt_threshold_ft"] and
-                icao24 not in _alerted):
-            _alerted.add(icao24)
+        in_zone = (dist_km <= cfg["radius_km"] and alt_ft <= cfg["alt_threshold_ft"])
+
+        if in_zone and icao24 not in _alerted:
             direction = bearing_to_compass(bearing_from_home(lat, lon))
             _metric = cfg.get("units_speed", "aviation") == "metric"
             vr_str = (f"↑ {abs(vrate*(60 if _metric else 196.85)):.0f} {'m/min' if _metric else 'fpm'}" if vrate > 0.5
@@ -516,12 +523,19 @@ def process_states(states):
                 'model': model, 'reg': reg, 'direction': direction,
                 'heading': heading,
             })
-            c.execute("""INSERT OR IGNORE INTO seen_aircraft
+            c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
                  lat,lon,origin_country,model,registration,alerted,photo_url,heading,category)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
                  country, model, reg, thumb_url, heading, category))
+            _alerted[icao24] = c.lastrowid
+
+        if in_zone and icao24 in _alerted:
+            c.execute("""INSERT INTO flight_pings
+                (visit_id,icao24,ts,lat,lon,alt_ft,speed_kts,heading,dist_km)
+                VALUES (?,?,?,?,?,?,?,?,?)""",
+                (_alerted[icao24], icao24, now, lat, lon, alt_ft, speed_kts, heading, dist_km))
 
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
     conn.commit()
@@ -577,7 +591,7 @@ def process_states(states):
     live_icaos = {s[0] for s in states if s[6] and s[5]}
     for icao in list(_alerted):
         if icao not in live_icaos:
-            _alerted.discard(icao)
+            _alerted.pop(icao, None)
 
 # ── Satellites ────────────────────────────────────────────────────────────────
 _sat_last_check = 0.0

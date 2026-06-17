@@ -476,9 +476,9 @@ function _drawAircraft() {
                 <span style="display:flex;align-items:center;gap:6px">
                   <span class="hc-time">${dt}</span>
                   <span class="hc-actions">
-                    <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen('${r.icao24}',${i})" title="${r.seen?'Mark unseen':'Mark as seen outside'}">👁</button>
-                    <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav('${r.icao24}',${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
-                    <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry('${r.icao24}',${i})" title="Delete">🗑</button>
+                    <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark unseen':'Mark as seen outside'}">👁</button>
+                    <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
+                    <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
                   </span>
                 </span>
               </div>
@@ -608,32 +608,32 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function toggleFav(icao24, idx) {
+function toggleFav(id, idx) {
   fetch('/api/history/favourite', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({icao24})
+    body: JSON.stringify({id})
   })
   .then(r => r.json())
   .then(d => { if (d.ok) { historyData[idx].favourited = d.favourited; _drawAircraft(); } });
 }
 
-function toggleSeen(icao24, idx) {
+function toggleSeen(id, idx) {
   fetch('/api/history/seen', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({icao24})
+    body: JSON.stringify({id})
   })
   .then(r => r.json())
   .then(d => { if (d.ok) { historyData[idx].seen = d.seen; _drawAircraft(); } });
 }
 
-function deleteHistEntry(icao24, idx) {
-  showConfirm(`Delete ${historyData[idx]?.callsign || icao24} from history?`, 'Delete', async () => {
+function deleteHistEntry(id, idx) {
+  showConfirm(`Delete ${historyData[idx]?.callsign || id} from history?`, 'Delete', async () => {
     await fetch('/api/history/delete', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({icao24})
+      body: JSON.stringify({id})
     });
     historyData.splice(idx, 1);
     _histOffset = Math.max(0, _histOffset - 1);
