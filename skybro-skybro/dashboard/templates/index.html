@@ -398,7 +398,6 @@ function clearGhostPath() {
 }
 
 async function showHistoryPin(r) {
-  clearGhostPath();
   const type = aircraftType(r.model, r.category, r.callsign);
   const pings = r.id
     ? await fetch(`/api/history/${r.id}/pings`).then(res => res.json()).catch(() => [])
