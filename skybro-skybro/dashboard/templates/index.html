@@ -309,7 +309,7 @@ map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
   const VerCtrl = L.Control.extend({
     onAdd: function() {
       const d = L.DomUtil.create('div', 'ver-ctrl');
-      d.innerHTML = GIT_SHA ? `v${APP_VERSION} <span class="ver-sha">${GIT_SHA}</span>` : `v${APP_VERSION}`;
+      d.innerHTML = GIT_SHA ? `v${APP_VERSION} <span class="ver-sha">dev-${GIT_SHA}</span>` : `v${APP_VERSION}`;
       L.DomEvent.disableClickPropagation(d);
       return d;
     }
