@@ -413,7 +413,7 @@ async function showHistoryPin(r) {
       }
       ghostMarkers.push(m);
     });
-    map.fitBounds(L.latLngBounds(latlngs), {padding: [60, 60]});
+    map.flyTo([r.lat, r.lon], Math.max(map.getZoom(), 12));
   } else {
     const m = L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, type)})
       .addTo(map)
