@@ -32,4 +32,5 @@ networks:
     external: true
     name: umbrel_main_network
   skybro-net:
+    external: true
     name: skybro-net
