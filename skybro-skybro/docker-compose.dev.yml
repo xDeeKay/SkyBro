@@ -1,3 +1,5 @@
+name: skybro-dev
+
 services:
   tracker:
     build: ./tracker
