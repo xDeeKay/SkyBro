@@ -16,6 +16,8 @@ services:
     volumes:
       - /home/umbrel/umbrel/app-data/skybro-skybro/data:/data
       - /etc/localtime:/etc/localtime:ro
+    environment:
+      GIT_SHA: "${GIT_SHA:-dev}"
     depends_on:
       - tracker
     networks:

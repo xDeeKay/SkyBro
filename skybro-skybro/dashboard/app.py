@@ -5,6 +5,8 @@ Settings are persisted to /data/config.json (hot-reloaded by tracker).
 """
 
 import os, json, sqlite3, time
+
+APP_VERSION = "1.3.0"
 from datetime import datetime
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, abort
@@ -55,7 +57,9 @@ def db():
 @app.route("/")
 def index():
     cfg = read_config()
-    return render_template("index.html", cfg=cfg)
+    return render_template("index.html", cfg=cfg,
+                           app_version=APP_VERSION,
+                           git_sha=os.environ.get("GIT_SHA", "").strip())
 
 @app.route("/settings")
 def settings():
