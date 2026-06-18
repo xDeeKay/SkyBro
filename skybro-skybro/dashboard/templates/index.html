@@ -412,7 +412,7 @@ async function showHistoryPin(r) {
     const center = pings.length > 1
       ? L.latLngBounds(latlngs).getCenter()
       : [r.lat, r.lon];
-    map.flyTo(center, 12);
+    map.flyTo(center, 13);
   } else {
     ghostMarkers.push(L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, type)}).addTo(map));
     map.flyTo([r.lat, r.lon], Math.max(map.getZoom(), 12));
