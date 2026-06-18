@@ -23,9 +23,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .hdr-sep{width:1px;height:28px;background:var(--border);flex-shrink:0}
 .stat{text-align:center;white-space:nowrap}.stat-val{font-size:17px;font-weight:700;color:var(--accent);line-height:1}.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 .hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.hdr-clock{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);white-space:nowrap}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+.hdr-clock{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);white-space:nowrap}
 .settings-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;transition:border-color .15s}
 .settings-btn:hover{border-color:var(--accent)}
 @media (max-width:800px){.hdr-ctx{display:none!important}}
@@ -200,13 +198,9 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="stat"><div class="stat-val" id="s-today">—</div><div class="stat-lbl">Today</div></div>
     <div class="stat"><div class="stat-val" id="s-total">—</div><div class="stat-lbl">All time</div></div>
     <div class="stat"><div class="stat-val" id="s-countries">—</div><div class="stat-lbl">Countries</div></div>
-    <div class="hdr-sep hdr-ctx"></div>
-    <div class="stat hdr-ctx"><div class="stat-val" id="s-weather">—</div><div class="stat-lbl">Weather</div></div>
-    <div class="stat hdr-ctx"><div class="stat-val" id="s-moon">—</div><div class="stat-lbl">Moon</div></div>
-    <div class="stat hdr-ctx" id="s-pass-wrap" style="display:none"><div class="stat-val" id="s-pass">—</div><div class="stat-lbl">Next pass</div></div>
   </div>
   <div class="hdr-right">
-    <div class="hdr-clock"><div class="dot"></div><span id="hdr-time">—</span></div>
+    <div class="hdr-clock"><span id="s-weather" class="hdr-ctx"></span><span id="hdr-time">—</span></div>
     <a class="settings-btn" href="/settings">⚙ Settings</a>
   </div>
 </header>
@@ -1232,23 +1226,6 @@ async function refresh() {
     // Weather
     if (cur && cur.temp != null) {
       document.getElementById('s-weather').textContent = `${wmoEmoji(cur.weather_code)} ${fmtTempBare(cur.temp)}`;
-    }
-    // Moon
-    if (astronomy && astronomy.moon) {
-      const _mi = astronomy.moon;
-      const _illum = _mi.illumination != null ? _mi.illumination : Math.round(_mi.phase_pct||0);
-      document.getElementById('s-moon').textContent = `${_mi.phase_emoji||'🌙'} ${_illum}%`;
-    }
-    // Next satellite pass
-    const _nextPass = (satellites||[]).find(p => (p.mins_away||0) > 0);
-    if (_nextPass) {
-      const _mins = Math.round(_nextPass.mins_away);
-      const _timeStr = _mins >= 60 ? `${Math.floor(_mins/60)}h ${_mins%60}m` : `${_mins}m`;
-      const _satLabel = (_nextPass.sat_name||'ISS').replace('Hubble Space Telescope','HST').replace('Tiangong CSS','CSS');
-      document.getElementById('s-pass').textContent = `${_satLabel} ${_timeStr}`;
-      document.getElementById('s-pass-wrap').style.display = '';
-    } else {
-      document.getElementById('s-pass-wrap').style.display = 'none';
     }
   } catch(e) { console.error('Refresh error:', e); }
 }
