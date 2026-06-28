@@ -124,6 +124,7 @@ def api_history():
                    COALESCE(sa.category, 0) AS category,
                    COALESCE(sa.favourited, 0) AS favourited,
                    COALESCE(sa.seen, 0) AS seen,
+                   COALESCE(sa.speed_kts, 0) AS speed_kts,
                    COALESCE(pc.thumb_url, sa.photo_url) AS thumb_url,
                    pc.photo_url AS full_photo_url
             FROM seen_aircraft sa

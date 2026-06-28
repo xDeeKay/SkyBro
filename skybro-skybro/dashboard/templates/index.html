@@ -489,6 +489,7 @@ function _histCardHtml(r, i) {
           ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
           <span class="hc-tag">↕ ${fmtAlt(r.min_alt_ft||0)}</span>
           <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
+          ${r.speed_kts ? `<span class="hc-tag">➜ ${fmtSpeed(r.speed_kts)}</span>` : ''}
         </div>
       </div>
     </div>

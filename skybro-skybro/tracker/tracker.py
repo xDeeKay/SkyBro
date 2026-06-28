@@ -164,7 +164,8 @@ def migrate_db():
                        ("live_aircraft",   "category INTEGER DEFAULT 0"),
                        ("seen_aircraft",   "category INTEGER DEFAULT 0"),
                        ("seen_aircraft",   "favourited INTEGER DEFAULT 0"),
-                       ("seen_aircraft",   "seen INTEGER DEFAULT 0")]:
+                       ("seen_aircraft",   "seen INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "speed_kts REAL DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -529,10 +530,10 @@ def process_states(states):
             })
             c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
-                 lat,lon,origin_country,model,registration,alerted,photo_url,heading,category)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)""",
+                 lat,lon,origin_country,model,registration,alerted,photo_url,heading,category,speed_kts)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
-                 country, model, reg, thumb_url, heading, category))
+                 country, model, reg, thumb_url, heading, category, speed_kts))
             _alerted[icao24] = c.lastrowid
 
         if in_zone and icao24 in _alerted:
