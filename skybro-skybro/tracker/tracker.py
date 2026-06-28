@@ -578,7 +578,7 @@ def process_states(states):
     for alert in alert_queue:
         icao24    = alert['icao24']
         photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
-        title = f"✈ {alert['callsign']} overhead"
+        title = f"✈️ {alert['callsign']} overhead"
         _metric = cfg.get("units_speed", "aviation") == "metric"
         alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
         spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"

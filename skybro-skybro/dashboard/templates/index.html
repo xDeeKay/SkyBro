@@ -231,7 +231,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
   <div id="map"></div>
   <div class="sidebar">
     <div class="tabs">
-      <div class="tab active" data-tab="aircraft">✈ Aircraft</div>
+      <div class="tab active" data-tab="aircraft">✈️ Aircraft</div>
       <div class="tab" data-tab="satellites">🛰️ Satellites</div>
       <div class="tab" data-tab="weather">☁ Weather</div>
       <div class="tab" data-tab="astronomy">✨ Astronomy</div>
@@ -338,6 +338,10 @@ const markers = {};
 let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false, _histSeenOnly = false;
 let _histHasMore = false, _histOffset = 0;
 let ghostMarkers = [], ghostPath = null, _selectedHistIdx = null;
+
+function _acEmoji(category, callsign, model) {
+  return aircraftType(model, category, callsign) === 'heli' ? '🚁' : '✈️';
+}
 
 function aircraftType(model, category, callsign) {
   // ADS-B category is authoritative when set (non-zero)
@@ -477,7 +481,7 @@ function _histCardHtml(r, i) {
       ${thumb}
       <div class="hc-body">
         <div class="hc-row">
-          <span class="hc-call">✈ ${r.callsign}</span>
+          <span class="hc-call">${_acEmoji(r.category, r.callsign, r.model)} ${r.callsign}</span>
           <span class="hc-time">${dt}</span>
         </div>
         <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
@@ -503,7 +507,7 @@ function _drawAircraft() {
   const el = document.getElementById('pane-aircraft');
   const subEl = document.getElementById('sidebar-sub-tabs');
 
-  const tabsHtml = [['live','✈ Live'],['history','📋 History'],['stats','📊 Stats']].map(([id,lbl]) =>
+  const tabsHtml = [['live','✈️ Live'],['history','📋 History'],['stats','📊 Stats']].map(([id,lbl]) =>
     `<div class="sub-tab${_aircraftTab===id?' active':''}" onclick="switchAircraftTab('${id}')">${lbl}</div>`
   ).join('');
   if (el.classList.contains('active')) { subEl.innerHTML = tabsHtml; subEl.style.display = ''; }
@@ -520,7 +524,7 @@ function _drawAircraft() {
       const vrStr = fmtVR(vr);
       return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
         ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" decoding="async" onerror="this.style.display='none'">` : ''}
-        <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
+        <div class="pc-header"><span class="pc-call">${_acEmoji(ac.category, ac.callsign, ac.model)} ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
         <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
         <div class="pc-grid">
           <div class="pstat"><div class="pstat-val">${fmtAlt(ac.alt_ft||0)}</div><div class="pstat-lbl">${UNITS_SPEED==='metric'?'Metres':'Feet'}</div></div>
