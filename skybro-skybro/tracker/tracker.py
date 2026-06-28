@@ -5,7 +5,7 @@ Sends alerts via Pushover and/or Discord webhook.
 Config is read from /data/config.json and hot-reloaded when it changes.
 """
 
-import time, math, json, logging, sqlite3, requests, os, csv, io
+import time, math, json, logging, sqlite3, requests, os, csv, io, re
 import ephem
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -525,7 +525,7 @@ def process_states(states):
                 'alt_ft': alt_ft, 'speed_kts': speed_kts, 'vrate': vrate,
                 'vr_str': vr_str, 'dist_km': dist_km, 'country': country,
                 'model': model, 'reg': reg, 'direction': direction,
-                'heading': heading,
+                'heading': heading, 'category': category,
             })
             c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
@@ -575,7 +575,8 @@ def process_states(states):
     for alert in alert_queue:
         icao24    = alert['icao24']
         photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
-        title = f"✈️ {alert['callsign']} overhead"
+        ac_emoji = '🚁' if _is_heli(alert.get('category', 0), alert['callsign'], alert['model']) else '✈️'
+        title = f"{ac_emoji} {alert['callsign']} overhead"
         _metric = cfg.get("units_speed", "aviation") == "metric"
         alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
         spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
@@ -599,6 +600,14 @@ def process_states(states):
 
 # ── Satellites ────────────────────────────────────────────────────────────────
 _sat_last_check = 0.0
+
+def _is_heli(category, callsign, model):
+    if category == 8: return True
+    cs = (callsign or '').upper()
+    m  = (model or '').lower()
+    if not model or model == 'Unknown':
+        return bool(re.match(r'^(RSCU|TIGR|HEMS|LIFEF|HELIAIR|POLAIR|NGAIR|CHC|PHG)', cs))
+    return bool(re.search(r'helicopt|eurocopter|sikorsky|robinson|airbus h|leonardo|bell \d|ec\d{3}|h130|h145|h160|aw\d{3}|r22|r44|r66|bo.?105|bk.?117|ka-\d|mi-\d', m))
 
 def _az_compass(deg):
     dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
