@@ -584,7 +584,10 @@ function _drawSatellites() {
   let html = ``;
 
   if (!filtered.length) {
-    html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>Fetches every 2h — check n2yo key in Settings</small></div>`;
+    const emptyHint = _satSubTab === 'Starlink'
+      ? 'Computed from CelesTrak TLEs — refreshes every 6h'
+      : 'Fetches every 2h — check n2yo key in Settings';
+    html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>${emptyHint}</small></div>`;
   } else {
     html += filtered.map(p => {
       const dt = new Date(p.pass_time * 1000);
