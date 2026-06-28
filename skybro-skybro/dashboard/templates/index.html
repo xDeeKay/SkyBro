@@ -87,6 +87,25 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .fav-filter-btn:hover:not(.active),.seen-filter-btn:hover:not(.active){border-color:var(--accent)}
 .load-more-btn{display:block;width:100%;padding:9px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:13px;cursor:pointer;margin-top:8px;transition:border-color .15s,color .15s}
 .load-more-btn:hover{border-color:var(--accent);color:var(--text)}
+.stats-section-hdr{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:14px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.stats-section-hdr:first-child{margin-top:2px}
+.stats-overview{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:2px}
+.stats-tile{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center}
+.stats-tile-val{font-size:22px;font-weight:700;color:var(--accent);line-height:1}
+.stats-tile-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.stats-records{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stats-rec{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 10px 8px}
+.stats-rec-val{font-size:15px;font-weight:700;color:var(--text);line-height:1.2}
+.stats-rec-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.stats-rec-sub{font-size:11px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.bar-label{font-size:11px;color:var(--text);width:100px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;background:var(--surface2);border-radius:3px;height:5px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:3px;opacity:.8}
+.bar-count{font-size:10px;color:var(--muted);width:24px;flex-shrink:0;text-align:right}
+.hour-chart{display:flex;align-items:flex-end;gap:2px;height:44px}
+.hour-bar{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;opacity:.65;transition:opacity .1s}
+.hour-bar:hover{opacity:1}
 .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center}
 .confirm-overlay.open{display:flex}
 .confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;max-width:300px;width:90%;text-align:center}
@@ -481,11 +500,12 @@ function _drawAircraft() {
   const el = document.getElementById('pane-aircraft');
   const subEl = document.getElementById('sidebar-sub-tabs');
 
-  const tabsHtml = [['live','✈ Live'],['history','📋 History']].map(([id,lbl]) =>
+  const tabsHtml = [['live','✈ Live'],['history','📋 History'],['stats','📊 Stats']].map(([id,lbl]) =>
     `<div class="sub-tab${_aircraftTab===id?' active':''}" onclick="switchAircraftTab('${id}')">${lbl}</div>`
   ).join('');
   if (el.classList.contains('active')) { subEl.innerHTML = tabsHtml; subEl.style.display = ''; }
 
+  if (_aircraftTab === 'stats') { _drawStats(); return; }
   if (_aircraftTab === 'live') {
     if (!_liveAircraft.length) {
       el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+fmtAlt(ALT_THR)+'</small></div>';
@@ -634,11 +654,68 @@ async function toggleHistSeen() {
   _drawAircraft();
 }
 
+async function _drawStats() {
+  const el = document.getElementById('pane-aircraft');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  let s;
+  try { s = await fetch('/api/aircraft/stats').then(r => r.json()); }
+  catch(e) { el.innerHTML = '<div class="empty">Failed to load stats</div>'; return; }
+  if (!s.total) { el.innerHTML = '<div class="empty">No alert history yet</div>'; return; }
+
+  const fmtDur = sec => sec >= 3600
+    ? Math.floor(sec/3600)+'h '+(Math.floor(sec/60)%60)+'m'
+    : Math.floor(sec/60)+'m '+(sec%60)+'s';
+  const recSub = r => r ? `${r.callsign||'—'} · ${r.model||'Unknown'}` : '—';
+
+  const maxHour = Math.max(...s.hours.map(h => h.n), 1);
+  const hourBars = Array.from({length:24}, (_,i) => {
+    const h = s.hours.find(x => x.hr === i);
+    const pct = h ? Math.max(Math.round(h.n/maxHour*100), 4) : 4;
+    return `<div class="hour-bar" style="height:${pct}%" title="${i}:00 — ${h?h.n:0} alerts"></div>`;
+  }).join('');
+
+  const barRows = (rows, max) => rows.map(r => `
+    <div class="bar-row">
+      <span class="bar-label" title="${r.label}">${r.label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(r.n/max*100)}%"></div></div>
+      <span class="bar-count">${r.n}</span>
+    </div>`).join('');
+
+  const maxC = (s.top_countries[0]||{}).n || 1;
+  const maxM = (s.top_models[0]||{}).n || 1;
+
+  el.innerHTML = `
+    <div class="stats-section-hdr">Overview</div>
+    <div class="stats-overview">
+      <div class="stats-tile"><div class="stats-tile-val">${s.total}</div><div class="stats-tile-lbl">Total visits</div></div>
+      <div class="stats-tile"><div class="stats-tile-val">${s.unique_aircraft}</div><div class="stats-tile-lbl">Aircraft</div></div>
+      <div class="stats-tile"><div class="stats-tile-val">${s.unique_countries}</div><div class="stats-tile-lbl">Countries</div></div>
+      <div class="stats-tile"><div class="stats-tile-val">${s.unique_models}</div><div class="stats-tile-lbl">Models</div></div>
+    </div>
+    <div class="stats-section-hdr">Records</div>
+    <div class="stats-records">
+      <div class="stats-rec"><div class="stats-rec-val">${s.closest ? s.closest.min_dist_km+' km' : '—'}</div><div class="stats-rec-lbl">Closest approach</div><div class="stats-rec-sub">${recSub(s.closest)}</div></div>
+      <div class="stats-rec"><div class="stats-rec-val">${s.lowest ? fmtAlt(s.lowest.min_alt_ft) : '—'}</div><div class="stats-rec-lbl">Lowest altitude</div><div class="stats-rec-sub">${recSub(s.lowest)}</div></div>
+      <div class="stats-rec"><div class="stats-rec-val">${s.longest ? fmtDur(s.longest.dur) : '—'}</div><div class="stats-rec-lbl">Longest visit</div><div class="stats-rec-sub">${recSub(s.longest)}</div></div>
+      <div class="stats-rec"><div class="stats-rec-val">${s.most_visited ? s.most_visited.visits+' visits' : '—'}</div><div class="stats-rec-lbl">Most frequent</div><div class="stats-rec-sub">${recSub(s.most_visited)}</div></div>
+    </div>
+    <div class="stats-section-hdr">Alerts by hour</div>
+    <div class="hour-chart">${hourBars}</div>
+    <div style="display:flex;justify-content:space-between;margin-top:3px">
+      ${['0:00','6:00','12:00','18:00','23:00'].map(t=>`<span style="font-size:8px;color:var(--muted)">${t}</span>`).join('')}
+    </div>
+    ${s.top_countries.length ? `<div class="stats-section-hdr">Top countries</div>${barRows(s.top_countries.map(r=>({...r,label:r.origin_country})),maxC)}` : ''}
+    ${s.top_models.length ? `<div class="stats-section-hdr">Top models</div>${barRows(s.top_models.map(r=>({...r,label:r.model})),maxM)}` : ''}
+  `;
+}
+
 async function switchAircraftTab(tab) {
   _aircraftTab = tab;
   _histSearch = ''; _histFavOnly = false; _histSeenOnly = false;
   if (tab === 'history') {
     await searchHistory();
+  } else if (tab === 'stats') {
+    _drawAircraft();
   } else {
     _drawAircraft();
   }
