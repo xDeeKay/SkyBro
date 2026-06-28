@@ -33,8 +33,8 @@ _astronomy_last    = 0.0
 STARLINK_INTERVAL  = 6 * 3600  # 6 hours
 _starlink_last     = 0.0
 STARLINK_TLE_URLS  = [
-    "https://celestrak.org/NORAD/elements/gp.php?GROUP=STARLINK&FORMAT=TLE",
     "https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=starlink&FORMAT=TLE",
+    "https://celestrak.org/NORAD/elements/gp.php?GROUP=STARLINK&FORMAT=TLE",
 ]
 
 # Satellites to track in addition to ISS (name, NORAD ID, send_alert)
