@@ -32,10 +32,7 @@ ASTRONOMY_INTERVAL = 3600   # 1 hour
 _astronomy_last    = 0.0
 STARLINK_INTERVAL  = 6 * 3600  # 6 hours
 _starlink_last     = 0.0
-STARLINK_TLE_URLS  = [
-    "https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=starlink&FORMAT=TLE",
-    "https://celestrak.org/NORAD/elements/gp.php?GROUP=STARLINK&FORMAT=TLE",
-]
+STARLINK_TLE_URL = "https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=starlink&FORMAT=TLE"
 
 # Satellites to track in addition to ISS (name, NORAD ID, send_alert)
 SATELLITES = [
@@ -617,17 +614,12 @@ def check_starlink_passes():
     _starlink_last = time.time()
     lat, lon = cfg["home_lat"], cfg["home_lon"]
 
-    lines = None
-    for url in STARLINK_TLE_URLS:
-        try:
-            r = requests.get(url, timeout=30)
-            r.raise_for_status()
-            lines = [l.strip() for l in r.text.splitlines() if l.strip()]
-            if lines:
-                break
-        except Exception as e:
-            log.warning(f"Starlink TLE fetch error ({url}): {e}")
-    if not lines:
+    try:
+        r = requests.get(STARLINK_TLE_URL, timeout=30)
+        r.raise_for_status()
+        lines = [l.strip() for l in r.text.splitlines() if l.strip()]
+    except Exception as e:
+        log.warning(f"Starlink TLE fetch error: {e}")
         return
 
     sats = []
