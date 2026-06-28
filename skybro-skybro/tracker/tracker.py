@@ -6,6 +6,7 @@ Config is read from /data/config.json and hot-reloaded when it changes.
 """
 
 import time, math, json, logging, sqlite3, requests, os, csv, io
+import ephem
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from weather import fetch_weather, process_weather, process_moon
@@ -29,6 +30,9 @@ MOON_INTERVAL      = 3600   # 1 hour
 _moon_last         = 0.0
 ASTRONOMY_INTERVAL = 3600   # 1 hour
 _astronomy_last    = 0.0
+STARLINK_INTERVAL  = 6 * 3600  # 6 hours
+_starlink_last     = 0.0
+STARLINK_TLE_URL   = "https://celestrak.org/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle"
 
 # Satellites to track in addition to ISS (name, NORAD ID, send_alert)
 SATELLITES = [
@@ -596,6 +600,95 @@ def process_states(states):
 # ── Satellites ────────────────────────────────────────────────────────────────
 _sat_last_check = 0.0
 
+def _az_compass(deg):
+    dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
+    return dirs[int(round(deg / 22.5)) % 16]
+
+def _ephem_to_unix(d):
+    return int(ephem.Date(d).datetime().replace(tzinfo=timezone.utc).timestamp())
+
+def check_starlink_passes():
+    global _starlink_last
+    if time.time() - _starlink_last < STARLINK_INTERVAL:
+        return
+    _starlink_last = time.time()
+    lat, lon = cfg["home_lat"], cfg["home_lon"]
+
+    try:
+        r = requests.get(STARLINK_TLE_URL, timeout=30)
+        r.raise_for_status()
+        lines = [l.strip() for l in r.text.splitlines() if l.strip()]
+    except Exception as e:
+        log.warning(f"Starlink TLE fetch error: {e}")
+        return
+
+    sats = []
+    for i in range(0, len(lines) - 2, 3):
+        if lines[i+1].startswith('1 ') and lines[i+2].startswith('2 '):
+            sats.append((lines[i], lines[i+1], lines[i+2]))
+    if not sats:
+        log.warning("Starlink: no TLEs parsed")
+        return
+
+    # Sample ~30 across the full list for good orbital plane coverage
+    n = 30
+    step = max(1, len(sats) // n)
+    sampled = sats[::step][:n]
+
+    obs = ephem.Observer()
+    obs.lat = str(lat)
+    obs.lon = str(lon)
+    obs.elevation = 0
+    obs.horizon = '10'
+
+    now_e = ephem.now()
+    end_e = ephem.Date(now_e + 7)
+    passes = []
+    for name, line1, line2 in sampled:
+        try:
+            sat = ephem.readtle(name, line1, line2)
+            obs.date = now_e
+            for _ in range(25):
+                if obs.date >= end_e:
+                    break
+                try:
+                    rise_t, rise_az, _, max_el, set_t, set_az = obs.next_pass(sat)
+                    if rise_t and rise_t >= now_e:
+                        max_el_deg = int(math.degrees(max_el))
+                        if max_el_deg >= 10:
+                            passes.append({
+                                'pass_time': _ephem_to_unix(rise_t),
+                                'duration':  max(0, int((set_t - rise_t) * 86400)),
+                                'max_el':    max_el_deg,
+                                'start_az':  _az_compass(math.degrees(rise_az)),
+                                'end_az':    _az_compass(math.degrees(set_az)),
+                            })
+                        obs.date = ephem.Date((set_t or obs.date) + 1 * ephem.minute)
+                    else:
+                        obs.date = ephem.Date(obs.date + 90 * ephem.minute)
+                except (ephem.NeverUpError, ephem.AlwaysUpError):
+                    break
+                except Exception:
+                    obs.date = ephem.Date(obs.date + 90 * ephem.minute)
+        except Exception as e:
+            log.debug(f"Starlink pass error ({name}): {e}")
+
+    passes.sort(key=lambda p: p['pass_time'])
+    passes = passes[:50]  # cap at 50 upcoming passes
+
+    now_unix = int(time.time())
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM iss_alerts WHERE sat_name='Starlink' AND alerted=0 AND pass_time > ?", (now_unix,))
+    for p in passes:
+        c.execute(
+            "INSERT OR IGNORE INTO iss_alerts (pass_time, duration, alerted, start_az, max_el, end_az, sat_name) "
+            "VALUES (?, ?, 0, ?, ?, ?, 'Starlink')",
+            (p['pass_time'], p['duration'], p['start_az'], p['max_el'], p['end_az'])
+        )
+    conn.commit(); conn.close()
+    log.info(f"Starlink: {len(passes)} passes computed from {len(sampled)} satellites")
+
 def check_satellites():
     global _sat_last_check
     if time.time() - _sat_last_check < cfg["iss_check_hours"] * 3600:
@@ -730,6 +823,10 @@ def main():
         except Exception as e:
             log.error(f"Satellites error: {e}", exc_info=True)
             update_source_status('iss', False, str(e))
+        try:
+            check_starlink_passes()
+        except Exception as e:
+            log.error(f"Starlink error: {e}", exc_info=True)
         try:
             maybe_update_weather()
         except Exception as e:
