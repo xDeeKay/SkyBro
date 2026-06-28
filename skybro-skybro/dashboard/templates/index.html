@@ -142,9 +142,12 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .at-lbl{color:var(--muted);flex-shrink:0;white-space:nowrap}
 .at-val{text-align:right;font-weight:500;font-size:11px}
 .at-hi{margin-top:8px;padding-top:7px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
-.astro-sec{border:none;margin-bottom:2px}
-.astro-sec summary{list-style:none;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:9px 2px 5px;display:flex;justify-content:space-between;align-items:center;user-select:none}
-.astro-sec summary::-webkit-details-marker{display:none}
+.astro-sec{margin-bottom:2px}
+.astro-sec-hdr{cursor:pointer;padding:9px 4px 5px;display:flex;justify-content:space-between;align-items:center;user-select:none;border-bottom:1px solid var(--border)}
+.astro-sec-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+.astro-sec-badge{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:600;color:var(--text);text-transform:none;letter-spacing:0}
+.astro-sec-chev{font-size:13px;color:var(--muted)}
+.astro-sec-body{padding-top:4px}
 .a-count{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--text)}
 .astro-card{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;margin-bottom:5px}
 .ac-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
@@ -879,6 +882,8 @@ function renderWeather(cur, hourly, daily) {
 
 // ── Astronomy tab ─────────────────────────────────────────────────────────────
 let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '', _astroTab = 'tonight';
+let _aTonightOpen = {planets: true, dso: true, meteors: true};
+function toggleTonightSection(key) { _aTonightOpen[key] = !_aTonightOpen[key]; _drawAstro(); }
 let _lazyObs = null;
 function _initLazyImgs(root) {
   if (!('IntersectionObserver' in window)) {
@@ -1090,20 +1095,28 @@ function _astroTonight(a) {
       </div>
     </div>
     ${tonightPlanets.length ? `
-    <details class="astro-sec" open>
-      <summary>🪐 Planets tonight <span style="font-weight:400;font-size:10px;color:var(--muted)">(${tonightPlanets.length})</span></summary>
-      ${planetCards}
-    </details>` : ''}
-    <details class="astro-sec" open>
-      <summary>🔭 DSOs tonight <span style="font-weight:400;font-size:10px;color:var(--muted)">(${tonightDSO.length})</span></summary>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${_equipBtns()}</div>
-      ${tonightDSO.length ? dsoCards : `<div class="astro-empty">No DSOs visible with current equipment filter</div>`}
-    </details>
+    <div class="astro-sec">
+      <div class="astro-sec-hdr" onclick="toggleTonightSection('planets')">
+        <span class="astro-sec-title">🪐 Planets tonight <span class="astro-sec-badge">${tonightPlanets.length}</span></span>
+        <span class="astro-sec-chev">${_aTonightOpen.planets ? '▾' : '▸'}</span>
+      </div>
+      ${_aTonightOpen.planets ? `<div class="astro-sec-body">${planetCards}</div>` : ''}
+    </div>` : ''}
+    <div class="astro-sec">
+      <div class="astro-sec-hdr" onclick="toggleTonightSection('dso')">
+        <span class="astro-sec-title">🔭 DSOs tonight <span class="astro-sec-badge">${tonightDSO.length}</span></span>
+        <span class="astro-sec-chev">${_aTonightOpen.dso ? '▾' : '▸'}</span>
+      </div>
+      ${_aTonightOpen.dso ? `<div class="astro-sec-body"><div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${_equipBtns()}</div>${tonightDSO.length ? dsoCards : `<div class="astro-empty">No DSOs visible with current equipment filter</div>`}</div>` : ''}
+    </div>
     ${activeMeteors.length ? `
-    <details class="astro-sec" open>
-      <summary>☄️ Active meteor showers <span style="font-weight:400;font-size:10px;color:var(--muted)">(${activeMeteors.length})</span></summary>
-      ${meteorCards}
-    </details>` : ''}
+    <div class="astro-sec">
+      <div class="astro-sec-hdr" onclick="toggleTonightSection('meteors')">
+        <span class="astro-sec-title">☄️ Active meteor showers <span class="astro-sec-badge">${activeMeteors.length}</span></span>
+        <span class="astro-sec-chev">${_aTonightOpen.meteors ? '▾' : '▸'}</span>
+      </div>
+      ${_aTonightOpen.meteors ? `<div class="astro-sec-body">${meteorCards}</div>` : ''}
+    </div>` : ''}
     ${!tonightPlanets.length && !tonightDSO.length && !activeMeteors.length ? `<div class="astro-empty" style="padding:24px">Nothing found — check back after dusk</div>` : ''}`;
 }
 
