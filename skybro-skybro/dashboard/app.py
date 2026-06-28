@@ -83,7 +83,7 @@ def api_satellites():
         now  = int(time.time())
         rows = db().execute(
             "SELECT *, (pass_time - ?) as mins_away FROM iss_alerts "
-            "WHERE pass_time > ? ORDER BY pass_time ASC LIMIT 20",
+            "WHERE pass_time > ? ORDER BY pass_time ASC LIMIT 200",
             (now, now)).fetchall()
         result = []
         for r in rows:
