@@ -1299,6 +1299,7 @@ document.querySelectorAll('.tab').forEach(t => {
     else if (t.dataset.tab === 'satellites') { _drawSatellites(); }
     else if (t.dataset.tab === 'astronomy') { _drawAstro(); }
     else { subEl.style.display = 'none'; subEl.innerHTML = ''; }
+    if (window._updateBackTop) _updateBackTop();
   });
 });
 
@@ -1377,15 +1378,19 @@ _tickClock();
 // ── Back to top ───────────────────────────────────────────────────────────────
 (function() {
   const btn = document.getElementById('back-top');
+  function _updateBackTop() {
+    const pane = document.querySelector('.tab-pane.active');
+    btn.classList.toggle('visible', !!pane && pane.scrollTop > 200);
+  }
   document.querySelectorAll('.tab-pane').forEach(pane => {
-    pane.addEventListener('scroll', () => {
-      btn.classList.toggle('visible', pane.scrollTop > 200);
-    }, { passive: true });
+    pane.addEventListener('scroll', _updateBackTop, { passive: true });
   });
   btn.addEventListener('click', () => {
     const pane = document.querySelector('.tab-pane.active');
     if (pane) pane.scrollTo({ top: 0, behavior: 'smooth' });
   });
+  // Expose so tab switches can call it
+  window._updateBackTop = _updateBackTop;
 })();
 
 fetchLocationName();
