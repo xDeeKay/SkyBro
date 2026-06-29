@@ -490,6 +490,7 @@ function _histCardHtml(r, i) {
           <span class="hc-tag">↕ ${fmtAlt(r.min_alt_ft||0)}</span>
           <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
           ${r.speed_kts ? `<span class="hc-tag">➜ ${fmtSpeed(r.speed_kts)}</span>` : ''}
+          ${Math.abs(r.vertical_rate||0) > 0.5 ? `<span class="hc-tag">${fmtVR(r.vertical_rate)}</span>` : ''}
         </div>
       </div>
     </div>

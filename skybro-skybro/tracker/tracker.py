@@ -165,7 +165,12 @@ def migrate_db():
                        ("seen_aircraft",   "category INTEGER DEFAULT 0"),
                        ("seen_aircraft",   "favourited INTEGER DEFAULT 0"),
                        ("seen_aircraft",   "seen INTEGER DEFAULT 0"),
-                       ("seen_aircraft",   "speed_kts REAL DEFAULT 0")]:
+                       ("seen_aircraft",   "speed_kts REAL DEFAULT 0"),
+                       ("seen_aircraft",   "vertical_rate REAL DEFAULT 0"),
+                       ("seen_aircraft",   "geo_alt_ft REAL DEFAULT 0"),
+                       ("seen_aircraft",   "squawk TEXT"),
+                       ("seen_aircraft",   "spi INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "position_source INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -503,6 +508,10 @@ def process_states(states):
         heading   = round(s[10] or 0)
         vrate     = s[11] or 0
         country   = s[2] or ""
+        geo_alt_ft      = round(s[13] * 3.28084) if len(s) > 13 and s[13] else 0
+        squawk          = s[14] if len(s) > 14 and s[14] else None
+        spi             = 1 if len(s) > 15 and s[15] else 0
+        position_source = int(s[16]) if len(s) > 16 and s[16] is not None else 0
         category  = int(s[17]) if len(s) > 17 and s[17] is not None else 0
         dist_km   = round(haversine(cfg["home_lat"], cfg["home_lon"], lat, lon), 2)
         model, reg = lookup(icao24)
@@ -527,13 +536,17 @@ def process_states(states):
                 'vr_str': vr_str, 'dist_km': dist_km, 'country': country,
                 'model': model, 'reg': reg, 'direction': direction,
                 'heading': heading, 'category': category,
+                'geo_alt_ft': geo_alt_ft, 'squawk': squawk,
+                'spi': spi, 'position_source': position_source,
             })
             c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
-                 lat,lon,origin_country,model,registration,alerted,photo_url,heading,category,speed_kts)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)""",
+                 lat,lon,origin_country,model,registration,alerted,photo_url,heading,category,
+                 speed_kts,vertical_rate,geo_alt_ft,squawk,spi,position_source)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
-                 country, model, reg, thumb_url, heading, category, speed_kts))
+                 country, model, reg, thumb_url, heading, category,
+                 speed_kts, vrate, geo_alt_ft, squawk, spi, position_source))
             _alerted[icao24] = c.lastrowid
 
         if in_zone and icao24 in _alerted:
