@@ -216,7 +216,6 @@ def api_aircraft_stats():
 
         closest     = conn.execute("SELECT icao24, callsign, model, min_dist_km FROM seen_aircraft WHERE alerted=1 ORDER BY min_dist_km ASC LIMIT 1").fetchone()
         lowest      = conn.execute("SELECT icao24, callsign, model, min_alt_ft FROM seen_aircraft WHERE alerted=1 ORDER BY min_alt_ft ASC LIMIT 1").fetchone()
-        longest     = conn.execute("SELECT icao24, callsign, model, (last_seen - first_seen) AS dur FROM seen_aircraft WHERE alerted=1 AND last_seen > first_seen ORDER BY dur DESC LIMIT 1").fetchone()
         most_visited = conn.execute("SELECT icao24, callsign, model, COUNT(*) AS visits FROM seen_aircraft WHERE alerted=1 GROUP BY icao24 ORDER BY visits DESC LIMIT 1").fetchone()
 
         top_countries = conn.execute(
@@ -236,7 +235,6 @@ def api_aircraft_stats():
             "unique_models": unique_models,
             "closest":      dict(closest)      if closest      else None,
             "lowest":       dict(lowest)       if lowest       else None,
-            "longest":      dict(longest)      if longest      else None,
             "most_visited": dict(most_visited) if most_visited else None,
             "top_countries": [dict(r) for r in top_countries],
             "top_models":    [dict(r) for r in top_models],
