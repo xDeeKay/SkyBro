@@ -164,6 +164,9 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .ac-g2-item{background:var(--surface);border-radius:4px;padding:5px 7px;font-size:10px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
 .src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);padding-bottom:env(safe-area-inset-bottom)}
+.back-top{position:absolute;bottom:52px;right:10px;width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s,color .15s;z-index:50}
+.back-top.visible{opacity:1;pointer-events:auto}
+.back-top:hover{color:var(--text);border-color:var(--accent)}
 .src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border);position:relative}
 .src-item:last-child{border-right:none}
 .src-item[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;line-height:1.4;padding:5px 9px;border-radius:6px;width:220px;white-space:normal;z-index:200;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.5)}
@@ -242,6 +245,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tab-pane" id="pane-satellites"></div>
     <div class="tab-pane" id="pane-weather"></div>
     <div class="tab-pane" id="pane-astronomy"></div>
+    <button class="back-top" id="back-top" title="Back to top">↑</button>
     <div class="src-bar" id="src-bar">
       <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div class="src-info"><div class="src-name">Aircraft</div><div class="src-detail" id="st-opensky">—</div></div></div>
       <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">Satellites</div><div class="src-detail" id="st-iss">—</div></div></div>
@@ -1369,6 +1373,20 @@ async function fetchLocationName() {
 function _tickClock() { document.getElementById('hdr-time').textContent = fmtTime(new Date()); }
 setInterval(_tickClock, 1000);
 _tickClock();
+
+// ── Back to top ───────────────────────────────────────────────────────────────
+(function() {
+  const btn = document.getElementById('back-top');
+  document.querySelectorAll('.tab-pane').forEach(pane => {
+    pane.addEventListener('scroll', () => {
+      btn.classList.toggle('visible', pane.scrollTop > 200);
+    }, { passive: true });
+  });
+  btn.addEventListener('click', () => {
+    const pane = document.querySelector('.tab-pane.active');
+    if (pane) pane.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+})();
 
 fetchLocationName();
 refresh();
