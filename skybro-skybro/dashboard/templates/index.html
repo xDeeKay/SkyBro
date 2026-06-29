@@ -104,9 +104,11 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .bar-track{flex:1;background:var(--surface2);border-radius:3px;height:5px;overflow:hidden}
 .bar-fill{height:100%;background:var(--accent);border-radius:3px;opacity:.8}
 .bar-count{font-size:10px;color:var(--muted);width:24px;flex-shrink:0;text-align:right}
+.hour-chart-wrap{position:relative}
+.hour-tip{position:absolute;bottom:calc(100% + 5px);background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:3px 8px;border-radius:5px;pointer-events:none;white-space:nowrap;display:none;transform:translateX(-50%);z-index:20}
 .hour-chart{display:flex;align-items:flex-end;gap:2px;height:44px}
-.hour-bar{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;opacity:.65;transition:opacity .1s}
-.hour-bar:hover{opacity:1}
+.hour-bar{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;opacity:.65;transition:opacity .1s;cursor:pointer}
+.hour-bar:hover,.hour-bar.active{opacity:1}
 .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center}
 .confirm-overlay.open{display:flex}
 .confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;max-width:300px;width:90%;text-align:center}
@@ -694,7 +696,7 @@ async function _drawStats() {
   const hourBars = Array.from({length:24}, (_,i) => {
     const h = s.hours.find(x => x.hr === i);
     const pct = h ? Math.max(Math.round(h.n/maxHour*100), 4) : 4;
-    return `<div class="hour-bar" style="height:${pct}%" title="${i}:00 — ${h?h.n:0} alerts"></div>`;
+    return `<div class="hour-bar" style="height:${pct}%" data-tip="${i}:00 — ${h?h.n:0} alert${h&&h.n===1?'':'s'}"></div>`;
   }).join('');
 
   const barRows = (rows, max) => rows.map(r => `
@@ -723,13 +725,46 @@ async function _drawStats() {
       <div class="stats-rec"><div class="stats-rec-val">${s.most_visited ? s.most_visited.visits+' visits' : '—'}</div><div class="stats-rec-lbl">Most frequent</div><div class="stats-rec-sub">${recSub(s.most_visited)}</div></div>
     </div>
     <div class="stats-section-hdr">Alerts by hour</div>
-    <div class="hour-chart">${hourBars}</div>
+    <div class="hour-chart-wrap">
+      <div class="hour-tip" id="hour-tip"></div>
+      <div class="hour-chart" id="hour-chart">${hourBars}</div>
+    </div>
     <div style="display:flex;justify-content:space-between;margin-top:3px">
       ${['0:00','6:00','12:00','18:00','23:00'].map(t=>`<span style="font-size:8px;color:var(--muted)">${t}</span>`).join('')}
     </div>
     ${s.top_countries.length ? `<div class="stats-section-hdr">Top countries</div>${barRows(s.top_countries.map(r=>({...r,label:r.origin_country})),maxC)}` : ''}
     ${s.top_models.length ? `<div class="stats-section-hdr">Top models</div>${barRows(s.top_models.map(r=>({...r,label:r.model})),maxM)}` : ''}
   `;
+
+  const chart = el.querySelector('#hour-chart');
+  const tip   = el.querySelector('#hour-tip');
+  if (chart && tip) {
+    let _hideTimer;
+    function _showTip(bar) {
+      clearTimeout(_hideTimer);
+      tip.textContent = bar.dataset.tip;
+      const cRect = chart.getBoundingClientRect();
+      const bRect = bar.getBoundingClientRect();
+      let left = bRect.left - cRect.left + bRect.width / 2;
+      left = Math.max(tip.offsetWidth / 2, Math.min(left, cRect.width - tip.offsetWidth / 2));
+      tip.style.left = left + 'px';
+      tip.style.display = 'block';
+      chart.querySelectorAll('.hour-bar').forEach(b => b.classList.remove('active'));
+      bar.classList.add('active');
+    }
+    function _hideTip() {
+      _hideTimer = setTimeout(() => {
+        tip.style.display = 'none';
+        chart.querySelectorAll('.hour-bar').forEach(b => b.classList.remove('active'));
+      }, 800);
+    }
+    chart.querySelectorAll('.hour-bar').forEach(bar => {
+      bar.addEventListener('mouseenter', () => _showTip(bar));
+      bar.addEventListener('mouseleave', _hideTip);
+      bar.addEventListener('touchstart', e => { e.preventDefault(); _showTip(bar); }, { passive: false });
+      bar.addEventListener('touchend', _hideTip);
+    });
+  }
 }
 
 async function switchAircraftTab(tab) {
