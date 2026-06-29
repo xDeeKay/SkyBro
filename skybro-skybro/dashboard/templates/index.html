@@ -41,7 +41,8 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .tab-pane{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;will-change:transform;padding:12px;display:none}
 .tab-pane.active{display:block}
 .plane-card{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
-.plane-card:hover{border-top-color:var(--accent);border-right-color:var(--accent);border-bottom-color:var(--accent)}
+.plane-card:not(.alert):hover{border-top-color:var(--amber);border-right-color:var(--amber);border-bottom-color:var(--amber)}
+.plane-card.alert:hover{border-top-color:var(--accent);border-right-color:var(--accent);border-bottom-color:var(--accent)}
 .plane-card.alert{border-left:3px solid var(--accent)}
 .pc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .pc-call{font-weight:700;font-size:14px}.pc-dist{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2px 7px;font-size:11px;color:var(--muted)}
