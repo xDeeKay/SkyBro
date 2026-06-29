@@ -29,7 +29,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 @media (max-width:800px){.hdr-ctx{display:none!important}}
 .main{display:flex;flex:1;overflow:hidden;position:relative}
 #map{flex:1;min-width:0}
-.sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease}
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease;position:relative}
 .sidebar.collapsed{width:0;min-width:0;border:none}
 .sidebar-tab{position:absolute;right:var(--sidebar-w);top:50%;transform:translateY(-50%);width:18px;height:44px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;z-index:500;transition:right .2s ease;padding:0;line-height:1;user-select:none}
 .sidebar-tab:hover{color:var(--text);background:var(--surface2)}
@@ -164,7 +164,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .ac-g2-item{background:var(--surface);border-radius:4px;padding:5px 7px;font-size:10px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
 .src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);padding-bottom:env(safe-area-inset-bottom)}
-.back-top{position:absolute;bottom:52px;right:10px;width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s,color .15s;z-index:50}
+.back-top{position:absolute;top:82px;left:50%;transform:translateX(-50%);width:30px;height:30px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s,color .15s;z-index:50}
 .back-top.visible{opacity:1;pointer-events:auto}
 .back-top:hover{color:var(--text);border-color:var(--accent)}
 .src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border);position:relative}
