@@ -346,7 +346,7 @@ map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 const markers = {};
 let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false, _histSeenOnly = false;
 let _histHasMore = false, _histOffset = 0;
-let ghostMarkers = [], ghostPath = null, _selectedHistIdx = null;
+let ghostMarkers = [], ghostPath = null, _selectedHistId = null;
 
 function _acEmoji(category, callsign, model) {
   return aircraftType(model, category, callsign) === 'heli' ? '🚁' : '✈️';
@@ -422,7 +422,7 @@ function clearGhostPath() {
   ghostMarkers.forEach(m => map.removeLayer(m));
   ghostMarkers = [];
   if (ghostPath) { map.removeLayer(ghostPath); ghostPath = null; }
-  _selectedHistIdx = null;
+  _selectedHistId = null;
   document.querySelectorAll('.hist-card.selected').forEach(el => el.classList.remove('selected'));
 }
 
@@ -485,7 +485,7 @@ function _histCardHtml(r, i) {
   const locAnchor = (r.lat && r.lon)
     ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
     : `<span></span>`;
-  return `<div class="hist-card" data-idx="${i}">
+  return `<div class="hist-card" data-id="${r.id}">
     <div class="hc-top">
       ${thumb}
       <div class="hc-body">
@@ -566,8 +566,8 @@ function _drawAircraft() {
     el.innerHTML = html;
     void el.scrollHeight;
     el.scrollTop = savedScroll;
-    if (_selectedHistIdx !== null) {
-      const sel = el.querySelector(`.hist-card[data-idx="${_selectedHistIdx}"]`);
+    if (_selectedHistId !== null) {
+      const sel = el.querySelector(`.hist-card[data-id="${_selectedHistId}"]`);
       if (sel) sel.classList.add('selected');
     }
     if (wasSearch || _histSearch) {
@@ -1380,12 +1380,12 @@ async function refresh() {
 document.getElementById('pane-aircraft').addEventListener('click', e => {
   const card = e.target.closest('.hist-card');
   if (!card) return;
-  const idx = +card.dataset.idx;
-  if (idx === _selectedHistIdx) { clearGhostPath(); return; }
+  const id = +card.dataset.id;
+  if (id === _selectedHistId) { clearGhostPath(); return; }
   clearGhostPath();
-  const r = historyData[idx];
+  const r = historyData.find(x => x.id === id);
   if (r && r.lat && r.lon) {
-    _selectedHistIdx = idx;
+    _selectedHistId = id;
     card.classList.add('selected');
     showHistoryPin(r);
   }
