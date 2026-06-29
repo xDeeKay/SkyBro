@@ -575,7 +575,7 @@ function _drawAircraft() {
 
 const SAT_COLORS = {ISS:'#1abc9c', Hubble:'#9b59b6', Tiangong:'#e74c3c', Starlink:'#f39c12'};
 const SAT_NAMES  = ['ISS', 'Hubble', 'Tiangong', 'Starlink'];
-let _satPasses = [], _satSubTab = 'ISS';
+let _satPasses = [], _satSubTab = 'ISS', _satSubTabPrev = 'ISS';
 
 function renderSatellites(passes) { _satPasses = passes; _drawSatellites(); }
 
@@ -622,6 +622,11 @@ function _drawSatellites() {
     }).join('');
   }
   el.innerHTML = html;
+  if (_satSubTab !== _satSubTabPrev) {
+    el.scrollTop = 0;
+    _satSubTabPrev = _satSubTab;
+    if (window._updateBackTop) _updateBackTop();
+  }
 }
 
 function renderHistory(data) {
@@ -895,7 +900,7 @@ function renderWeather(cur, hourly, daily) {
 }
 
 // ── Astronomy tab ─────────────────────────────────────────────────────────────
-let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '', _astroTab = 'tonight';
+let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '', _astroTab = 'tonight', _astroTabPrev = 'tonight';
 let _aTonightOpen = {planets: true, dso: true, meteors: true};
 function toggleTonightSection(key) { _aTonightOpen[key] = !_aTonightOpen[key]; _drawAstro(); }
 let _lazyObs = null;
@@ -952,10 +957,12 @@ function _drawAstro() {
   else if (_astroTab === 'dso')     body = _astroDSO(a);
   else if (_astroTab === 'moon')    body = _astroMoon(a.moon||{});
 
-  const savedScroll = el.scrollTop;
+  const tabChanged = _astroTab !== _astroTabPrev;
+  const savedScroll = tabChanged ? 0 : el.scrollTop;
   el.innerHTML = body;
   void el.scrollHeight;
   el.scrollTop = savedScroll;
+  if (tabChanged) { _astroTabPrev = _astroTab; if (window._updateBackTop) _updateBackTop(); }
   _initLazyImgs(el);
 
   // Restore focus to search bar after re-render
