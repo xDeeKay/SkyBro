@@ -237,7 +237,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tabs">
       <div class="tab active" data-tab="aircraft">✈️ Aircraft</div>
       <div class="tab" data-tab="satellites">🛰️ Satellites</div>
-      <div class="tab" data-tab="weather">☁ Weather</div>
+      <div class="tab" data-tab="weather">☁️ Weather</div>
       <div class="tab" data-tab="astronomy">✨ Astronomy</div>
     </div>
     <div class="tabs" id="sidebar-sub-tabs" style="display:none"></div>
@@ -504,7 +504,7 @@ function _histCardHtml(r, i) {
       <span class="hc-actions">
         <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
         <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark as unseen':'Mark as seen'}">👁️</button>
-        <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
+        <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑️</button>
       </span>
     </div>
   </div>`;
@@ -888,7 +888,7 @@ function renderWeather(cur, hourly, daily) {
         <span style="font-size:18px">${wmoEmoji(d.weather_code)}</span>
         <div><div class="hist-call">${day}</div><div class="hist-sub">${d.description}</div></div>
       </div>
-      <div class="hist-meta">${fmtTempBare(d.temp_min)} – ${fmtTemp(d.temp_max)}<br>💧${d.precip_prob||0}% · ☁ ${d.astronomy_score}</div>
+      <div class="hist-meta">${fmtTempBare(d.temp_min)} – ${fmtTemp(d.temp_max)}<br>💧${d.precip_prob||0}% · ☁️ ${d.astronomy_score}</div>
     </div>`;
   });
   el.innerHTML = html;
