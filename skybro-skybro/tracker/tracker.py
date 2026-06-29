@@ -373,7 +373,7 @@ def fetch_aircraft_photo(icao24):
     except Exception as e:
         log.debug(f"Photo fetch {icao24} (hex): {e}")
 
-    if not thumb_url and reg:
+    if not thumb_url and reg and re.search(r'[A-Za-z]', reg):
         try:
             r = requests.get(f"https://api.planespotters.net/pub/photos/reg/{reg}",
                              headers=headers, timeout=5)
