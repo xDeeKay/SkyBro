@@ -564,7 +564,7 @@ function _drawAircraft() {
     }
     if (wasSearch || _histSearch) {
       const inp = el.querySelector('.hist-search');
-      if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
+      if (inp) { inp.focus({ preventScroll: true }); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
     }
   }
 }
@@ -948,13 +948,16 @@ function _drawAstro() {
   else if (_astroTab === 'dso')     body = _astroDSO(a);
   else if (_astroTab === 'moon')    body = _astroMoon(a.moon||{});
 
+  const savedScroll = el.scrollTop;
   el.innerHTML = body;
+  void el.scrollHeight;
+  el.scrollTop = savedScroll;
   _initLazyImgs(el);
 
   // Restore focus to search bar after re-render
   if (wasSearch || _aSearch) {
     const inp = el.querySelector('.astro-search');
-    if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
+    if (inp) { inp.focus({ preventScroll: true }); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
   }
 }
 
