@@ -499,7 +499,7 @@ function _histCardHtml(r, i) {
       ${locAnchor}
       <span class="hc-actions">
         <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
-        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark as unseen':'Mark as seen'}">👁</button>
+        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark as unseen':'Mark as seen'}">👁️</button>
         <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
       </span>
     </div>
@@ -543,7 +543,7 @@ function _drawAircraft() {
     let html = `<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
       <input class="hist-search astro-search" type="text" placeholder="Search history…" value="${_histSearch.replace(/"/g,'&quot;')}" oninput="_histSearch=this.value;searchHistory()" style="flex:1;min-width:0">
       <button class="fav-filter-btn${_histFavOnly?' active':''}" onclick="toggleHistFav()" title="${_histFavOnly?'Show all':'Show favourites only'}">⭐</button>
-      <button class="seen-filter-btn${_histSeenOnly?' active':''}" onclick="toggleHistSeen()" title="${_histSeenOnly?'Show all':'Show seen only'}">👁</button>
+      <button class="seen-filter-btn${_histSeenOnly?' active':''}" onclick="toggleHistSeen()" title="${_histSeenOnly?'Show all':'Show seen only'}">👁️</button>
     </div>`;
 
     if (!historyData.length) {
@@ -913,7 +913,7 @@ function _initLazyImgs(root) {
   root.querySelectorAll('img[data-lazysrc]').forEach(img => _lazyObs.observe(img));
 }
 const _ETIER = {naked_eye:0, binoculars:1, telescope:2};
-const _EICON = {naked_eye:'👁', binoculars:'🔭', telescope:'⭐'};
+const _EICON = {naked_eye:'👁️', binoculars:'🔭', telescope:'⭐'};
 const _CONST = {And:'Andromeda',Aqr:'Aquarius',Aur:'Auriga',Cap:'Capricornus',Cas:'Cassiopeia',
   Cet:'Cetus',CMa:'Canis Major',Cnc:'Cancer',Com:'Coma Berenices',CVn:'Canes Venatici',
   Cyg:'Cygnus',Dra:'Draco',Gem:'Gemini',Her:'Hercules',Hya:'Hydra',Leo:'Leo',Lep:'Lepus',
@@ -968,7 +968,7 @@ function _horizonBtn() {
   return `<button class="a-btn a-horizon${_aHorizon?' active':''}" onclick="_aHorizon=!_aHorizon;_drawAstro()">↑ Horizon</button>`;
 }
 function _equipBtns() {
-  return [['👁 Naked eye',0],['🔭 Binoculars',1],['⭐ All',2]].map(([l,v])=>
+  return [['👁️ Naked eye',0],['🔭 Binoculars',1],['⭐ All',2]].map(([l,v])=>
     `<button class="a-btn${_aEquip===v?' active':''}" onclick="_aEquip=${v};_drawAstro()">${l}</button>`
   ).join('');
 }
