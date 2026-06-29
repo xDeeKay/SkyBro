@@ -739,31 +739,30 @@ async function _drawStats() {
   const chart = el.querySelector('#hour-chart');
   const tip   = el.querySelector('#hour-tip');
   if (chart && tip) {
-    let _hideTimer;
     function _showTip(bar) {
-      clearTimeout(_hideTimer);
       tip.textContent = bar.dataset.tip;
+      tip.style.display = 'block';
+      void tip.offsetWidth; // force reflow so offsetWidth is correct before clamping
       const cRect = chart.getBoundingClientRect();
       const bRect = bar.getBoundingClientRect();
       let left = bRect.left - cRect.left + bRect.width / 2;
       left = Math.max(tip.offsetWidth / 2, Math.min(left, cRect.width - tip.offsetWidth / 2));
       tip.style.left = left + 'px';
-      tip.style.display = 'block';
       chart.querySelectorAll('.hour-bar').forEach(b => b.classList.remove('active'));
       bar.classList.add('active');
     }
     function _hideTip() {
-      _hideTimer = setTimeout(() => {
-        tip.style.display = 'none';
-        chart.querySelectorAll('.hour-bar').forEach(b => b.classList.remove('active'));
-      }, 800);
+      tip.style.display = 'none';
+      chart.querySelectorAll('.hour-bar').forEach(b => b.classList.remove('active'));
     }
     chart.querySelectorAll('.hour-bar').forEach(bar => {
       bar.addEventListener('mouseenter', () => _showTip(bar));
       bar.addEventListener('mouseleave', _hideTip);
       bar.addEventListener('touchstart', e => { e.preventDefault(); _showTip(bar); }, { passive: false });
-      bar.addEventListener('touchend', _hideTip);
     });
+    document.addEventListener('touchstart', e => {
+      if (!e.target.classList.contains('hour-bar')) _hideTip();
+    }, { passive: true });
   }
 }
 
