@@ -362,9 +362,14 @@ def fetch_aircraft_photo(icao24):
         r.raise_for_status()
         photos = r.json().get("photos", [])
         if photos:
-            photo_url = photos[0].get("link", "")
-            tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
-            thumb_url = tl.get("src", "")
+            ac = photos[0].get("aircraft", {})
+            returned_hex = (ac.get("modes") or "").lower().strip()
+            if not returned_hex or returned_hex == icao24.lower():
+                photo_url = photos[0].get("link", "")
+                tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
+                thumb_url = tl.get("src", "")
+            else:
+                log.debug(f"Photo fetch {icao24}: hex result was for {returned_hex}, skipping")
     except Exception as e:
         log.debug(f"Photo fetch {icao24} (hex): {e}")
 
@@ -375,10 +380,15 @@ def fetch_aircraft_photo(icao24):
             r.raise_for_status()
             photos = r.json().get("photos", [])
             if photos:
-                photo_url = photos[0].get("link", "")
-                tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
-                thumb_url = tl.get("src", "")
-                log.debug(f"Photo fetch {icao24}: found via reg {reg}")
+                ac = photos[0].get("aircraft", {})
+                returned_reg = (ac.get("reg") or "").upper().strip()
+                if returned_reg == reg.upper().strip():
+                    photo_url = photos[0].get("link", "")
+                    tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
+                    thumb_url = tl.get("src", "")
+                    log.debug(f"Photo fetch {icao24}: found via reg {reg}")
+                else:
+                    log.debug(f"Photo fetch {icao24}: reg result was for '{returned_reg}', expected '{reg}', skipping")
         except Exception as e:
             log.debug(f"Photo fetch {icao24} (reg {reg}): {e}")
 
