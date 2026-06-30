@@ -466,8 +466,16 @@ async function showHistoryPin(r) {
     const latlngs = pings.map(p => [p.lat, p.lon]);
     const extKm = p => (p.speed_kts || 250) * 1.852 / 240;
     const fp = pings[0], lp = pings[pings.length - 1];
-    const phantomFirst = _project(fp.lat, fp.lon, (fp.heading + 180) % 360, extKm(fp));
-    const phantomLast  = _project(lp.lat, lp.lon, lp.heading, extKm(lp));
+    const havsKm = (a, b) => {
+      const R = 6371, φ1 = a.lat*Math.PI/180, φ2 = b.lat*Math.PI/180;
+      const dφ = (b.lat-a.lat)*Math.PI/180, dλ = (b.lon-a.lon)*Math.PI/180;
+      const s = Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+    };
+    const d01 = pings.length > 1 ? havsKm(pings[0], pings[1]) : extKm(fp);
+    const dN  = pings.length > 1 ? havsKm(pings[pings.length-2], pings[pings.length-1]) : extKm(lp);
+    const phantomFirst = _project(fp.lat, fp.lon, (fp.heading + 180) % 360, d01);
+    const phantomLast  = _project(lp.lat, lp.lon, lp.heading, dN);
     const curved = _catmullRom(latlngs, 10, phantomFirst, phantomLast);
     ghostPath = L.polyline(curved, {color: 'rgba(255,255,255,0.3)', weight: 2, dashArray: '5 7'}).addTo(map);
     pings.forEach(p => {
