@@ -346,7 +346,7 @@ map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 const markers = {};
 let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false, _histSeenOnly = false;
 let _histHasMore = false, _histOffset = 0;
-let ghostMarkers = [], ghostPath = null, _selectedHistId = null;
+let ghostMarkers = [], ghostPath = null, _selectedHistId = null, _ghostToken = 0;
 
 function _acEmoji(category, callsign, model) {
   return aircraftType(model, category, callsign) === 'heli' ? '🚁' : '✈️';
@@ -419,6 +419,7 @@ function ghostIcon(heading, type) {
 }
 
 function clearGhostPath() {
+  _ghostToken++;
   ghostMarkers.forEach(m => map.removeLayer(m));
   ghostMarkers = [];
   if (ghostPath) { map.removeLayer(ghostPath); ghostPath = null; }
@@ -445,10 +446,13 @@ function _catmullRom(pts, segs = 10) {
 }
 
 async function showHistoryPin(r) {
+  const token = ++_ghostToken;
   const type = aircraftType(r.model, r.category, r.callsign);
   const pings = r.id
     ? await fetch(`/api/history/${r.id}/pings`).then(res => res.json()).catch(() => [])
     : [];
+
+  if (token !== _ghostToken) return;
 
   if (pings.length > 0) {
     const latlngs = pings.map(p => [p.lat, p.lon]);
