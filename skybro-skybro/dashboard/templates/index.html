@@ -469,7 +469,7 @@ async function showHistoryPin(r) {
     pings.forEach(p => {
       ghostMarkers.push(L.marker([p.lat, p.lon], {icon: ghostIcon(p.heading, type)}).addTo(map));
     });
-    const extKm = p => (p.speed_kts || 250) * 1.852 / 7200;
+    const extKm = p => (p.speed_kts || 250) * 1.852 / 240;
     const fp = pings[0], lp = pings[pings.length - 1];
     const extStyle = {color: 'rgba(255,255,255,0.18)', weight: 2, dashArray: '3 9'};
     ghostMarkers.push(
