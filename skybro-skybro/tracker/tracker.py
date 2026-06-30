@@ -5,7 +5,8 @@ Sends alerts via Pushover and/or Discord webhook.
 Config is read from /data/config.json and hot-reloaded when it changes.
 """
 
-import time, math, json, logging, sqlite3, requests, os, csv, io
+import time, math, json, logging, sqlite3, requests, os, csv, io, re
+import ephem
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from weather import fetch_weather, process_weather, process_moon
@@ -29,6 +30,9 @@ MOON_INTERVAL      = 3600   # 1 hour
 _moon_last         = 0.0
 ASTRONOMY_INTERVAL = 3600   # 1 hour
 _astronomy_last    = 0.0
+STARLINK_INTERVAL  = 6 * 3600  # 6 hours
+_starlink_last     = 0.0
+STARLINK_TLE_URL = "https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=starlink&FORMAT=TLE"
 
 # Satellites to track in addition to ISS (name, NORAD ID, send_alert)
 SATELLITES = [
@@ -160,7 +164,13 @@ def migrate_db():
                        ("live_aircraft",   "category INTEGER DEFAULT 0"),
                        ("seen_aircraft",   "category INTEGER DEFAULT 0"),
                        ("seen_aircraft",   "favourited INTEGER DEFAULT 0"),
-                       ("seen_aircraft",   "seen INTEGER DEFAULT 0")]:
+                       ("seen_aircraft",   "seen INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "speed_kts REAL DEFAULT 0"),
+                       ("seen_aircraft",   "vertical_rate REAL DEFAULT 0"),
+                       ("seen_aircraft",   "geo_alt_ft REAL DEFAULT 0"),
+                       ("seen_aircraft",   "squawk TEXT"),
+                       ("seen_aircraft",   "spi INTEGER DEFAULT 0"),
+                       ("seen_aircraft",   "position_source INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -352,23 +362,33 @@ def fetch_aircraft_photo(icao24):
         r.raise_for_status()
         photos = r.json().get("photos", [])
         if photos:
-            photo_url = photos[0].get("link", "")
-            tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
-            thumb_url = tl.get("src", "")
+            ac = photos[0].get("aircraft", {})
+            returned_hex = (ac.get("modes") or "").lower().strip()
+            if not returned_hex or returned_hex == icao24.lower():
+                photo_url = photos[0].get("link", "")
+                tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
+                thumb_url = tl.get("src", "")
+            else:
+                log.debug(f"Photo fetch {icao24}: hex result was for {returned_hex}, skipping")
     except Exception as e:
         log.debug(f"Photo fetch {icao24} (hex): {e}")
 
-    if not thumb_url and reg:
+    if not thumb_url and reg and re.search(r'[A-Za-z]', reg):
         try:
             r = requests.get(f"https://api.planespotters.net/pub/photos/reg/{reg}",
                              headers=headers, timeout=5)
             r.raise_for_status()
             photos = r.json().get("photos", [])
             if photos:
-                photo_url = photos[0].get("link", "")
-                tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
-                thumb_url = tl.get("src", "")
-                log.debug(f"Photo fetch {icao24}: found via reg {reg}")
+                ac = photos[0].get("aircraft", {})
+                returned_reg = (ac.get("reg") or "").upper().strip()
+                if returned_reg == reg.upper().strip():
+                    photo_url = photos[0].get("link", "")
+                    tl = photos[0].get("thumbnail_large") or photos[0].get("thumbnail") or {}
+                    thumb_url = tl.get("src", "")
+                    log.debug(f"Photo fetch {icao24}: found via reg {reg}")
+                else:
+                    log.debug(f"Photo fetch {icao24}: reg result was for '{returned_reg}', expected '{reg}', skipping")
         except Exception as e:
             log.debug(f"Photo fetch {icao24} (reg {reg}): {e}")
 
@@ -498,6 +518,10 @@ def process_states(states):
         heading   = round(s[10] or 0)
         vrate     = s[11] or 0
         country   = s[2] or ""
+        geo_alt_ft      = round(s[13] * 3.28084) if len(s) > 13 and s[13] else 0
+        squawk          = s[14] if len(s) > 14 and s[14] else None
+        spi             = 1 if len(s) > 15 and s[15] else 0
+        position_source = int(s[16]) if len(s) > 16 and s[16] is not None else 0
         category  = int(s[17]) if len(s) > 17 and s[17] is not None else 0
         dist_km   = round(haversine(cfg["home_lat"], cfg["home_lon"], lat, lon), 2)
         model, reg = lookup(icao24)
@@ -521,14 +545,18 @@ def process_states(states):
                 'alt_ft': alt_ft, 'speed_kts': speed_kts, 'vrate': vrate,
                 'vr_str': vr_str, 'dist_km': dist_km, 'country': country,
                 'model': model, 'reg': reg, 'direction': direction,
-                'heading': heading,
+                'heading': heading, 'category': category,
+                'geo_alt_ft': geo_alt_ft, 'squawk': squawk,
+                'spi': spi, 'position_source': position_source,
             })
             c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
-                 lat,lon,origin_country,model,registration,alerted,photo_url,heading,category)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)""",
+                 lat,lon,origin_country,model,registration,alerted,photo_url,heading,category,
+                 speed_kts,vertical_rate,geo_alt_ft,squawk,spi,position_source)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
-                 country, model, reg, thumb_url, heading, category))
+                 country, model, reg, thumb_url, heading, category,
+                 speed_kts, vrate, geo_alt_ft, squawk, spi, position_source))
             _alerted[icao24] = c.lastrowid
 
         if in_zone and icao24 in _alerted:
@@ -571,7 +599,8 @@ def process_states(states):
     for alert in alert_queue:
         icao24    = alert['icao24']
         photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
-        title = f"✈ {alert['callsign']} overhead"
+        ac_emoji = '🚁' if _is_heli(alert.get('category', 0), alert['callsign'], alert['model']) else '✈️'
+        title = f"{ac_emoji} {alert['callsign']} overhead"
         _metric = cfg.get("units_speed", "aviation") == "metric"
         alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
         spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
@@ -595,6 +624,103 @@ def process_states(states):
 
 # ── Satellites ────────────────────────────────────────────────────────────────
 _sat_last_check = 0.0
+
+def _is_heli(category, callsign, model):
+    if category == 8: return True
+    cs = (callsign or '').upper()
+    m  = (model or '').lower()
+    if not model or model == 'Unknown':
+        return bool(re.match(r'^(RSCU|TIGR|HEMS|LIFEF|HELIAIR|POLAIR|NGAIR|CHC|PHG)', cs))
+    return bool(re.search(r'helicopt|eurocopter|sikorsky|robinson|airbus h|leonardo|bell \d|ec\d{3}|h130|h145|h160|aw\d{3}|r22|r44|r66|bo.?105|bk.?117|ka-\d|mi-\d', m))
+
+def _az_compass(deg):
+    dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
+    return dirs[int(round(deg / 22.5)) % 16]
+
+def _ephem_to_unix(d):
+    return int(ephem.Date(d).datetime().replace(tzinfo=timezone.utc).timestamp())
+
+def check_starlink_passes():
+    global _starlink_last
+    if time.time() - _starlink_last < STARLINK_INTERVAL:
+        return
+    _starlink_last = time.time()
+    lat, lon = cfg["home_lat"], cfg["home_lon"]
+
+    try:
+        r = requests.get(STARLINK_TLE_URL, timeout=30)
+        r.raise_for_status()
+        lines = [l.strip() for l in r.text.splitlines() if l.strip()]
+    except Exception as e:
+        log.warning(f"Starlink TLE fetch error: {e}")
+        return
+
+    sats = []
+    for i in range(0, len(lines) - 2, 3):
+        if lines[i+1].startswith('1 ') and lines[i+2].startswith('2 '):
+            sats.append((lines[i], lines[i+1], lines[i+2]))
+    if not sats:
+        log.warning("Starlink: no TLEs parsed")
+        return
+
+    # Sample ~30 across the full list for good orbital plane coverage
+    n = 30
+    step = max(1, len(sats) // n)
+    sampled = sats[::step][:n]
+
+    obs = ephem.Observer()
+    obs.lat = str(lat)
+    obs.lon = str(lon)
+    obs.elevation = 0
+    obs.horizon = '10'
+
+    now_e = ephem.now()
+    end_e = ephem.Date(now_e + 7)
+    passes = []
+    for name, line1, line2 in sampled:
+        try:
+            sat = ephem.readtle(name, line1, line2)
+            obs.date = now_e
+            for _ in range(25):
+                if obs.date >= end_e:
+                    break
+                try:
+                    rise_t, rise_az, _, max_el, set_t, set_az = obs.next_pass(sat)
+                    if rise_t and rise_t >= now_e:
+                        max_el_deg = int(math.degrees(max_el))
+                        if max_el_deg >= 10:
+                            passes.append({
+                                'pass_time': _ephem_to_unix(rise_t),
+                                'duration':  max(0, int((set_t - rise_t) * 86400)),
+                                'max_el':    max_el_deg,
+                                'start_az':  _az_compass(math.degrees(rise_az)),
+                                'end_az':    _az_compass(math.degrees(set_az)),
+                            })
+                        obs.date = ephem.Date((set_t or obs.date) + 1 * ephem.minute)
+                    else:
+                        obs.date = ephem.Date(obs.date + 90 * ephem.minute)
+                except (ephem.NeverUpError, ephem.AlwaysUpError):
+                    break
+                except Exception:
+                    obs.date = ephem.Date(obs.date + 90 * ephem.minute)
+        except Exception as e:
+            log.debug(f"Starlink pass error ({name}): {e}")
+
+    passes.sort(key=lambda p: p['pass_time'])
+    passes = passes[:50]  # cap at 50 upcoming passes
+
+    now_unix = int(time.time())
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM iss_alerts WHERE sat_name='Starlink' AND alerted=0 AND pass_time > ?", (now_unix,))
+    for p in passes:
+        c.execute(
+            "INSERT OR IGNORE INTO iss_alerts (pass_time, duration, alerted, start_az, max_el, end_az, sat_name) "
+            "VALUES (?, ?, 0, ?, ?, ?, 'Starlink')",
+            (p['pass_time'], p['duration'], p['start_az'], p['max_el'], p['end_az'])
+        )
+    conn.commit(); conn.close()
+    log.info(f"Starlink: {len(passes)} passes computed from {len(sampled)} satellites")
 
 def check_satellites():
     global _sat_last_check
@@ -730,6 +856,10 @@ def main():
         except Exception as e:
             log.error(f"Satellites error: {e}", exc_info=True)
             update_source_status('iss', False, str(e))
+        try:
+            check_starlink_passes()
+        except Exception as e:
+            log.error(f"Starlink error: {e}", exc_info=True)
         try:
             maybe_update_weather()
         except Exception as e:

@@ -24,12 +24,12 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .stat{text-align:center;white-space:nowrap}.stat-val{font-size:17px;font-weight:700;color:var(--accent);line-height:1}.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 .hdr-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .hdr-clock{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700;color:var(--muted);white-space:nowrap}.hdr-clock-sep{font-size:13px;color:var(--border)}
-.settings-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;text-decoration:none;transition:border-color .15s}
-.settings-btn:hover{border-color:var(--accent)}
+.settings-btn{color:var(--muted);font-size:17px;font-weight:700;text-decoration:none;cursor:pointer;transition:color .15s}
+.settings-btn:hover{color:var(--text)}
 @media (max-width:800px){.hdr-ctx{display:none!important}}
 .main{display:flex;flex:1;overflow:hidden;position:relative}
 #map{flex:1;min-width:0}
-.sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease}
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease;position:relative}
 .sidebar.collapsed{width:0;min-width:0;border:none}
 .sidebar-tab{position:absolute;right:var(--sidebar-w);top:50%;transform:translateY(-50%);width:18px;height:44px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;z-index:500;transition:right .2s ease;padding:0;line-height:1;user-select:none}
 .sidebar-tab:hover{color:var(--text);background:var(--surface2)}
@@ -41,7 +41,8 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .tab-pane{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;will-change:transform;padding:12px;display:none}
 .tab-pane.active{display:block}
 .plane-card{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
-.plane-card:hover{border-top-color:var(--accent);border-right-color:var(--accent);border-bottom-color:var(--accent)}
+.plane-card:not(.alert):hover{border-top-color:var(--amber);border-right-color:var(--amber);border-bottom-color:var(--amber)}
+.plane-card.alert:hover{border-top-color:var(--accent);border-right-color:var(--accent);border-bottom-color:var(--accent)}
 .plane-card.alert{border-left:3px solid var(--accent)}
 .pc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .pc-call{font-weight:700;font-size:14px}.pc-dist{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2px 7px;font-size:11px;color:var(--muted)}
@@ -79,14 +80,36 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .fav-btn.active,.fav-btn:hover{opacity:1}
 .seen-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px;line-height:1;flex-shrink:0;color:rgba(59,158,255,.3);transition:color .15s}
 .seen-btn.active,.seen-btn:hover{color:#3b9eff}
-.del-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:.25;transition:opacity .15s,color .15s;line-height:1;flex-shrink:0;color:var(--text)}
-.del-btn:hover{opacity:1;color:var(--red)}
+.del-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:.25;transition:opacity .15s,text-shadow .15s;line-height:1;flex-shrink:0}
+.del-btn:hover{opacity:1;text-shadow:0 0 1px var(--red),0 0 2px var(--red),0 0 2px var(--red)}
 .fav-filter-btn,.seen-filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:13px;transition:border-color .15s,background .15s;flex-shrink:0}
 .fav-filter-btn.active{background:rgba(243,156,18,.15);border-color:var(--amber)}
 .seen-filter-btn.active{background:rgba(59,158,255,.15);border-color:#3b9eff}
 .fav-filter-btn:hover:not(.active),.seen-filter-btn:hover:not(.active){border-color:var(--accent)}
 .load-more-btn{display:block;width:100%;padding:9px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:13px;cursor:pointer;margin-top:8px;transition:border-color .15s,color .15s}
 .load-more-btn:hover{border-color:var(--accent);color:var(--text)}
+.stats-section-hdr{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.sec-hdr{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.stats-section-hdr:first-child{margin-top:2px}
+.stats-overview{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:2px}
+.stats-tile{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center}
+.stats-tile-val{font-size:22px;font-weight:700;color:var(--accent);line-height:1}
+.stats-tile-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.stats-records{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats-rec{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 10px 8px;min-width:0}
+.stats-rec-val{font-size:15px;font-weight:700;color:var(--text);line-height:1.2}
+.stats-rec-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.stats-rec-sub{font-size:11px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.bar-label{font-size:11px;color:var(--text);width:100px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;background:var(--surface2);border-radius:3px;height:5px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:3px;opacity:.8}
+.bar-count{font-size:10px;color:var(--muted);width:24px;flex-shrink:0;text-align:right}
+.hour-chart-wrap{position:relative}
+.hour-tip{position:absolute;bottom:calc(100% + 5px);background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:3px 8px;border-radius:5px;pointer-events:none;white-space:nowrap;display:none;transform:translateX(-50%);z-index:20}
+.hour-chart{display:flex;align-items:flex-end;gap:2px;height:44px}
+.hour-bar{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;opacity:.65;transition:opacity .1s;cursor:pointer}
+.hour-bar:hover,.hour-bar.active{opacity:1}
 .confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center}
 .confirm-overlay.open{display:flex}
 .confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;max-width:300px;width:90%;text-align:center}
@@ -123,9 +146,12 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .at-lbl{color:var(--muted);flex-shrink:0;white-space:nowrap}
 .at-val{text-align:right;font-weight:500;font-size:11px}
 .at-hi{margin-top:8px;padding-top:7px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
-.astro-sec{border:none;margin-bottom:2px}
-.astro-sec summary{list-style:none;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:9px 2px 5px;display:flex;justify-content:space-between;align-items:center;user-select:none}
-.astro-sec summary::-webkit-details-marker{display:none}
+.astro-sec{margin-bottom:2px}
+.astro-sec-hdr{cursor:pointer;padding:9px 4px 5px;display:flex;justify-content:space-between;align-items:center;user-select:none;border-bottom:1px solid var(--border)}
+.astro-sec-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+.astro-sec-badge{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:600;color:var(--text);text-transform:none;letter-spacing:0}
+.astro-sec-chev{font-size:13px;color:var(--muted)}
+.astro-sec-body{padding-top:4px}
 .a-count{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1px 6px;font-size:10px;font-weight:600;color:var(--text)}
 .astro-card{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;margin-bottom:5px}
 .ac-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
@@ -142,6 +168,9 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .ac-g2-item{background:var(--surface);border-radius:4px;padding:5px 7px;font-size:10px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
 .src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);padding-bottom:env(safe-area-inset-bottom)}
+.back-top{position:absolute;top:82px;left:50%;transform:translateX(-50%);width:30px;height:30px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding-top:4px;opacity:0;pointer-events:none;transition:opacity .2s,background .15s;z-index:50}
+.back-top.visible{opacity:1;pointer-events:auto}
+.back-top:hover{background:var(--muted)}
 .src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:10px;color:var(--muted);min-width:0;border-right:1px solid var(--border);position:relative}
 .src-item:last-child{border-right:none}
 .src-item[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;line-height:1.4;padding:5px 9px;border-radius:6px;width:220px;white-space:normal;z-index:200;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.5)}
@@ -200,8 +229,9 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="stat"><div class="stat-val" id="s-countries">—</div><div class="stat-lbl">Countries</div></div>
   </div>
   <div class="hdr-right">
-    <div class="hdr-clock"><span id="s-weather" class="hdr-ctx"></span><span class="hdr-clock-sep hdr-ctx">|</span><span id="hdr-time">—</span></div>
-    <a class="settings-btn" href="/settings">⚙ Settings</a>
+    <div class="hdr-clock"><span id="hdr-time">—</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx"></span></div>
+    <span class="hdr-clock-sep hdr-ctx">|</span>
+    <a class="settings-btn" href="/settings" title="Settings">⚙️</a>
   </div>
 </header>
 
@@ -209,9 +239,9 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
   <div id="map"></div>
   <div class="sidebar">
     <div class="tabs">
-      <div class="tab active" data-tab="aircraft">✈ Aircraft</div>
+      <div class="tab active" data-tab="aircraft">✈️ Aircraft</div>
       <div class="tab" data-tab="satellites">🛰️ Satellites</div>
-      <div class="tab" data-tab="weather">☁ Weather</div>
+      <div class="tab" data-tab="weather">☁️ Weather</div>
       <div class="tab" data-tab="astronomy">✨ Astronomy</div>
     </div>
     <div class="tabs" id="sidebar-sub-tabs" style="display:none"></div>
@@ -219,6 +249,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tab-pane" id="pane-satellites"></div>
     <div class="tab-pane" id="pane-weather"></div>
     <div class="tab-pane" id="pane-astronomy"></div>
+    <button class="back-top" id="back-top" title="Back to top">^</button>
     <div class="src-bar" id="src-bar">
       <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div class="src-info"><div class="src-name">Aircraft</div><div class="src-detail" id="st-opensky">—</div></div></div>
       <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">Satellites</div><div class="src-detail" id="st-iss">—</div></div></div>
@@ -315,7 +346,11 @@ map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 const markers = {};
 let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false, _histSeenOnly = false;
 let _histHasMore = false, _histOffset = 0;
-let ghostMarkers = [], ghostPath = null, _selectedHistIdx = null;
+let ghostMarkers = [], ghostPath = null, _selectedHistId = null, _ghostToken = 0;
+
+function _acEmoji(category, callsign, model) {
+  return aircraftType(model, category, callsign) === 'heli' ? '🚁' : '✈️';
+}
 
 function aircraftType(model, category, callsign) {
   // ADS-B category is authoritative when set (non-zero)
@@ -384,25 +419,73 @@ function ghostIcon(heading, type) {
 }
 
 function clearGhostPath() {
+  _ghostToken++;
   ghostMarkers.forEach(m => map.removeLayer(m));
   ghostMarkers = [];
   if (ghostPath) { map.removeLayer(ghostPath); ghostPath = null; }
-  _selectedHistIdx = null;
+  _selectedHistId = null;
   document.querySelectorAll('.hist-card.selected').forEach(el => el.classList.remove('selected'));
 }
 
+function _project(lat, lon, bearingDeg, distKm) {
+  const R = 6371, d = distKm / R, b = bearingDeg * Math.PI / 180;
+  const φ1 = lat * Math.PI / 180, λ1 = lon * Math.PI / 180;
+  const φ2 = Math.asin(Math.sin(φ1)*Math.cos(d) + Math.cos(φ1)*Math.sin(d)*Math.cos(b));
+  const λ2 = λ1 + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(φ1), Math.cos(d)-Math.sin(φ1)*Math.sin(φ2));
+  return [φ2*180/Math.PI, λ2*180/Math.PI];
+}
+
+function _catmullRom(pts, segs = 10, p0 = null, pN = null) {
+  if (pts.length < 2) return pts;
+  const p = [p0 || pts[0], ...pts, pN || pts[pts.length - 1]];
+  const out = [];
+  for (let i = 1; i < p.length - 2; i++) {
+    for (let s = 0; s < segs; s++) {
+      const t = s / segs, t2 = t * t, t3 = t2 * t;
+      const q0 = -t3 + 2*t2 - t, q1 = 3*t3 - 5*t2 + 2, q2 = -3*t3 + 4*t2 + t, q3 = t3 - t2;
+      out.push([
+        0.5*(p[i-1][0]*q0 + p[i][0]*q1 + p[i+1][0]*q2 + p[i+2][0]*q3),
+        0.5*(p[i-1][1]*q0 + p[i][1]*q1 + p[i+1][1]*q2 + p[i+2][1]*q3)
+      ]);
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
 async function showHistoryPin(r) {
+  const token = ++_ghostToken;
   const type = aircraftType(r.model, r.category, r.callsign);
   const pings = r.id
     ? await fetch(`/api/history/${r.id}/pings`).then(res => res.json()).catch(() => [])
     : [];
 
+  if (token !== _ghostToken) return;
+
   if (pings.length > 0) {
     const latlngs = pings.map(p => [p.lat, p.lon]);
-    ghostPath = L.polyline(latlngs, {color: 'rgba(255,255,255,0.3)', weight: 2, dashArray: '5 7'}).addTo(map);
+    const extKm = p => (p.speed_kts || 250) * 1.852 / 240;
+    const fp = pings[0], lp = pings[pings.length - 1];
+    const havsKm = (a, b) => {
+      const R = 6371, φ1 = a.lat*Math.PI/180, φ2 = b.lat*Math.PI/180;
+      const dφ = (b.lat-a.lat)*Math.PI/180, dλ = (b.lon-a.lon)*Math.PI/180;
+      const s = Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+    };
+    const d01 = pings.length > 1 ? havsKm(pings[0], pings[1]) : extKm(fp);
+    const dN  = pings.length > 1 ? havsKm(pings[pings.length-2], pings[pings.length-1]) : extKm(lp);
+    const phantomFirst = _project(fp.lat, fp.lon, (fp.heading + 180) % 360, d01);
+    const phantomLast  = _project(lp.lat, lp.lon, lp.heading, dN);
+    const curved = _catmullRom(latlngs, 10, phantomFirst, phantomLast);
+    ghostPath = L.polyline(curved, {color: 'rgba(255,255,255,0.3)', weight: 2, dashArray: '5 7'}).addTo(map);
     pings.forEach(p => {
       ghostMarkers.push(L.marker([p.lat, p.lon], {icon: ghostIcon(p.heading, type)}).addTo(map));
     });
+    const extStyle = {color: 'rgba(255,255,255,0.18)', weight: 2, dashArray: '3 9'};
+    ghostMarkers.push(
+      L.polyline([_project(fp.lat, fp.lon, (fp.heading + 180) % 360, extKm(fp)), [fp.lat, fp.lon]], extStyle).addTo(map),
+      L.polyline([[lp.lat, lp.lon], _project(lp.lat, lp.lon, lp.heading, extKm(lp))], extStyle).addTo(map)
+    );
     const center = pings.length > 1
       ? L.latLngBounds(latlngs).getCenter()
       : [r.lat, r.lon];
@@ -450,12 +533,12 @@ function _histCardHtml(r, i) {
   const locAnchor = (r.lat && r.lon)
     ? `<a class="hc-loc" href="https://maps.google.com/?q=${r.lat.toFixed(4)},${r.lon.toFixed(4)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📍 ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}</a>`
     : `<span></span>`;
-  return `<div class="hist-card" data-idx="${i}">
+  return `<div class="hist-card" data-id="${r.id}">
     <div class="hc-top">
       ${thumb}
       <div class="hc-body">
         <div class="hc-row">
-          <span class="hc-call">✈ ${r.callsign}</span>
+          <span class="hc-call">${_acEmoji(r.category, r.callsign, r.model)} ${r.callsign}</span>
           <span class="hc-time">${dt}</span>
         </div>
         <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
@@ -463,6 +546,8 @@ function _histCardHtml(r, i) {
           ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
           <span class="hc-tag">↕ ${fmtAlt(r.min_alt_ft||0)}</span>
           <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
+          ${r.speed_kts ? `<span class="hc-tag">➜ ${fmtSpeed(r.speed_kts)}</span>` : ''}
+          ${Math.abs(r.vertical_rate||0) > 0.5 ? `<span class="hc-tag">${fmtVR(r.vertical_rate)}</span>` : ''}
         </div>
       </div>
     </div>
@@ -470,8 +555,8 @@ function _histCardHtml(r, i) {
       ${locAnchor}
       <span class="hc-actions">
         <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
-        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark as unseen':'Mark as seen'}">◉</button>
-        <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑</button>
+        <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark as unseen':'Mark as seen'}">👁️</button>
+        <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑️</button>
       </span>
     </div>
   </div>`;
@@ -481,11 +566,12 @@ function _drawAircraft() {
   const el = document.getElementById('pane-aircraft');
   const subEl = document.getElementById('sidebar-sub-tabs');
 
-  const tabsHtml = [['live','✈ Live'],['history','📋 History']].map(([id,lbl]) =>
+  const tabsHtml = [['live','✈️ Live'],['history','📋 History'],['stats','📊 Stats']].map(([id,lbl]) =>
     `<div class="sub-tab${_aircraftTab===id?' active':''}" onclick="switchAircraftTab('${id}')">${lbl}</div>`
   ).join('');
   if (el.classList.contains('active')) { subEl.innerHTML = tabsHtml; subEl.style.display = ''; }
 
+  if (_aircraftTab === 'stats') { _drawStats(); return; }
   if (_aircraftTab === 'live') {
     if (!_liveAircraft.length) {
       el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+fmtAlt(ALT_THR)+'</small></div>';
@@ -497,7 +583,7 @@ function _drawAircraft() {
       const vrStr = fmtVR(vr);
       return `<div class="plane-card${isAlert?' alert':''}" onclick="map.flyTo([${ac.lat},${ac.lon}],13)">
         ${ac.photo_url ? `<img class="pc-photo" src="${ac.photo_url}" alt="${ac.callsign}" decoding="async" onerror="this.style.display='none'">` : ''}
-        <div class="pc-header"><span class="pc-call">✈ ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
+        <div class="pc-header"><span class="pc-call">${_acEmoji(ac.category, ac.callsign, ac.model)} ${ac.callsign}</span><span class="pc-dist">${ac.dist_km} km</span></div>
         <div class="pc-model">${ac.model||'Unknown'}${ac.registration?' · '+ac.registration:''} · ${ac.origin_country}</div>
         <div class="pc-grid">
           <div class="pstat"><div class="pstat-val">${fmtAlt(ac.alt_ft||0)}</div><div class="pstat-lbl">${UNITS_SPEED==='metric'?'Metres':'Feet'}</div></div>
@@ -513,7 +599,7 @@ function _drawAircraft() {
     let html = `<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
       <input class="hist-search astro-search" type="text" placeholder="Search history…" value="${_histSearch.replace(/"/g,'&quot;')}" oninput="_histSearch=this.value;searchHistory()" style="flex:1;min-width:0">
       <button class="fav-filter-btn${_histFavOnly?' active':''}" onclick="toggleHistFav()" title="${_histFavOnly?'Show all':'Show favourites only'}">⭐</button>
-      <button class="seen-filter-btn${_histSeenOnly?' active':''}" onclick="toggleHistSeen()" title="${_histSeenOnly?'Show all':'Show seen only'}">◉</button>
+      <button class="seen-filter-btn${_histSeenOnly?' active':''}" onclick="toggleHistSeen()" title="${_histSeenOnly?'Show all':'Show seen only'}">👁️</button>
     </div>`;
 
     if (!historyData.length) {
@@ -528,20 +614,20 @@ function _drawAircraft() {
     el.innerHTML = html;
     void el.scrollHeight;
     el.scrollTop = savedScroll;
-    if (_selectedHistIdx !== null) {
-      const sel = el.querySelector(`.hist-card[data-idx="${_selectedHistIdx}"]`);
+    if (_selectedHistId !== null) {
+      const sel = el.querySelector(`.hist-card[data-id="${_selectedHistId}"]`);
       if (sel) sel.classList.add('selected');
     }
     if (wasSearch || _histSearch) {
       const inp = el.querySelector('.hist-search');
-      if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
+      if (inp) { inp.focus({ preventScroll: true }); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
     }
   }
 }
 
-const SAT_COLORS = {ISS:'#1abc9c', Hubble:'#9b59b6', Tiangong:'#e74c3c'};
-const SAT_NAMES  = ['ISS', 'Hubble', 'Tiangong'];
-let _satPasses = [], _satSubTab = 'ISS';
+const SAT_COLORS = {ISS:'#1abc9c', Hubble:'#9b59b6', Tiangong:'#e74c3c', Starlink:'#f39c12'};
+const SAT_NAMES  = ['ISS', 'Hubble', 'Tiangong', 'Starlink'];
+let _satPasses = [], _satSubTab = 'ISS', _satSubTabPrev = 'ISS';
 
 function renderSatellites(passes) { _satPasses = passes; _drawSatellites(); }
 
@@ -561,7 +647,10 @@ function _drawSatellites() {
   let html = ``;
 
   if (!filtered.length) {
-    html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>Fetches every 2h — check n2yo key in Settings</small></div>`;
+    const emptyHint = _satSubTab === 'Starlink'
+      ? 'Computed from CelesTrak TLEs — refreshes every 6h'
+      : 'Fetches every 2h — check n2yo key in Settings';
+    html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>${emptyHint}</small></div>`;
   } else {
     html += filtered.map(p => {
       const dt = new Date(p.pass_time * 1000);
@@ -585,6 +674,11 @@ function _drawSatellites() {
     }).join('');
   }
   el.innerHTML = html;
+  if (_satSubTab !== _satSubTabPrev) {
+    el.scrollTop = 0;
+    _satSubTabPrev = _satSubTab;
+    if (window._updateBackTop) _updateBackTop();
+  }
 }
 
 function renderHistory(data) {
@@ -634,11 +728,96 @@ async function toggleHistSeen() {
   _drawAircraft();
 }
 
+async function _drawStats() {
+  const el = document.getElementById('pane-aircraft');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  let s;
+  try { s = await fetch('/api/aircraft/stats').then(r => r.json()); }
+  catch(e) { el.innerHTML = '<div class="empty">Failed to load stats</div>'; return; }
+  if (!s.total) { el.innerHTML = '<div class="empty">No alert history yet</div>'; return; }
+
+  const recSub = r => r ? `${r.callsign||'—'} · ${r.model||'Unknown'}` : '—';
+
+  const maxHour = Math.max(...s.hours.map(h => h.n), 1);
+  const hourBars = Array.from({length:24}, (_,i) => {
+    const h = s.hours.find(x => x.hr === i);
+    const pct = h ? Math.max(Math.round(h.n/maxHour*100), 4) : 4;
+    return `<div class="hour-bar" style="height:${pct}%" data-tip="${i}:00 — ${h?h.n:0} alert${h&&h.n===1?'':'s'}"></div>`;
+  }).join('');
+
+  const barRows = (rows, max) => rows.map(r => `
+    <div class="bar-row">
+      <span class="bar-label" title="${r.label}">${r.label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(r.n/max*100)}%"></div></div>
+      <span class="bar-count">${r.n}</span>
+    </div>`).join('');
+
+  const maxC = (s.top_countries[0]||{}).n || 1;
+  const maxM = (s.top_models[0]||{}).n || 1;
+
+  el.innerHTML = `
+    <div class="stats-section-hdr">Overview</div>
+    <div class="stats-overview">
+      <div class="stats-tile"><div class="stats-tile-val">${s.total}</div><div class="stats-tile-lbl">Total visits</div></div>
+      <div class="stats-tile"><div class="stats-tile-val">${s.unique_aircraft}</div><div class="stats-tile-lbl">Aircraft</div></div>
+      <div class="stats-tile"><div class="stats-tile-val">${s.unique_countries}</div><div class="stats-tile-lbl">Countries</div></div>
+      <div class="stats-tile"><div class="stats-tile-val">${s.unique_models}</div><div class="stats-tile-lbl">Models</div></div>
+    </div>
+    <div class="stats-section-hdr">Records</div>
+    <div class="stats-records">
+      <div class="stats-rec"><div class="stats-rec-val">${s.closest ? s.closest.min_dist_km+' km' : '—'}</div><div class="stats-rec-lbl">Closest approach</div><div class="stats-rec-sub">${recSub(s.closest)}</div></div>
+      <div class="stats-rec"><div class="stats-rec-val">${s.lowest ? fmtAlt(s.lowest.min_alt_ft) : '—'}</div><div class="stats-rec-lbl">Lowest altitude</div><div class="stats-rec-sub">${recSub(s.lowest)}</div></div>
+      <div class="stats-rec"><div class="stats-rec-val">${s.most_visited ? s.most_visited.visits+' visits' : '—'}</div><div class="stats-rec-lbl">Most frequent</div><div class="stats-rec-sub">${recSub(s.most_visited)}</div></div>
+    </div>
+    <div class="stats-section-hdr">Alerts by hour</div>
+    <div class="hour-chart-wrap">
+      <div class="hour-tip" id="hour-tip"></div>
+      <div class="hour-chart" id="hour-chart">${hourBars}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:3px">
+      ${['0:00','6:00','12:00','18:00','23:00'].map(t=>`<span style="font-size:8px;color:var(--muted)">${t}</span>`).join('')}
+    </div>
+    ${s.top_countries.length ? `<div class="stats-section-hdr">Top countries</div>${barRows(s.top_countries.map(r=>({...r,label:r.origin_country})),maxC)}` : ''}
+    ${s.top_models.length ? `<div class="stats-section-hdr">Top models</div>${barRows(s.top_models.map(r=>({...r,label:r.model})),maxM)}` : ''}
+  `;
+
+  const chart = el.querySelector('#hour-chart');
+  const tip   = el.querySelector('#hour-tip');
+  if (chart && tip) {
+    function _showTip(bar) {
+      tip.textContent = bar.dataset.tip;
+      tip.style.display = 'block';
+      void tip.offsetWidth; // force reflow so offsetWidth is correct before clamping
+      const cRect = chart.getBoundingClientRect();
+      const bRect = bar.getBoundingClientRect();
+      let left = bRect.left - cRect.left + bRect.width / 2;
+      left = Math.max(tip.offsetWidth / 2, Math.min(left, cRect.width - tip.offsetWidth / 2));
+      tip.style.left = left + 'px';
+      chart.querySelectorAll('.hour-bar').forEach(b => b.classList.remove('active'));
+      bar.classList.add('active');
+    }
+    function _hideTip() {
+      tip.style.display = 'none';
+      chart.querySelectorAll('.hour-bar').forEach(b => b.classList.remove('active'));
+    }
+    chart.querySelectorAll('.hour-bar').forEach(bar => {
+      bar.addEventListener('mouseenter', () => _showTip(bar));
+      bar.addEventListener('mouseleave', _hideTip);
+      bar.addEventListener('touchstart', e => { e.preventDefault(); _showTip(bar); }, { passive: false });
+    });
+    document.addEventListener('touchstart', e => {
+      if (!e.target.classList.contains('hour-bar')) _hideTip();
+    }, { passive: true });
+  }
+}
+
 async function switchAircraftTab(tab) {
   _aircraftTab = tab;
   _histSearch = ''; _histFavOnly = false; _histSeenOnly = false;
   if (tab === 'history') {
     await searchHistory();
+  } else if (tab === 'stats') {
+    _drawAircraft();
   } else {
     _drawAircraft();
   }
@@ -773,7 +952,7 @@ function renderWeather(cur, hourly, daily) {
       <span style="font-weight:700;color:${astroCol}">${astroLbl} (${cur.astronomy_score}/100)</span>
     </div>
   </div>`;
-  html += `<div style="font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">Next 24 hours</div>
+  html += `<div class="sec-hdr">Next 24 hours</div>
   <div style="overflow-x:auto;padding-bottom:6px"><div style="display:flex;gap:6px;min-width:max-content">`;
   (hourly||[]).slice(0,24).forEach(h => {
     const hTime = h.time ? h.time.split('T')[1] : '';
@@ -786,7 +965,7 @@ function renderWeather(cur, hourly, daily) {
     </div>`;
   });
   html += `</div></div>`;
-  html += `<div style="font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">7-day forecast</div>`;
+  html += `<div class="sec-hdr">7-day forecast</div>`;
   (daily||[]).forEach(d => {
     const day = d.date ? new Date(d.date+'T00:00').toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'}) : '';
     html += `<div class="hist-row">
@@ -794,14 +973,16 @@ function renderWeather(cur, hourly, daily) {
         <span style="font-size:18px">${wmoEmoji(d.weather_code)}</span>
         <div><div class="hist-call">${day}</div><div class="hist-sub">${d.description}</div></div>
       </div>
-      <div class="hist-meta">${fmtTempBare(d.temp_min)} – ${fmtTemp(d.temp_max)}<br>💧${d.precip_prob||0}% · ☁ ${d.astronomy_score}</div>
+      <div class="hist-meta">${fmtTempBare(d.temp_min)} – ${fmtTemp(d.temp_max)}<br>💧${d.precip_prob||0}% · ☁️ ${d.astronomy_score}</div>
     </div>`;
   });
   el.innerHTML = html;
 }
 
 // ── Astronomy tab ─────────────────────────────────────────────────────────────
-let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '', _astroTab = 'tonight';
+let _aData = null, _aEquip = 2, _aHorizon = true, _aSearch = '', _astroTab = 'tonight', _astroTabPrev = 'tonight';
+let _aTonightOpen = {planets: true, dso: true, meteors: true};
+function toggleTonightSection(key) { _aTonightOpen[key] = !_aTonightOpen[key]; _drawAstro(); }
 let _lazyObs = null;
 function _initLazyImgs(root) {
   if (!('IntersectionObserver' in window)) {
@@ -821,7 +1002,7 @@ function _initLazyImgs(root) {
   root.querySelectorAll('img[data-lazysrc]').forEach(img => _lazyObs.observe(img));
 }
 const _ETIER = {naked_eye:0, binoculars:1, telescope:2};
-const _EICON = {naked_eye:'👁', binoculars:'🔭', telescope:'⭐'};
+const _EICON = {naked_eye:'👁️', binoculars:'🔭', telescope:'⭐'};
 const _CONST = {And:'Andromeda',Aqr:'Aquarius',Aur:'Auriga',Cap:'Capricornus',Cas:'Cassiopeia',
   Cet:'Cetus',CMa:'Canis Major',Cnc:'Cancer',Com:'Coma Berenices',CVn:'Canes Venatici',
   Cyg:'Cygnus',Dra:'Draco',Gem:'Gemini',Her:'Hercules',Hya:'Hydra',Leo:'Leo',Lep:'Lepus',
@@ -856,13 +1037,18 @@ function _drawAstro() {
   else if (_astroTab === 'dso')     body = _astroDSO(a);
   else if (_astroTab === 'moon')    body = _astroMoon(a.moon||{});
 
+  const tabChanged = _astroTab !== _astroTabPrev;
+  const savedScroll = tabChanged ? 0 : el.scrollTop;
   el.innerHTML = body;
+  void el.scrollHeight;
+  el.scrollTop = savedScroll;
+  if (tabChanged) { _astroTabPrev = _astroTab; if (window._updateBackTop) _updateBackTop(); }
   _initLazyImgs(el);
 
   // Restore focus to search bar after re-render
   if (wasSearch || _aSearch) {
     const inp = el.querySelector('.astro-search');
-    if (inp) { inp.focus(); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
+    if (inp) { inp.focus({ preventScroll: true }); if (cursor !== null) inp.setSelectionRange(cursor, cursor); }
   }
 }
 
@@ -873,7 +1059,7 @@ function _horizonBtn() {
   return `<button class="a-btn a-horizon${_aHorizon?' active':''}" onclick="_aHorizon=!_aHorizon;_drawAstro()">↑ Horizon</button>`;
 }
 function _equipBtns() {
-  return [['👁 Naked eye',0],['🔭 Binoculars',1],['⭐ All',2]].map(([l,v])=>
+  return [['👁️ Naked eye',0],['🔭 Binoculars',1],['⭐ All',2]].map(([l,v])=>
     `<button class="a-btn${_aEquip===v?' active':''}" onclick="_aEquip=${v};_drawAstro()">${l}</button>`
   ).join('');
 }
@@ -1013,20 +1199,28 @@ function _astroTonight(a) {
       </div>
     </div>
     ${tonightPlanets.length ? `
-    <details class="astro-sec" open>
-      <summary>🪐 Planets tonight <span style="font-weight:400;font-size:10px;color:var(--muted)">(${tonightPlanets.length})</span></summary>
-      ${planetCards}
-    </details>` : ''}
-    <details class="astro-sec" open>
-      <summary>🔭 DSOs tonight <span style="font-weight:400;font-size:10px;color:var(--muted)">(${tonightDSO.length})</span></summary>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${_equipBtns()}</div>
-      ${tonightDSO.length ? dsoCards : `<div class="astro-empty">No DSOs visible with current equipment filter</div>`}
-    </details>
+    <div class="astro-sec">
+      <div class="astro-sec-hdr" onclick="toggleTonightSection('planets')">
+        <span class="astro-sec-title">🪐 Planets tonight <span class="astro-sec-badge">${tonightPlanets.length}</span></span>
+        <span class="astro-sec-chev">${_aTonightOpen.planets ? '▾' : '▸'}</span>
+      </div>
+      ${_aTonightOpen.planets ? `<div class="astro-sec-body">${planetCards}</div>` : ''}
+    </div>` : ''}
+    <div class="astro-sec">
+      <div class="astro-sec-hdr" onclick="toggleTonightSection('dso')">
+        <span class="astro-sec-title">🔭 DSOs tonight <span class="astro-sec-badge">${tonightDSO.length}</span></span>
+        <span class="astro-sec-chev">${_aTonightOpen.dso ? '▾' : '▸'}</span>
+      </div>
+      ${_aTonightOpen.dso ? `<div class="astro-sec-body"><div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${_equipBtns()}</div>${tonightDSO.length ? dsoCards : `<div class="astro-empty">No DSOs visible with current equipment filter</div>`}</div>` : ''}
+    </div>
     ${activeMeteors.length ? `
-    <details class="astro-sec" open>
-      <summary>☄️ Active meteor showers <span style="font-weight:400;font-size:10px;color:var(--muted)">(${activeMeteors.length})</span></summary>
-      ${meteorCards}
-    </details>` : ''}
+    <div class="astro-sec">
+      <div class="astro-sec-hdr" onclick="toggleTonightSection('meteors')">
+        <span class="astro-sec-title">☄️ Active meteor showers <span class="astro-sec-badge">${activeMeteors.length}</span></span>
+        <span class="astro-sec-chev">${_aTonightOpen.meteors ? '▾' : '▸'}</span>
+      </div>
+      ${_aTonightOpen.meteors ? `<div class="astro-sec-body">${meteorCards}</div>` : ''}
+    </div>` : ''}
     ${!tonightPlanets.length && !tonightDSO.length && !activeMeteors.length ? `<div class="astro-empty" style="padding:24px">Nothing found — check back after dusk</div>` : ''}`;
 }
 
@@ -1192,6 +1386,7 @@ document.querySelectorAll('.tab').forEach(t => {
     else if (t.dataset.tab === 'satellites') { _drawSatellites(); }
     else if (t.dataset.tab === 'astronomy') { _drawAstro(); }
     else { subEl.style.display = 'none'; subEl.innerHTML = ''; }
+    if (window._updateBackTop) _updateBackTop();
   });
 });
 
@@ -1225,7 +1420,7 @@ async function refresh() {
     document.getElementById('s-countries').textContent = stats.countries;
     // Weather
     if (cur && cur.temp != null) {
-      document.getElementById('s-weather').textContent = `${wmoEmoji(cur.weather_code)} ${fmtTempBare(cur.temp)}`;
+      document.getElementById('s-weather').textContent = `${wmoEmoji(cur.weather_code)} ${fmtTemp(cur.temp)}`;
     }
   } catch(e) { console.error('Refresh error:', e); }
 }
@@ -1233,12 +1428,12 @@ async function refresh() {
 document.getElementById('pane-aircraft').addEventListener('click', e => {
   const card = e.target.closest('.hist-card');
   if (!card) return;
-  const idx = +card.dataset.idx;
-  if (idx === _selectedHistIdx) { clearGhostPath(); return; }
+  const id = +card.dataset.id;
+  if (id === _selectedHistId) { clearGhostPath(); return; }
   clearGhostPath();
-  const r = historyData[idx];
+  const r = historyData.find(x => x.id === id);
   if (r && r.lat && r.lon) {
-    _selectedHistIdx = idx;
+    _selectedHistId = id;
     card.classList.add('selected');
     showHistoryPin(r);
   }
@@ -1266,6 +1461,24 @@ async function fetchLocationName() {
 function _tickClock() { document.getElementById('hdr-time').textContent = fmtTime(new Date()); }
 setInterval(_tickClock, 1000);
 _tickClock();
+
+// ── Back to top ───────────────────────────────────────────────────────────────
+(function() {
+  const btn = document.getElementById('back-top');
+  function _updateBackTop() {
+    const pane = document.querySelector('.tab-pane.active');
+    btn.classList.toggle('visible', !!pane && pane.scrollTop > 200);
+  }
+  document.querySelectorAll('.tab-pane').forEach(pane => {
+    pane.addEventListener('scroll', _updateBackTop, { passive: true });
+  });
+  btn.addEventListener('click', () => {
+    const pane = document.querySelector('.tab-pane.active');
+    if (pane) pane.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  // Expose so tab switches can call it
+  window._updateBackTop = _updateBackTop;
+})();
 
 fetchLocationName();
 refresh();

@@ -6,7 +6,7 @@ Settings are persisted to /data/config.json (hot-reloaded by tracker).
 
 import os, json, sqlite3, time
 
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 from datetime import datetime
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, abort
@@ -83,7 +83,7 @@ def api_satellites():
         now  = int(time.time())
         rows = db().execute(
             "SELECT *, (pass_time - ?) as mins_away FROM iss_alerts "
-            "WHERE pass_time > ? ORDER BY pass_time ASC LIMIT 20",
+            "WHERE pass_time > ? ORDER BY pass_time ASC LIMIT 200",
             (now, now)).fetchall()
         result = []
         for r in rows:
@@ -124,6 +124,12 @@ def api_history():
                    COALESCE(sa.category, 0) AS category,
                    COALESCE(sa.favourited, 0) AS favourited,
                    COALESCE(sa.seen, 0) AS seen,
+                   COALESCE(sa.speed_kts, 0) AS speed_kts,
+                   COALESCE(sa.vertical_rate, 0) AS vertical_rate,
+                   COALESCE(sa.geo_alt_ft, 0) AS geo_alt_ft,
+                   sa.squawk,
+                   COALESCE(sa.spi, 0) AS spi,
+                   COALESCE(sa.position_source, 0) AS position_source,
                    COALESCE(pc.thumb_url, sa.photo_url) AS thumb_url,
                    pc.photo_url AS full_photo_url
             FROM seen_aircraft sa
@@ -192,6 +198,50 @@ def api_history_pings(row_id):
         return jsonify([dict(r) for r in rows])
     except Exception:
         return jsonify([])
+
+@app.route("/api/aircraft/stats")
+def api_aircraft_stats():
+    try:
+        conn = db()
+        try:
+            row = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
+            utc_offset = json.loads(row["data"]).get("utc_offset_seconds", 0) if row else 0
+        except Exception:
+            utc_offset = 0
+
+        total            = conn.execute("SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
+        unique_aircraft  = conn.execute("SELECT COUNT(DISTINCT icao24) FROM seen_aircraft WHERE alerted=1").fetchone()[0]
+        unique_countries = conn.execute("SELECT COUNT(DISTINCT origin_country) FROM seen_aircraft WHERE alerted=1 AND origin_country != ''").fetchone()[0]
+        unique_models    = conn.execute("SELECT COUNT(DISTINCT model) FROM seen_aircraft WHERE alerted=1 AND model NOT IN ('','Unknown')").fetchone()[0]
+
+        closest     = conn.execute("SELECT icao24, callsign, model, min_dist_km FROM seen_aircraft WHERE alerted=1 ORDER BY min_dist_km ASC LIMIT 1").fetchone()
+        lowest      = conn.execute("SELECT icao24, callsign, model, min_alt_ft FROM seen_aircraft WHERE alerted=1 ORDER BY min_alt_ft ASC LIMIT 1").fetchone()
+        most_visited = conn.execute("SELECT icao24, callsign, model, COUNT(*) AS visits FROM seen_aircraft WHERE alerted=1 GROUP BY icao24 ORDER BY visits DESC LIMIT 1").fetchone()
+
+        top_countries = conn.execute(
+            "SELECT origin_country, COUNT(*) AS n FROM seen_aircraft WHERE alerted=1 AND origin_country != '' "
+            "GROUP BY origin_country ORDER BY n DESC LIMIT 8").fetchall()
+        top_models = conn.execute(
+            "SELECT model, COUNT(*) AS n FROM seen_aircraft WHERE alerted=1 AND model NOT IN ('','Unknown') "
+            "GROUP BY model ORDER BY n DESC LIMIT 8").fetchall()
+        hours = conn.execute(
+            "SELECT CAST((first_seen + ?) / 3600 AS INTEGER) % 24 AS hr, COUNT(*) AS n "
+            "FROM seen_aircraft WHERE alerted=1 GROUP BY hr ORDER BY hr", (utc_offset,)).fetchall()
+
+        return jsonify({
+            "total": total,
+            "unique_aircraft": unique_aircraft,
+            "unique_countries": unique_countries,
+            "unique_models": unique_models,
+            "closest":      dict(closest)      if closest      else None,
+            "lowest":       dict(lowest)       if lowest       else None,
+            "most_visited": dict(most_visited) if most_visited else None,
+            "top_countries": [dict(r) for r in top_countries],
+            "top_models":    [dict(r) for r in top_models],
+            "hours":         [dict(r) for r in hours],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/history/reset", methods=["POST"])
 def api_history_reset():
