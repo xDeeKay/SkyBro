@@ -427,6 +427,14 @@ function clearGhostPath() {
   document.querySelectorAll('.hist-card.selected').forEach(el => el.classList.remove('selected'));
 }
 
+function _project(lat, lon, bearingDeg, distKm) {
+  const R = 6371, d = distKm / R, b = bearingDeg * Math.PI / 180;
+  const φ1 = lat * Math.PI / 180, λ1 = lon * Math.PI / 180;
+  const φ2 = Math.asin(Math.sin(φ1)*Math.cos(d) + Math.cos(φ1)*Math.sin(d)*Math.cos(b));
+  const λ2 = λ1 + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(φ1), Math.cos(d)-Math.sin(φ1)*Math.sin(φ2));
+  return [φ2*180/Math.PI, λ2*180/Math.PI];
+}
+
 function _catmullRom(pts, segs = 10) {
   if (pts.length < 3) return pts;
   const p = [pts[0], ...pts, pts[pts.length - 1]];
@@ -461,6 +469,13 @@ async function showHistoryPin(r) {
     pings.forEach(p => {
       ghostMarkers.push(L.marker([p.lat, p.lon], {icon: ghostIcon(p.heading, type)}).addTo(map));
     });
+    const extKm = p => (p.speed_kts || 250) * 1.852 / 7200;
+    const fp = pings[0], lp = pings[pings.length - 1];
+    const extStyle = {color: 'rgba(255,255,255,0.18)', weight: 2, dashArray: '3 9'};
+    ghostMarkers.push(
+      L.polyline([_project(fp.lat, fp.lon, (fp.heading + 180) % 360, extKm(fp)), [fp.lat, fp.lon]], extStyle).addTo(map),
+      L.polyline([[lp.lat, lp.lon], _project(lp.lat, lp.lon, lp.heading, extKm(lp))], extStyle).addTo(map)
+    );
     const center = pings.length > 1
       ? L.latLngBounds(latlngs).getCenter()
       : [r.lat, r.lon];
