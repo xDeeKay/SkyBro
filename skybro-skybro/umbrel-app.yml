@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro-skybro
 category: networking
 name: SkyBro
-version: "1.4.0"
+version: "1.5.0"
 tagline: Live aircraft, ISS, weather & moon tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
@@ -51,7 +51,10 @@ path: ""
 defaultUsername: ""
 defaultPassword: ""
 releaseNotes: >-
-  v1.4.0 — Flight path visualisation on history cards (ghost icons + dashed
-  polyline for every recorded ping). Per-visit seen/favourite/delete actions.
-  Show seen only and show favourites filters with server-side search. Version
-  badge on map. Simplified header with inline temp and clock.
+  v1.5.0 — New Statistics tab with overview counts, all-time records, hourly
+  activity chart, and top-10 aircraft lists. Starlink overpasses added to the
+  Satellites tab via live CelesTrak TLEs. Flight paths now curve naturally
+  through recorded pings (Catmull-Rom spline) with faint heading-guided
+  extension lines beyond the first and last ping. History cards now show speed,
+  vertical rate, squawk, and position source. Photo validation prevents
+  mismatched Planespotters results. Back-to-top button in all sidebar panes.
