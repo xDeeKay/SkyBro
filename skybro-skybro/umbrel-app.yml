@@ -1,6 +1,6 @@
 manifestVersion: 1
 id: skybro-skybro
-category: networking
+category: utilities
 name: SkyBro
 version: "1.5.0"
 tagline: Live aircraft, ISS, weather & moon tracker
@@ -37,7 +37,7 @@ description: >-
   settings page. No config file editing required. Changes apply within 15
   seconds without restarting.
 
-developer: SkyBro
+developer: xDeeKay
 website: https://github.com/xDeeKay/SkyBro
 dependencies: []
 repo: https://github.com/xDeeKay/SkyBro

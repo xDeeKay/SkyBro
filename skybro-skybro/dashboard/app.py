@@ -57,9 +57,12 @@ def db():
 @app.route("/")
 def index():
     cfg = read_config()
+    first_run = (cfg.get("home_lat") == DEFAULTS["home_lat"] and
+                 cfg.get("home_lon") == DEFAULTS["home_lon"])
     return render_template("index.html", cfg=cfg,
                            app_version=APP_VERSION,
-                           git_sha=os.environ.get("GIT_SHA", "").strip())
+                           git_sha=os.environ.get("GIT_SHA", "").strip(),
+                           first_run=first_run)
 
 @app.route("/settings")
 def settings():
@@ -380,5 +383,29 @@ def api_status():
         return jsonify([dict(r) for r in rows])
     except Exception:
         return jsonify([])
+
+@app.route("/api/health")
+def api_health():
+    db_ok = True
+    sources = {}
+    tracker_alive = False
+    now = int(time.time())
+    try:
+        db().execute("SELECT 1").fetchone()
+    except Exception:
+        db_ok = False
+    try:
+        rows = db().execute(
+            "SELECT source, status, last_success, last_error FROM source_status").fetchall()
+        for r in rows:
+            sources[r["source"]] = {
+                "status": r["status"], "last_success": r["last_success"], "last_error": r["last_error"]}
+            if r["last_success"] and now - r["last_success"] < 300:
+                tracker_alive = True
+    except Exception:
+        db_ok = False
+    any_error = any(s["status"] == "error" for s in sources.values())
+    status = "ok" if (db_ok and tracker_alive and not any_error) else "degraded"
+    return jsonify({"status": status, "db": db_ok, "tracker_alive": tracker_alive, "sources": sources})
 
 import json as _json  # ensure json available in appended scope

@@ -119,6 +119,15 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .confirm-ok:hover{opacity:.85}
 .confirm-cancel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 18px;border-radius:6px;font-size:13px;cursor:pointer;transition:border-color .15s}
 .confirm-cancel:hover{border-color:var(--accent)}
+.first-run-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center}
+.frm-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;max-width:360px;width:90%;text-align:center}
+.frm-box p{font-size:14px;margin-bottom:18px;line-height:1.5}
+.frm-actions{display:flex;gap:8px;justify-content:center}
+.frm-actions button{padding:8px 18px;border-radius:6px;font-size:13px;cursor:pointer;transition:opacity .15s,border-color .15s}
+#frm-ok{background:var(--accent);border:none;color:#fff;font-weight:600}
+#frm-ok:hover{opacity:.85}
+#frm-settings{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+#frm-settings:hover{border-color:var(--accent)}
 .lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:pointer;flex-direction:column;gap:12px}
 .lb.open{display:flex}
 .lb img{max-width:90vw;max-height:80vh;border-radius:8px;object-fit:contain;cursor:default}
@@ -263,6 +272,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 <script>
 const HOME_LAT   = {{ cfg.home_lat }};
 const HOME_LON   = {{ cfg.home_lon }};
+const FIRST_RUN  = {{ 'true' if first_run else 'false' }};
 const RADIUS     = {{ cfg.radius_km }};
 const ALT_THR    = {{ cfg.alt_threshold_ft }};
 let USE_LOC_TZ = {{ 'true' if cfg.use_location_time else 'false' }};
@@ -320,14 +330,88 @@ function fmtVR(ms) {
   return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 196.85)) + ' fpm';
 }
 
+// ── First-run timezone-based location default ─────────────────────────────────
+const TIMEZONE_CITIES = {
+  "Australia/Perth":      { lat: -31.9505, lon: 115.8605, name: "Perth" },
+  "Australia/Sydney":     { lat: -33.8688, lon: 151.2093, name: "Sydney" },
+  "Australia/Melbourne":  { lat: -37.8136, lon: 144.9631, name: "Melbourne" },
+  "Australia/Brisbane":   { lat: -27.4698, lon: 153.0251, name: "Brisbane" },
+  "Australia/Adelaide":   { lat: -34.9285, lon: 138.6007, name: "Adelaide" },
+  "America/New_York":     { lat: 40.7128,  lon: -74.0060,  name: "New York" },
+  "America/Chicago":      { lat: 41.8781,  lon: -87.6298,  name: "Chicago" },
+  "America/Denver":       { lat: 39.7392,  lon: -104.9903, name: "Denver" },
+  "America/Los_Angeles":  { lat: 34.0522,  lon: -118.2437, name: "Los Angeles" },
+  "America/Phoenix":      { lat: 33.4484,  lon: -112.0740, name: "Phoenix" },
+  "America/Anchorage":    { lat: 61.2181,  lon: -149.9003, name: "Anchorage" },
+  "America/Honolulu":     { lat: 21.3069,  lon: -157.8583, name: "Honolulu" },
+  "America/Toronto":      { lat: 43.6532,  lon: -79.3832,  name: "Toronto" },
+  "America/Vancouver":    { lat: 49.2827,  lon: -123.1207, name: "Vancouver" },
+  "America/Sao_Paulo":    { lat: -23.5505, lon: -46.6333,  name: "São Paulo" },
+  "America/Buenos_Aires": { lat: -34.6037, lon: -58.3816,  name: "Buenos Aires" },
+  "America/Mexico_City":  { lat: 19.4326,  lon: -99.1332,  name: "Mexico City" },
+  "Europe/London":        { lat: 51.5074,  lon: -0.1278,   name: "London" },
+  "Europe/Paris":         { lat: 48.8566,  lon: 2.3522,    name: "Paris" },
+  "Europe/Berlin":        { lat: 52.5200,  lon: 13.4050,   name: "Berlin" },
+  "Europe/Madrid":        { lat: 40.4168,  lon: -3.7038,   name: "Madrid" },
+  "Europe/Rome":          { lat: 41.9028,  lon: 12.4964,   name: "Rome" },
+  "Europe/Amsterdam":     { lat: 52.3676,  lon: 4.9041,    name: "Amsterdam" },
+  "Europe/Stockholm":     { lat: 59.3293,  lon: 18.0686,   name: "Stockholm" },
+  "Europe/Oslo":          { lat: 59.9139,  lon: 10.7522,   name: "Oslo" },
+  "Europe/Copenhagen":    { lat: 55.6761,  lon: 12.5683,   name: "Copenhagen" },
+  "Europe/Helsinki":      { lat: 60.1699,  lon: 24.9384,   name: "Helsinki" },
+  "Europe/Warsaw":        { lat: 52.2297,  lon: 21.0122,   name: "Warsaw" },
+  "Europe/Prague":        { lat: 50.0755,  lon: 14.4378,   name: "Prague" },
+  "Europe/Vienna":        { lat: 48.2082,  lon: 16.3738,   name: "Vienna" },
+  "Europe/Zurich":        { lat: 47.3769,  lon: 8.5417,    name: "Zurich" },
+  "Europe/Brussels":      { lat: 50.8503,  lon: 4.3517,    name: "Brussels" },
+  "Europe/Lisbon":        { lat: 38.7223,  lon: -9.1393,   name: "Lisbon" },
+  "Europe/Athens":        { lat: 37.9838,  lon: 23.7275,   name: "Athens" },
+  "Europe/Bucharest":     { lat: 44.4268,  lon: 26.1025,   name: "Bucharest" },
+  "Europe/Istanbul":      { lat: 41.0082,  lon: 28.9784,   name: "Istanbul" },
+  "Europe/Moscow":        { lat: 55.7558,  lon: 37.6173,   name: "Moscow" },
+  "Asia/Dubai":           { lat: 25.2048,  lon: 55.2708,   name: "Dubai" },
+  "Asia/Kolkata":         { lat: 28.6139,  lon: 77.2090,   name: "Delhi" },
+  "Asia/Dhaka":           { lat: 23.8103,  lon: 90.4125,   name: "Dhaka" },
+  "Asia/Bangkok":         { lat: 13.7563,  lon: 100.5018,  name: "Bangkok" },
+  "Asia/Singapore":       { lat: 1.3521,   lon: 103.8198,  name: "Singapore" },
+  "Asia/Hong_Kong":       { lat: 22.3193,  lon: 114.1694,  name: "Hong Kong" },
+  "Asia/Shanghai":        { lat: 31.2304,  lon: 121.4737,  name: "Shanghai" },
+  "Asia/Tokyo":           { lat: 35.6762,  lon: 139.6503,  name: "Tokyo" },
+  "Asia/Seoul":           { lat: 37.5665,  lon: 126.9780,  name: "Seoul" },
+  "Asia/Jakarta":         { lat: -6.2088,  lon: 106.8456,  name: "Jakarta" },
+  "Asia/Karachi":         { lat: 24.8607,  lon: 67.0011,   name: "Karachi" },
+  "Asia/Riyadh":          { lat: 24.7136,  lon: 46.6753,   name: "Riyadh" },
+  "Asia/Tehran":          { lat: 35.6892,  lon: 51.3890,   name: "Tehran" },
+  "Africa/Cairo":         { lat: 30.0444,  lon: 31.2357,   name: "Cairo" },
+  "Africa/Lagos":         { lat: 6.5244,   lon: 3.3792,    name: "Lagos" },
+  "Africa/Johannesburg":  { lat: -26.2041, lon: 28.0473,   name: "Johannesburg" },
+  "Africa/Nairobi":       { lat: -1.2921,  lon: 36.8219,   name: "Nairobi" },
+  "Pacific/Auckland":     { lat: -36.8485, lon: 174.7633,  name: "Auckland" },
+};
+
+let _initLat = HOME_LAT, _initLon = HOME_LON, _detectedCity = null;
+if (FIRST_RUN) {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const city = TIMEZONE_CITIES[tz];
+    if (city) {
+      _initLat = city.lat; _initLon = city.lon; _detectedCity = city.name;
+      fetch('/api/config', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({home_lat: city.lat, home_lon: city.lon})
+      }).catch(() => {});
+    }
+  } catch (e) { /* Intl.DateTimeFormat unsupported — keep Singapore fallback */ }
+}
+
 // ── Map ───────────────────────────────────────────────────────────────────────
-const map = L.map('map', {zoomControl:true}).setView([HOME_LAT, HOME_LON], 11);
+const map = L.map('map', {zoomControl:true}).setView([_initLat, _initLon], 11);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution:'© OpenStreetMap © CARTO', maxZoom:19
 }).addTo(map);
-L.circleMarker([HOME_LAT, HOME_LON], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
+L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');
-const radiusCircle = L.circle([HOME_LAT, HOME_LON], {radius:RADIUS*1000, color:'#4f7cff',
+const radiusCircle = L.circle([_initLat, _initLon], {radius:RADIUS*1000, color:'#4f7cff',
   fillColor:'#4f7cff',fillOpacity:.04,weight:1,dashArray:'5 7'}).addTo(map);
 map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 
@@ -345,6 +429,7 @@ map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
 
 const markers = {};
 let historyData = [], _liveAircraft = [], _aircraftTab = 'live', _histSearch = '', _histFavOnly = false, _histSeenOnly = false;
+let _sourceStatus = {};
 let _histHasMore = false, _histOffset = 0;
 let ghostMarkers = [], ghostPath = null, _selectedHistId = null, _ghostToken = 0;
 
@@ -574,7 +659,14 @@ function _drawAircraft() {
   if (_aircraftTab === 'stats') { _drawStats(); return; }
   if (_aircraftTab === 'live') {
     if (!_liveAircraft.length) {
-      el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+fmtAlt(ALT_THR)+'</small></div>';
+      const os = _sourceStatus.opensky;
+      if (os && os.status === 'error') {
+        el.innerHTML = '<div class="empty">Aircraft data unavailable<br><small>OpenSky Network isn\'t responding. Check again shortly.</small></div>';
+      } else if (os && os.status === 'backoff') {
+        el.innerHTML = '<div class="empty">Rate limited by OpenSky<br><small>Retrying automatically.</small></div>';
+      } else {
+        el.innerHTML = '<div class="empty">No aircraft in range<br><small>Radius: '+RADIUS+' km · Alt ≤ '+fmtAlt(ALT_THR)+'</small></div>';
+      }
       return;
     }
     el.innerHTML = _liveAircraft.map(ac => {
@@ -647,10 +739,15 @@ function _drawSatellites() {
   let html = ``;
 
   if (!filtered.length) {
-    const emptyHint = _satSubTab === 'Starlink'
-      ? 'Computed from CelesTrak TLEs — refreshes every 6h'
-      : 'Fetches every 2h — check n2yo key in Settings';
-    html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>${emptyHint}</small></div>`;
+    const iss = _sourceStatus.iss;
+    if (_satSubTab !== 'Starlink' && iss && iss.status === 'no_key') {
+      html += `<div class="empty">Satellite passes unavailable<br><small>Add an n2yo API key in Settings to enable ${_satSubTab} tracking.</small></div>`;
+    } else {
+      const emptyHint = _satSubTab === 'Starlink'
+        ? 'Computed from CelesTrak TLEs — refreshes every 6h'
+        : 'Fetches every 2h — check n2yo key in Settings';
+      html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>${emptyHint}</small></div>`;
+    }
   } else {
     html += filtered.map(p => {
       const dt = new Date(p.pass_time * 1000);
@@ -932,7 +1029,13 @@ function wmoEmoji(code) {
 
 function renderWeather(cur, hourly, daily) {
   const el = document.getElementById('pane-weather');
-  if (!cur || !cur.temp) { el.innerHTML = '<div class="empty">Weather loading…</div>'; return; }
+  if (!cur || !cur.temp) {
+    const w = _sourceStatus.weather;
+    el.innerHTML = (w && w.status === 'error')
+      ? '<div class="empty">Weather data unavailable<br><small>Open-Meteo isn\'t responding. Check again shortly.</small></div>'
+      : '<div class="empty">Weather loading…</div>';
+    return;
+  }
   const [uvLbl, uvCol] = uvLabel(cur.uv_index || 0);
   const astroCol = cur.astronomy_color;
   const astroLbl = cur.astronomy_label;
@@ -1093,7 +1196,13 @@ function _skyBar(tw) {
 }
 
 function _astroTonight(a) {
-  if (!a.ts) return `<div class="empty" style="padding:24px">Astronomy data loading…<br><small>Calculates on first startup — check back shortly.</small></div>`;
+  if (!a.ts) {
+    const ast = _sourceStatus.astronomy;
+    if (ast && ast.status === 'error') {
+      return `<div class="empty" style="padding:24px">Astronomy data unavailable<br><small>Calculation failed — check back shortly.</small></div>`;
+    }
+    return `<div class="empty" style="padding:24px">Astronomy data loading…<br><small>Calculates on first startup — check back shortly.</small></div>`;
+  }
   const tw = a.twilight || {}, mi = a.moon || {};
   const illum = mi.illumination != null ? mi.illumination : 0;
   const [ifLabel, ifCol] = illum < 25 ? ['Low','var(--green)'] : illum < 60 ? ['Moderate','var(--amber)'] : ['High','var(--red)'];
@@ -1334,10 +1443,10 @@ function agoStr(ts) {
 }
 
 function renderStatus(rows) {
-  const map = {};
-  (rows||[]).forEach(r => map[r.source] = r);
+  _sourceStatus = {};
+  (rows||[]).forEach(r => _sourceStatus[r.source] = r);
   ['opensky','iss','weather','astronomy'].forEach(src => {
-    const r    = map[src];
+    const r    = _sourceStatus[src];
     const dot  = document.getElementById('sd-'+src);
     const lbl  = document.getElementById('st-'+src);
     const item = dot ? dot.closest('.src-item') : null;
@@ -1407,13 +1516,13 @@ async function refresh() {
     if (cur && cur.timezone) locationTZ = cur.timezone;
     if (stats.use_location_time !== undefined) USE_LOC_TZ = stats.use_location_time;
     if (stats.time_format) TIME_24H = (stats.time_format === '24h');
+    renderStatus(status);
     updateMap(aircraft);
     renderNearby(aircraft);
     renderSatellites(satellites);
     renderHistory(history);
     renderWeather(cur, hourly, daily);
     renderAstronomy(astronomy);
-    renderStatus(status);
     document.getElementById('s-live').textContent      = stats.live;
     document.getElementById('s-today').textContent     = stats.today;
     document.getElementById('s-total').textContent     = stats.total;
@@ -1444,7 +1553,7 @@ map.on('click', clearGhostPath);
 async function fetchLocationName() {
   try {
     const r = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${HOME_LAT}&lon=${HOME_LON}&format=json&zoom=14`,
+      `https://nominatim.openstreetmap.org/reverse?lat=${_initLat}&lon=${_initLon}&format=json&zoom=14`,
       {headers:{'Accept-Language':'en'}}
     );
     const d = await r.json();
@@ -1483,6 +1592,22 @@ _tickClock();
 fetchLocationName();
 refresh();
 setInterval(refresh, 15000);
+
+// ── First-run modal ────────────────────────────────────────────────────────────
+if (FIRST_RUN && !sessionStorage.getItem('skybro_first_run_dismissed')) {
+  const text = _detectedCity
+    ? `👋 Welcome to SkyBro! We've set your location to ${_detectedCity} based on your timezone. You can refine this in Settings, and optionally add API keys for aircraft and satellite tracking.`
+    : `👋 Welcome to SkyBro! We couldn't detect your location automatically — please set your home coordinates in Settings, and optionally add API keys for aircraft and satellite tracking.`;
+  document.getElementById('frm-text').textContent = text;
+  document.getElementById('first-run-modal').style.display = 'flex';
+  document.getElementById('frm-ok').addEventListener('click', () => {
+    sessionStorage.setItem('skybro_first_run_dismissed', '1');
+    document.getElementById('first-run-modal').style.display = 'none';
+  });
+  document.getElementById('frm-settings').addEventListener('click', () => {
+    window.location.href = '/settings';
+  });
+}
 </script>
 <div class="confirm-overlay" id="confirm-overlay" onclick="closeConfirm()">
   <div class="confirm-box" onclick="event.stopPropagation()">
@@ -1497,6 +1622,15 @@ setInterval(refresh, 15000);
   <span class="lb-close" onclick="closeLightbox()">✕</span>
   <img id="lb-img" src="" alt="" onclick="event.stopPropagation()">
   <div class="lb-credit" id="lb-credit"></div>
+</div>
+<div class="first-run-modal" id="first-run-modal">
+  <div class="frm-box">
+    <p id="frm-text"></p>
+    <div class="frm-actions">
+      <button id="frm-settings">Go to Settings</button>
+      <button id="frm-ok">Looks good</button>
+    </div>
+  </div>
 </div>
 </body>
 </html>
