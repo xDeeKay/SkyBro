@@ -37,6 +37,15 @@ description: >-
   settings page. No config file editing required. Changes apply within 15
   seconds without restarting.
 
+releaseNotes: >-
+  v1.5.0 — New Statistics tab with overview counts, all-time records, hourly
+  activity chart, and top-10 aircraft lists. Starlink overpasses added to the
+  Satellites tab via live CelesTrak TLEs. Flight paths now curve naturally
+  through recorded pings (Catmull-Rom spline) with faint heading-guided
+  extension lines beyond the first and last ping. History cards now show speed,
+  vertical rate, squawk, and position source. Photo validation prevents
+  mismatched Planespotters results. Back-to-top button in all sidebar panes.
+
 developer: xDeeKay
 website: https://github.com/xDeeKay/SkyBro
 dependencies: []
@@ -50,11 +59,5 @@ gallery:
 path: ""
 defaultUsername: ""
 defaultPassword: ""
-releaseNotes: >-
-  v1.5.0 — New Statistics tab with overview counts, all-time records, hourly
-  activity chart, and top-10 aircraft lists. Starlink overpasses added to the
-  Satellites tab via live CelesTrak TLEs. Flight paths now curve naturally
-  through recorded pings (Catmull-Rom spline) with faint heading-guided
-  extension lines beyond the first and last ping. History cards now show speed,
-  vertical rate, squawk, and position source. Photo validation prevents
-  mismatched Planespotters results. Back-to-top button in all sidebar panes.
+backupIgnore:
+  - data/aircraft_db.json
