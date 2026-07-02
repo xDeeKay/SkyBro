@@ -1599,10 +1599,10 @@ setInterval(refresh, 15000);
 // synchronously during initial parsing.
 document.addEventListener('DOMContentLoaded', () => {
 if (FIRST_RUN && !sessionStorage.getItem('skybro_first_run_dismissed')) {
-  const text = _detectedCity
-    ? `👋 Welcome to SkyBro! We've set your location to ${_detectedCity} based on your timezone. You can refine this in Settings, and optionally add API keys for aircraft and satellite tracking.`
-    : `👋 Welcome to SkyBro! We couldn't detect your location automatically — please set your home coordinates in Settings, and optionally add API keys for aircraft and satellite tracking.`;
-  document.getElementById('frm-text').textContent = text;
+  const html = _detectedCity
+    ? `👋 Welcome to SkyBro!<br><br>We've set your location to ${_detectedCity} based on your timezone.<br><br>You can refine this in Settings, and optionally add API keys for aircraft and satellite tracking.`
+    : `👋 Welcome to SkyBro!<br><br>We couldn't detect your location automatically — please set your home coordinates in Settings.<br><br>You can also optionally add API keys there for aircraft and satellite tracking.`;
+  document.getElementById('frm-text').innerHTML = html;
   document.getElementById('first-run-modal').style.display = 'flex';
   document.getElementById('frm-ok').addEventListener('click', () => {
     sessionStorage.setItem('skybro_first_run_dismissed', '1');
