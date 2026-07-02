@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro-skybro
 category: utilities
 name: SkyBro
-version: "1.5.1"
+version: "1.5.2"
 tagline: Live aircraft, ISS, weather & moon tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
@@ -38,6 +38,12 @@ description: >-
   seconds without restarting.
 
 releaseNotes: >-
+  v1.5.2 — Fixed the first-run welcome modal: it silently failed to appear
+  on a genuine fresh install because the script referenced modal elements
+  before the browser had parsed them. Location auto-detection itself was
+  unaffected and still worked correctly.
+
+
   v1.5.1 — Security and packaging hardening. Containers now run as a
   non-root user. Fixed a credential leak where an internal API key and
   password could appear in plaintext in logs or API responses. Added

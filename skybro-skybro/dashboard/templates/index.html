@@ -1594,6 +1594,10 @@ refresh();
 setInterval(refresh, 15000);
 
 // ── First-run modal ────────────────────────────────────────────────────────────
+// Deferred to DOMContentLoaded: the modal markup is defined further down the
+// page, after this script tag, so it doesn't exist in the DOM yet if this runs
+// synchronously during initial parsing.
+document.addEventListener('DOMContentLoaded', () => {
 if (FIRST_RUN && !sessionStorage.getItem('skybro_first_run_dismissed')) {
   const text = _detectedCity
     ? `👋 Welcome to SkyBro! We've set your location to ${_detectedCity} based on your timezone. You can refine this in Settings, and optionally add API keys for aircraft and satellite tracking.`
@@ -1608,6 +1612,7 @@ if (FIRST_RUN && !sessionStorage.getItem('skybro_first_run_dismissed')) {
     window.location.href = '/settings';
   });
 }
+});
 </script>
 <div class="confirm-overlay" id="confirm-overlay" onclick="closeConfirm()">
   <div class="confirm-box" onclick="event.stopPropagation()">
