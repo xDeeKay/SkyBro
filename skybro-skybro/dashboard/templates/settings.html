@@ -86,7 +86,7 @@ select.inline-select:focus{border-color:var(--accent)}
 </header>
 <div class="content">
   <h1>Settings</h1>
-  <p class="sub">Changes are saved instantly and picked up by the tracker within 15 seconds — no restart needed.</p>
+  <p class="sub">Changes are saved instantly and picked up by the tracker within 15 seconds. No restart needed.</p>
 
   <!-- Location & Thresholds -->
   <div class="card">
@@ -108,7 +108,7 @@ select.inline-select:focus{border-color:var(--accent)}
       <div>
         <label>Altitude Threshold (ft)</label>
         <input type="number" id="alt_threshold_ft" step="500" min="500" max="50000" value="{{ cfg.alt_threshold_ft }}">
-        <div class="hint">Only alert if plane is below this altitude</div>
+        <div class="hint">Only alert if a plane is below this altitude</div>
       </div>
     </div>
   </div>
@@ -122,18 +122,18 @@ select.inline-select:focus{border-color:var(--accent)}
       <label class="toggle"><input type="checkbox" id="use_location_time" {% if cfg.use_location_time %}checked{% endif %}><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">24-hour clock</div><div class="toggle-sub">Display times as 14:30 instead of 2:30 PM</div></div>
+      <div><div class="toggle-label">24-hour clock</div><div class="toggle-sub">Use 24-hour time instead of 12-hour AM/PM</div></div>
       <label class="toggle"><input type="checkbox" id="time_format_24h" {% if cfg.time_format == '24h' %}checked{% endif %}><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Units for altitude, speed, and vertical rate across the dashboard and alerts</div></div>
+      <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Choose the units for altitude, speed, and vertical rate across the dashboard and alerts</div></div>
       <select id="units_speed" class="inline-select">
         <option value="aviation" {% if cfg.units_speed == 'aviation' %}selected{% endif %}>Aviation (ft · kts)</option>
         <option value="metric" {% if cfg.units_speed == 'metric' %}selected{% endif %}>Metric (m · km/h)</option>
       </select>
     </div>
     <div class="toggle-row">
-      <div><div class="toggle-label">Temperature</div><div class="toggle-sub">Units for temperature in weather forecasts</div></div>
+      <div><div class="toggle-label">Temperature</div><div class="toggle-sub">Choose the units for temperature in weather forecasts</div></div>
       <select id="units_temp" class="inline-select">
         <option value="imperial" {% if cfg.units_temp == 'imperial' %}selected{% endif %}>Fahrenheit (°F)</option>
         <option value="metric" {% if cfg.units_temp == 'metric' %}selected{% endif %}>Celsius (°C)</option>
@@ -144,7 +144,7 @@ select.inline-select:focus{border-color:var(--accent)}
   <!-- Polling -->
   <div class="card">
     <div class="card-title">⏱ Polling Intervals</div>
-    <div class="card-desc">How often to check for new data. OpenSky rate-limits anonymous users to ~10s minimum.</div>
+    <div class="card-desc">Controls how often each data source is checked. OpenSky rate-limits anonymous users to ~10s minimum.</div>
     <div class="form-row">
       <div><label>Aircraft Poll (seconds)</label><input type="number" id="poll_interval" min="10" max="120" value="{{ cfg.poll_interval }}"></div>
       <div><label>ISS Re-check (hours)</label><input type="number" id="iss_check_hours" min="1" max="12" value="{{ cfg.iss_check_hours }}"></div>
@@ -153,7 +153,7 @@ select.inline-select:focus{border-color:var(--accent)}
       <div>
         <label>ISS Alert Lead Time (minutes)</label>
         <input type="number" id="iss_warn_mins" min="5" max="60" value="{{ cfg.iss_warn_mins }}">
-        <div class="hint">Send ISS alert this many minutes before the pass</div>
+        <div class="hint">Send an ISS alert this many minutes before the pass</div>
       </div>
     </div>
   </div>
@@ -170,7 +170,7 @@ select.inline-select:focus{border-color:var(--accent)}
       <div><label>Discord Webhook URL</label><input type="text" id="discord_webhook" placeholder="https://discord.com/api/webhooks/…" value="{{ cfg.discord_webhook }}"></div>
     </div>
     <div class="toggle-row" style="margin-top:8px">
-      <div><div class="toggle-label">Enable plane alerts</div><div class="toggle-sub">Alert when a plane enters your radius + altitude window</div></div>
+      <div><div class="toggle-label">Enable plane alerts</div><div class="toggle-sub">Alert when a plane enters your radius and altitude window</div></div>
       <label class="toggle"><input type="checkbox" id="alerts_enabled" {% if cfg.alerts_enabled %}checked{% endif %}><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
@@ -186,7 +186,7 @@ select.inline-select:focus{border-color:var(--accent)}
   <!-- OpenSky OAuth2 (optional) -->
   <div class="card">
     <div class="card-title">🔑 OpenSky Credentials (optional)</div>
-    <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials. Exponential backoff applies on 429 responses (5 min → doubles → 1 hr max).</div>
+    <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials.</div>
     <div class="form-row">
       <div><label>Client ID</label><input type="text" id="opensky_client_id" value="{{ cfg.opensky_client_id }}"></div>
       <div><label>Client Secret</label><input type="password" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}"></div>
@@ -196,7 +196,7 @@ select.inline-select:focus{border-color:var(--accent)}
   <!-- n2yo API key -->
   <div class="card">
     <div class="card-title">🛰️ n2yo API Key (for ISS passes)</div>
-    <div class="card-desc">Required for ISS flyover alerts. Register free at n2yo.com — API key arrives by email. Leave blank to disable ISS tracking.</div>
+    <div class="card-desc">Required for ISS flyover alerts. Sign up for free at n2yo.com. The API key arrives by email. Leave blank to disable ISS tracking.</div>
     <div class="form-row single">
       <div>
         <label>n2yo API Key</label>
