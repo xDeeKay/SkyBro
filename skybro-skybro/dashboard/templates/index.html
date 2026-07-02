@@ -238,7 +238,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="stat"><div class="stat-val" id="s-countries">—</div><div class="stat-lbl">Countries</div></div>
   </div>
   <div class="hdr-right">
-    <div class="hdr-clock"><span id="hdr-time">—</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx"></span></div>
+    <div class="hdr-clock"><span id="hdr-time">—</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx" title="Weather loading…">⏳</span></div>
     <span class="hdr-clock-sep hdr-ctx">|</span>
     <a class="settings-btn" href="/settings" title="Settings">⚙️</a>
   </div>
@@ -1530,6 +1530,10 @@ async function refresh() {
     // Weather
     if (cur && cur.temp != null) {
       document.getElementById('s-weather').textContent = `${wmoEmoji(cur.weather_code)} ${fmtTemp(cur.temp)}`;
+      document.getElementById('s-weather').removeAttribute('title');
+    } else if (_sourceStatus.weather && _sourceStatus.weather.status === 'error') {
+      document.getElementById('s-weather').textContent = '⚠️';
+      document.getElementById('s-weather').title = "Weather data unavailable — Open-Meteo isn't responding";
     }
   } catch(e) { console.error('Refresh error:', e); }
 }
@@ -1599,10 +1603,10 @@ setInterval(refresh, 15000);
 // synchronously during initial parsing.
 document.addEventListener('DOMContentLoaded', () => {
 if (FIRST_RUN && !sessionStorage.getItem('skybro_first_run_dismissed')) {
-  const text = _detectedCity
-    ? `👋 Welcome to SkyBro! We've set your location to ${_detectedCity} based on your timezone. You can refine this in Settings, and optionally add API keys for aircraft and satellite tracking.`
-    : `👋 Welcome to SkyBro! We couldn't detect your location automatically — please set your home coordinates in Settings, and optionally add API keys for aircraft and satellite tracking.`;
-  document.getElementById('frm-text').textContent = text;
+  const html = _detectedCity
+    ? `👋 Welcome to SkyBro!<br><br>We've set your location to ${_detectedCity} based on your timezone.<br><br>You can refine this in Settings, and optionally add API keys for aircraft and satellite tracking.`
+    : `👋 Welcome to SkyBro!<br><br>We couldn't detect your location automatically — please set your home coordinates in Settings.<br><br>You can also optionally add API keys there for aircraft and satellite tracking.`;
+  document.getElementById('frm-text').innerHTML = html;
   document.getElementById('first-run-modal').style.display = 'flex';
   document.getElementById('frm-ok').addEventListener('click', () => {
     sessionStorage.setItem('skybro_first_run_dismissed', '1');

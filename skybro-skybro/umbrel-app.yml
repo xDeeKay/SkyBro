@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro-skybro
 category: utilities
 name: SkyBro
-version: "1.5.2"
+version: "1.5.3"
 tagline: Live aircraft, ISS, weather & moon tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
@@ -38,24 +38,22 @@ description: >-
   seconds without restarting.
 
 releaseNotes: >-
+  v1.5.3 — Minor UI polish. The first-run welcome message now reads more
+  clearly, and the header weather indicator shows a loading icon instead
+  of staying blank while data is still being fetched.
+
+
   v1.5.2 — Fixed the first-run welcome message not appearing on a fresh
   install. Automatic location detection was unaffected and continued to
   work correctly.
 
 
-  v1.5.1 — Security and packaging hardening. Containers now run as a
-  non-root user. Fixed a credential leak where an internal API key and
-  password could appear in plaintext in logs or API responses. Added
-  health checks for both services and a configurable dashboard port.
+  v1.5.1 — Security hardening: containers now run as a non-root user, and
+  a credential leak in logs and API responses was fixed.
 
 
-  v1.5.0 — New Statistics tab with overview counts, all-time records, hourly
-  activity chart, and top-10 aircraft lists. Starlink overpasses added to the
-  Satellites tab via live CelesTrak TLEs. Flight paths now curve naturally
-  through recorded pings (Catmull-Rom spline) with faint heading-guided
-  extension lines beyond the first and last ping. History cards now show speed,
-  vertical rate, squawk, and position source. Photo validation prevents
-  mismatched Planespotters results. Back-to-top button in all sidebar panes.
+  v1.5.0 — New Statistics tab, Starlink overpasses, curved flight paths,
+  richer history cards, and photo validation improvements.
 
 developer: xDeeKay
 website: https://github.com/xDeeKay/SkyBro
