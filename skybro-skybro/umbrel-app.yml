@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro-skybro
 category: utilities
 name: SkyBro
-version: "1.5.3"
+version: "1.5.4"
 tagline: Live aircraft, ISS, weather & moon tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
@@ -38,6 +38,10 @@ description: >-
   seconds without restarting.
 
 releaseNotes: >-
+  v1.5.4 — Settings page copy cleanup. Clearer, more consistent wording
+  throughout, with a few unclear or overly technical descriptions rewritten.
+
+
   v1.5.3 — Minor UI polish. The first-run welcome message now reads more
   clearly, and the header weather indicator shows a loading icon instead
   of staying blank while data is still being fetched.
