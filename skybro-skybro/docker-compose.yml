@@ -6,14 +6,14 @@ services:
       APP_PORT: 5000
 
   tracker:
-    image: xdeekay/skybro-tracker:1.5.1
+    image: xdeekay/skybro-tracker:1.5.1@sha256:c10af7baaeb4c2fd1e728816b5b8e5cb4b798069ebff2c19bd917961411696f8
     restart: unless-stopped
     volumes:
       - ${APP_DATA_DIR}/data:/data
       - /etc/localtime:/etc/localtime:ro
 
   web:
-    image: xdeekay/skybro-dashboard:1.5.1
+    image: xdeekay/skybro-dashboard:1.5.1@sha256:11b2db44b41213947e24caafa5e2d7cd10efbb4ad109bf5214dfd1271f10f458
     restart: unless-stopped
     volumes:
       - ${APP_DATA_DIR}/data:/data
