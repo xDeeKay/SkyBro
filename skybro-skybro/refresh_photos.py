@@ -1,11 +1,11 @@
-"""One-time photo refresh — run inside the skybro-tracker container.
+"""One-time photo refresh — run inside the tracker container.
 Re-fetches Planespotters photos for every distinct aircraft in history,
 with validation to prevent wrong-aircraft matches, then falls back to
 Wikipedia type photos. Purely numeric registrations (e.g. military regs
 like 9106) skip the reg lookup entirely.
 
 Usage:
-  sudo docker exec -i skybro-tracker python3 < refresh_photos.py
+  sudo docker exec -i skybro-skybro_tracker_1 python3 < refresh_photos.py
 """
 import sqlite3, requests, time, re
 

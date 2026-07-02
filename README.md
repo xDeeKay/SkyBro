@@ -111,5 +111,5 @@ There are no required environment variables — all configuration is done throug
 `refresh_photos.py` is a one-time, opt-in maintenance script that re-fetches Planespotters photos for every distinct aircraft in your history (useful after the photo-validation logic changed). It is **not** part of normal operation and does not run automatically:
 
 ```bash
-docker exec -i skybro-tracker python3 < refresh_photos.py
+docker exec -i skybro-skybro_tracker_1 python3 < refresh_photos.py
 ```
