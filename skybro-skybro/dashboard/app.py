@@ -284,8 +284,9 @@ def api_stats():
 @app.route("/api/config", methods=["GET"])
 def api_config_get():
     cfg = read_config()
-    # Mask secrets in GET response
-    masked = dict(cfg)
+    # Only return known fields — never echo stray/legacy keys that may
+    # still be sitting in config.json (e.g. old opensky_user/opensky_pass).
+    masked = {k: cfg.get(k, DEFAULTS[k]) for k in UI_FIELDS}
     for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret","n2yo_api_key"):
         if masked.get(k):
             masked[k] = "••••••••"
