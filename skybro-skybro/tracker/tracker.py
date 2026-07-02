@@ -290,7 +290,8 @@ def send_discord(title, description, color=0x4f7cff, fields=None, thumb_url=None
     try:
         requests.post(cfg["discord_webhook"], json={"embeds": [embed]}, timeout=10)
     except Exception as e:
-        log.error(f"Discord error: {e}")
+        # Don't log str(e) — the webhook URL itself is the secret and may appear in it
+        log.error(f"Discord error: {type(e).__name__}")
 
 def notify(title, body, fields=None, priority=0, color=0x4f7cff, thumb_url=None):
     if not cfg.get("alerts_enabled", True):
@@ -740,8 +741,8 @@ def check_satellites():
     for sat_name, norad_id, _ in SATELLITES:
         try:
             url = (f"https://api.n2yo.com/rest/v1/satellite/visualpasses/"
-                   f"{norad_id}/{lat}/{lon}/0/10/60/&apiKey={api_key}")
-            r = requests.get(url, timeout=15)
+                   f"{norad_id}/{lat}/{lon}/0/10/60/")
+            r = requests.get(url, params={"apiKey": api_key}, timeout=15)
             r.raise_for_status()
             passes = r.json().get("passes") or []
             c.execute("DELETE FROM iss_alerts WHERE alerted=0 AND sat_name=? AND pass_time > ?",
@@ -758,7 +759,8 @@ def check_satellites():
             total += len(passes)
             log.info(f"Satellites: {sat_name} — {len(passes)} passes fetched")
         except Exception as e:
-            log.warning(f"Satellites fetch error ({sat_name}): {e}")
+            msg = str(e).replace(api_key, "***") if api_key else str(e)
+            log.warning(f"Satellites fetch error ({sat_name}): {msg}")
     conn.commit(); conn.close()
     update_source_status('iss', True)
     log.info(f"Satellites: {total} total passes across {len(SATELLITES)} objects")

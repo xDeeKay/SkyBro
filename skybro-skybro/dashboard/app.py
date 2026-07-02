@@ -286,7 +286,7 @@ def api_config_get():
     cfg = read_config()
     # Mask secrets in GET response
     masked = dict(cfg)
-    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret"):
+    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret","n2yo_api_key"):
         if masked.get(k):
             masked[k] = "••••••••"
     return jsonify(masked)
@@ -298,7 +298,7 @@ def api_config_post():
         abort(400)
     # Don't overwrite masked secrets with placeholder
     current = read_config()
-    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret"):
+    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret","n2yo_api_key"):
         if data.get(k) == "••••••••":
             data[k] = current.get(k, "")
     saved = write_config(data)
