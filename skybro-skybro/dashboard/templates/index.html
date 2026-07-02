@@ -238,7 +238,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="stat"><div class="stat-val" id="s-countries">—</div><div class="stat-lbl">Countries</div></div>
   </div>
   <div class="hdr-right">
-    <div class="hdr-clock"><span id="hdr-time">—</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx"></span></div>
+    <div class="hdr-clock"><span id="hdr-time">—</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx" title="Weather loading…">⏳</span></div>
     <span class="hdr-clock-sep hdr-ctx">|</span>
     <a class="settings-btn" href="/settings" title="Settings">⚙️</a>
   </div>
@@ -1530,6 +1530,10 @@ async function refresh() {
     // Weather
     if (cur && cur.temp != null) {
       document.getElementById('s-weather').textContent = `${wmoEmoji(cur.weather_code)} ${fmtTemp(cur.temp)}`;
+      document.getElementById('s-weather').removeAttribute('title');
+    } else if (_sourceStatus.weather && _sourceStatus.weather.status === 'error') {
+      document.getElementById('s-weather').textContent = '⚠️';
+      document.getElementById('s-weather').title = "Weather data unavailable — Open-Meteo isn't responding";
     }
   } catch(e) { console.error('Refresh error:', e); }
 }
