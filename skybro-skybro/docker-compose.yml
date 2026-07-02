@@ -12,9 +12,6 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data:/data
       - /etc/localtime:/etc/localtime:ro
-    environment:
-      HOME_LAT: "1.3521"
-      HOME_LON: "103.8198"
     networks:
       - skybro-net
 
@@ -25,9 +22,6 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data:/data
       - /etc/localtime:/etc/localtime:ro
-    environment:
-      HOME_LAT: "1.3521"
-      HOME_LON: "103.8198"
     depends_on:
       - tracker
     networks:

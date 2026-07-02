@@ -59,3 +59,57 @@ Current conditions, 24h hourly strip (starting from the current local hour), 7-d
 - Free [OpenSky Network](https://opensky-network.org) account with OAuth2 client credentials
 - Free [n2yo.com](https://www.n2yo.com) API key for satellite pass predictions
 - [Pushover](https://pushover.net) and/or Discord webhook for notifications (optional)
+
+## Running outside Umbrel
+
+SkyBro is a normal two-container Docker Compose app; Umbrel packaging (`umbrel-app.yml`, the `app_proxy` service) just adapts it to umbrelOS. To self-host it directly:
+
+```yaml
+services:
+  tracker:
+    image: xdeekay/skybro-tracker:1.5.0
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+      - /etc/localtime:/etc/localtime:ro
+
+  web:
+    image: xdeekay/skybro-dashboard:1.5.0
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - tracker
+    ports:
+      - "7437:5000"
+```
+
+Open `http://<host>:7437`, walk through the first-run flow, and configure everything else from **⚙ Settings** — no file edits or container restarts needed for normal use.
+
+## Data & configuration
+
+All state lives under the single mounted volume at `/data`:
+
+| File | Contents |
+|---|---|
+| `skybro.db` | SQLite database — history, flight paths, satellite passes, weather, astronomy |
+| `config.json` | All user settings (home location, alert radius/altitude, notification credentials, API keys). Written by the dashboard, hot-reloaded by the tracker every poll cycle (≤30s) |
+| `aircraft_db.json` | OpenSky aircraft model/registration lookup (~520k entries), auto-downloaded on first run if missing |
+
+There are no required environment variables — all configuration is done through the Settings page in the browser and persisted to `config.json`. `GIT_SHA` (dashboard only, build-time) is optional and only affects the dev version badge text.
+
+**Ports**: the dashboard listens on `5000` inside the container (currently not independently configurable — map it to whatever host port you want, e.g. `7437` above).
+
+**Optional integrations** (all configured via Settings, app runs and degrades gracefully in-UI if any are missing):
+- OpenSky Network OAuth2 client credentials — required for aircraft tracking
+- n2yo.com API key — required for satellite pass predictions
+- Pushover token/user and/or a Discord webhook URL — required for push alerts
+
+## Maintenance
+
+`refresh_photos.py` is a one-time, opt-in maintenance script that re-fetches Planespotters photos for every distinct aircraft in your history (useful after the photo-validation logic changed). It is **not** part of normal operation and does not run automatically:
+
+```bash
+docker exec -i skybro-tracker python3 < refresh_photos.py
+```
