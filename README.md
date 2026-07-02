@@ -97,9 +97,9 @@ All state lives under the single mounted volume at `/data`:
 | `config.json` | All user settings (home location, alert radius/altitude, notification credentials, API keys). Written by the dashboard, hot-reloaded by the tracker every poll cycle (≤30s) |
 | `aircraft_db.json` | OpenSky aircraft model/registration lookup (~520k entries), auto-downloaded on first run if missing |
 
-There are no required environment variables — all configuration is done through the Settings page in the browser and persisted to `config.json`. `GIT_SHA` (dashboard only, build-time) is optional and only affects the dev version badge text.
+There are no required environment variables — all configuration is done through the Settings page in the browser and persisted to `config.json`. Optional env vars: `GIT_SHA` (dashboard only, build-time, only affects the dev version badge text) and `PORT` (dashboard only, default `5000` — the port gunicorn binds to inside the container).
 
-**Ports**: the dashboard listens on `5000` inside the container (currently not independently configurable — map it to whatever host port you want, e.g. `7437` above).
+**Ports**: the dashboard listens on `5000` inside the container by default (set `PORT` to change it); map it to whatever host port you want, e.g. `7437` above.
 
 **Optional integrations** (all configured via Settings, app runs and degrades gracefully in-UI if any are missing):
 - OpenSky Network OAuth2 client credentials — required for aircraft tracking
