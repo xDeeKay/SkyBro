@@ -38,10 +38,9 @@ description: >-
   seconds without restarting.
 
 releaseNotes: >-
-  v1.5.2 — Fixed the first-run welcome modal: it silently failed to appear
-  on a genuine fresh install because the script referenced modal elements
-  before the browser had parsed them. Location auto-detection itself was
-  unaffected and still worked correctly.
+  v1.5.2 — Fixed the first-run welcome message not appearing on a fresh
+  install. Automatic location detection was unaffected and continued to
+  work correctly.
 
 
   v1.5.1 — Security and packaging hardening. Containers now run as a
