@@ -27,6 +27,11 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .settings-btn{color:var(--muted);font-size:17px;font-weight:700;text-decoration:none;cursor:pointer;transition:color .15s}
 .settings-btn:hover{color:var(--text)}
 @media (max-width:800px){.hdr-ctx{display:none!important}}
+@media (max-width:480px){
+  header{flex-wrap:wrap;row-gap:8px}
+  .hdr-stats{flex-basis:100%;order:3;justify-content:space-around}
+  .logo-loc{max-width:160px;overflow:hidden;text-overflow:ellipsis}
+}
 .main{display:flex;flex:1;overflow:hidden;position:relative}
 #map{flex:1;min-width:0}
 .sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease;position:relative}
