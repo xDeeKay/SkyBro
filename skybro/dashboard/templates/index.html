@@ -135,7 +135,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 #frm-settings:hover{border-color:var(--accent)}
 .lb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:pointer;flex-direction:column;gap:12px}
 .lb.open{display:flex}
-.lb img{max-width:90vw;max-height:80vh;border-radius:8px;object-fit:contain;cursor:default}
+.lb img{max-width:90vw;max-height:80vh;max-height:80dvh;border-radius:8px;object-fit:contain;cursor:default}
 .lb-close{position:absolute;top:14px;right:18px;color:#fff;font-size:26px;line-height:1;opacity:.6;cursor:pointer}
 .lb-close:hover{opacity:1}
 .lb-credit{font-size:11px;color:rgba(255,255,255,.45)}
@@ -181,7 +181,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .ac-grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
 .ac-g2-item{background:var(--surface);border-radius:4px;padding:5px 7px;font-size:10px;color:var(--muted)}
 .empty{color:var(--muted);text-align:center;padding:32px 16px;font-size:13px;line-height:1.6}
-.src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);padding-bottom:env(safe-area-inset-bottom)}
+.src-bar{display:flex;gap:0;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);padding-bottom:min(env(safe-area-inset-bottom),12px)}
 .back-top{position:absolute;top:82px;left:50%;transform:translateX(-50%);width:30px;height:30px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding-top:4px;opacity:0;pointer-events:none;transition:opacity .2s,background .15s;z-index:50}
 .back-top.visible{opacity:1;pointer-events:auto}
 .back-top:hover{background:var(--muted)}
@@ -418,7 +418,8 @@ L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',
   .addTo(map).bindPopup('<b>Home</b>');
 const radiusCircle = L.circle([_initLat, _initLon], {radius:RADIUS*1000, color:'#4f7cff',
   fillColor:'#4f7cff',fillOpacity:.04,weight:1,dashArray:'5 7'}).addTo(map);
-map.fitBounds(radiusCircle.getBounds(), {padding:[40,40], animate:false});
+const _initPad = window.innerWidth <= 600 ? 15 : 40;
+map.fitBounds(radiusCircle.getBounds(), {padding:[_initPad,_initPad], animate:false});
 
 (function() {
   const VerCtrl = L.Control.extend({
@@ -576,10 +577,11 @@ async function showHistoryPin(r) {
       L.polyline([_project(fp.lat, fp.lon, (fp.heading + 180) % 360, extKm(fp)), [fp.lat, fp.lon]], extStyle).addTo(map),
       L.polyline([[lp.lat, lp.lon], _project(lp.lat, lp.lon, lp.heading, extKm(lp))], extStyle).addTo(map)
     );
-    const center = pings.length > 1
-      ? L.latLngBounds(latlngs).getCenter()
-      : [r.lat, r.lon];
-    map.flyTo(center, 13);
+    if (pings.length > 1) {
+      map.flyToBounds(L.latLngBounds(latlngs), {padding: [50, 50], maxZoom: 15});
+    } else {
+      map.flyTo([r.lat, r.lon], 13);
+    }
   } else {
     ghostMarkers.push(L.marker([r.lat, r.lon], {icon: ghostIcon(r.heading, type)}).addTo(map));
     map.flyTo([r.lat, r.lon], Math.max(map.getZoom(), 12));
