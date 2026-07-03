@@ -5,10 +5,10 @@ services:
     build: ./tracker
     # Matches prod's Umbrel-injected name so refresh_photos.py and docs
     # work unchanged against either environment (only one runs at a time).
-    container_name: skybro-skybro_tracker_1
+    container_name: skybro_tracker_1
     restart: unless-stopped
     volumes:
-      - /home/umbrel/umbrel/app-data/skybro-skybro/data:/data
+      - /home/umbrel/umbrel/app-data/skybro/data:/data
       - /etc/localtime:/etc/localtime:ro
 
   web:
@@ -17,12 +17,12 @@ services:
       args:
         GIT_SHA: "${GIT_SHA:-dev}"
     # Must match prod's Umbrel-injected name: the real app_proxy (already
-    # running from the installed prod app) routes to APP_HOST=skybro-skybro_web_1.
+    # running from the installed prod app) routes to APP_HOST=skybro_web_1.
     # Stop prod first so this container can claim that name and get routed to.
-    container_name: skybro-skybro_web_1
+    container_name: skybro_web_1
     restart: unless-stopped
     volumes:
-      - /home/umbrel/umbrel/app-data/skybro-skybro/data:/data
+      - /home/umbrel/umbrel/app-data/skybro/data:/data
       - /etc/localtime:/etc/localtime:ro
     depends_on:
       - tracker
