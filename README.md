@@ -52,6 +52,33 @@ Current conditions, 24h hourly strip (starting from the current local hour), 7-d
 - **Meteors** — 11 annual showers with active state, ZHR, radiant, and parent body
 - **Moon** — phase arc, illumination, rise/set, and next full/new moon dates
 
+## Privacy & data sharing
+
+SkyBro runs entirely on your own hardware, but several features work by querying public third-party APIs, and some of those queries include your home location. This is unavoidable for services like satellite pass prediction or weather that need to know where you are. Here's exactly what leaves your network, and when.
+
+Sent from the tracker in the background (runs continuously while SkyBro is running, independent of which dashboard tab is open):
+
+| Service | What's sent | How often |
+|---|---|---|
+| OpenSky Network | An approximate bounding box around your home location | Every aircraft poll (default ~15-30s) |
+| Open-Meteo | Your exact home coordinates | Every weather poll (~15 min) |
+| Clear Outside, or lightpollutionmap.info as a fallback | Your exact home coordinates | Every astronomy poll (~1h) |
+| n2yo.com | Your exact home coordinates | Every satellite pass check (default every 2h), only if you've configured an API key |
+| Planespotters.net, or Wikipedia as a fallback | An aircraft's ICAO24 code, registration, or model name (no location data) | Once per newly-sighted aircraft, to fetch a photo |
+| Pushover and/or your Discord webhook | The alert content (aircraft or satellite pass details, plus a photo for Discord) | Only when an alert actually fires, and only for the service(s) you've configured |
+| CelesTrak | Nothing beyond a plain HTTPS request; it's a public data download | Every 6h, for Starlink pass data |
+
+Sent directly from your browser (not the server), so these requests originate from whatever device you're viewing the dashboard on:
+
+| Service | What's sent | When |
+|---|---|---|
+| Nominatim (OpenStreetMap Foundation) | Your exact home coordinates | Every time you load the dashboard, to show a location name in the header |
+| Photon (komoot) | Your search text, plus map coordinates for result ranking | Only when you use the city/address search in Settings |
+
+Nothing else leaves your network. Astronomy calculations (planets, deep-sky objects, meteor showers, moon phase, twilight times) run entirely locally via the `ephem` library, and all history, settings, and cached data stay in the local SQLite database and `config.json`.
+
+If you'd rather not share your home location with n2yo, leave its API key blank; satellite tracking will simply be disabled and every other feature keeps working normally.
+
 ## Requirements
 
 - Umbrel 1.x
@@ -67,14 +94,14 @@ SkyBro is a normal two-container Docker Compose app; Umbrel packaging (`umbrel-a
 ```yaml
 services:
   tracker:
-    image: xdeekay/skybro-tracker:1.5.0
+    image: xdeekay/skybro-tracker:1.5.4
     restart: unless-stopped
     volumes:
       - ./data:/data
       - /etc/localtime:/etc/localtime:ro
 
   web:
-    image: xdeekay/skybro-dashboard:1.5.0
+    image: xdeekay/skybro-dashboard:1.5.4
     restart: unless-stopped
     volumes:
       - ./data:/data
