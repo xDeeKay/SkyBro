@@ -2,8 +2,8 @@ manifestVersion: 1
 id: skybro
 category: networking
 name: SkyBro
-version: "1.5.5"
-tagline: Live aircraft, ISS, weather & moon tracker
+version: "1.5.6"
+tagline: Live aircraft, satellite, weather & astronomy tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
   background 24/7 and alerts you the moment something interesting is overhead.
@@ -38,6 +38,11 @@ description: >-
   seconds without restarting.
 
 releaseNotes: >-
+  v1.5.6 — Fixed a bug where changing your home location in Settings left
+  weather, moon, astronomy, and satellite pass data showing stale
+  information for up to two hours instead of updating right away.
+
+
   v1.5.5 — Mobile layout fixes. The header no longer overflows on phone
   screens, and the header, map, footer, and photo viewer all now display
   correctly on narrow and small-screen devices. The README also documents
