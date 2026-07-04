@@ -66,7 +66,7 @@ cfg = dict(DEFAULTS)
 _cfg_mtime = 0.0
 
 def load_config():
-    global cfg, _cfg_mtime
+    global cfg, _cfg_mtime, _weather_last, _moon_last, _astronomy_last, _sat_last_check, _starlink_last
     if not CFG_PATH.exists():
         save_config(DEFAULTS)
         return
@@ -74,11 +74,15 @@ def load_config():
         mtime = CFG_PATH.stat().st_mtime
         if mtime == _cfg_mtime:
             return
+        prev_lat, prev_lon = cfg.get("home_lat"), cfg.get("home_lon")
         with open(CFG_PATH) as f:
             loaded = json.load(f)
         cfg = {**DEFAULTS, **loaded}
         _cfg_mtime = mtime
         log.info("Config reloaded")
+        if (cfg.get("home_lat"), cfg.get("home_lon")) != (prev_lat, prev_lon):
+            _weather_last = _moon_last = _astronomy_last = _sat_last_check = _starlink_last = 0.0
+            log.info("Home location changed — forcing immediate weather/moon/astronomy/satellite refresh")
     except Exception as e:
         log.warning(f"Config load error: {e}")
 
