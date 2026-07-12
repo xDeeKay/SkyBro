@@ -47,6 +47,9 @@ Live map with real-time plane positions. Five per-airframe icon silhouettes (jet
 ### 📋 History
 Card-based log of every aircraft that triggered an alert. Each card shows a Planespotters photo, model, registration, country, altitude, closest approach distance, duration, and GPS coordinates. Clicking a card draws the recorded flight path on the map as ghost plane icons and a dashed polyline. Cards can be starred as favourites, marked as seen, or deleted individually. Filter by favourites, seen, or search by callsign, model, registration, or country.
 
+### 📊 Statistics
+Overview counts, all-time records, a 24h activity chart, and top countries and aircraft models seen.
+
 ### 🛰️ Satellites
 Upcoming passes for ISS, Hubble Space Telescope, and Tiangong CSS with countdown timers and pass details, plus Starlink train sightings via CelesTrak. Sub-tabs show a pass count per satellite. ISS push alerts still fire as normal.
 
@@ -55,40 +58,37 @@ Current conditions, 24h hourly strip (starting from the current local hour), 7-d
 
 ### ✨ Astronomy
 - **Tonight**: dark window, Bortle sky quality, moon interference, and observation highlights
+- **Moon**: phase arc, illumination, rise/set, and next full/new moon dates
 - **Planets**: altitude, azimuth, magnitude, rise/set/transit times for all 7 planets
 - **DSOs**: all 110 Messier objects with equipment filter (naked eye / binoculars / telescope) and horizon filter
 - **Meteors**: 11 annual showers with active state, ZHR, radiant, and parent body
-- **Moon**: phase arc, illumination, rise/set, and next full/new moon dates
-
-### 📊 Statistics
-Overview counts, all-time records, a 24h activity chart, and top countries and aircraft models seen.
 
 ## Privacy & data sharing
 
-SkyBro runs entirely on your own hardware, but several features work by querying public third-party APIs, and some of those queries include your home location. This is unavoidable for services like satellite pass prediction or weather that need to know where you are. Here's exactly what leaves your network, and when.
+SkyBro runs entirely on your own hardware, but several features work by querying public third-party APIs, and some of those queries include your configured location. This is unavoidable for services like satellite pass prediction or weather that need to know where you are. Here's exactly what leaves your network, and when.
 
 Sent from the tracker in the background (runs continuously while SkyBro is running, independent of which dashboard tab is open):
 
 | Service | What's sent | How often |
 |---|---|---|
-| OpenSky Network | An approximate bounding box around your home location | Every aircraft poll (default ~15-30s) |
+| OpenSky Network | An approximate bounding box around your configured location | Every aircraft poll (default ~15-30s) |
 | Planespotters.net, or Wikipedia as a fallback | An aircraft's ICAO24 code, registration, or model name (no location data) | Once per newly-sighted aircraft, to fetch a photo |
-| n2yo.com | Your exact home coordinates | Every satellite pass check (default every 2h), only if you've configured an API key |
+| n2yo.com | Your exact configured coordinates | Every satellite pass check (default every 2h), only if you've configured an API key |
 | CelesTrak | Nothing beyond a plain HTTPS request; it's a public data download | Every 6h, for Starlink pass data |
-| Open-Meteo | Your exact home coordinates | Every weather poll (~15 min) |
-| Clear Outside, or lightpollutionmap.info as a fallback | Your exact home coordinates | Every astronomy poll (~1h) |
+| Open-Meteo | Your exact configured coordinates | Every weather poll (~15 min) |
+| Clear Outside, or lightpollutionmap.info as a fallback | Your exact configured coordinates | Every astronomy poll (~1h) |
 | Pushover and/or your Discord webhook | The alert content (aircraft or satellite pass details, plus a photo for Discord) | Only when an alert actually fires, and only for the service(s) you've configured |
 
 Sent directly from your browser (not the server), so these requests originate from whatever device you're viewing the dashboard on:
 
 | Service | What's sent | When |
 |---|---|---|
-| Nominatim (OpenStreetMap Foundation) | Your exact home coordinates | Every time you load the dashboard, to show a location name in the header |
+| Nominatim (OpenStreetMap Foundation) | Your exact configured coordinates | Every time you load the dashboard, to show a location name in the header |
 | Photon (komoot) | Your search text, plus map coordinates for result ranking | Only when you use the city/address search in Settings |
 
 Nothing else leaves your network. Astronomy calculations (planets, deep-sky objects, meteor showers, moon phase, twilight times) run entirely locally via the `ephem` library, and all history, settings, and cached data stay in the local SQLite database and `config.json`.
 
-If you'd rather not share your home location with n2yo, leave its API key blank; satellite tracking will simply be disabled and every other feature keeps working normally.
+If you'd rather not share your configured location with n2yo, leave its API key blank; satellite tracking will simply be disabled and every other feature keeps working normally.
 
 ## Running outside Umbrel
 
