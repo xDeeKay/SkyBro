@@ -126,6 +126,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .confirm-box p{font-size:14px;margin-bottom:18px;line-height:1.5}
 .confirm-actions{display:flex;gap:8px;justify-content:center}
 .confirm-ok{background:var(--red);border:none;color:#fff;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.confirm-ok.neutral{background:var(--accent)}
 .confirm-ok:hover{opacity:.85}
 .confirm-cancel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 18px;border-radius:6px;font-size:13px;cursor:pointer;transition:border-color .15s}
 .confirm-cancel:hover{border-color:var(--accent)}
@@ -953,9 +954,11 @@ async function loadMoreHistory() {
 }
 
 let _confirmCb = null;
-function showConfirm(msg, label, cb) {
+function showConfirm(msg, label, cb, variant) {
   document.getElementById('confirm-msg').textContent = msg;
-  document.getElementById('confirm-ok-btn').textContent = label;
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.textContent = label;
+  okBtn.classList.toggle('neutral', variant === 'neutral');
   _confirmCb = cb;
   document.getElementById('confirm-overlay').classList.add('open');
 }
@@ -979,7 +982,7 @@ function toggleFav(id, idx) {
     })
     .then(r => r.json())
     .then(d => { if (d.ok) { historyData[idx].favourited = d.favourited; _drawAircraft(); } });
-  });
+  }, 'neutral');
 }
 
 function toggleSeen(id, idx) {
@@ -992,7 +995,7 @@ function toggleSeen(id, idx) {
     })
     .then(r => r.json())
     .then(d => { if (d.ok) { historyData[idx].seen = d.seen; _drawAircraft(); } });
-  });
+  }, 'neutral');
 }
 
 function deleteHistEntry(id, idx) {
