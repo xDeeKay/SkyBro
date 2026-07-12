@@ -970,23 +970,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function toggleFav(id, idx) {
-  fetch('/api/history/favourite', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({id})
-  })
-  .then(r => r.json())
-  .then(d => { if (d.ok) { historyData[idx].favourited = d.favourited; _drawAircraft(); } });
+  const willFav = !historyData[idx]?.favourited;
+  showConfirm(willFav ? 'Add to favourites?' : 'Remove from favourites?', willFav ? 'Add' : 'Remove', () => {
+    fetch('/api/history/favourite', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({id})
+    })
+    .then(r => r.json())
+    .then(d => { if (d.ok) { historyData[idx].favourited = d.favourited; _drawAircraft(); } });
+  });
 }
 
 function toggleSeen(id, idx) {
-  fetch('/api/history/seen', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({id})
-  })
-  .then(r => r.json())
-  .then(d => { if (d.ok) { historyData[idx].seen = d.seen; _drawAircraft(); } });
+  const willSee = !historyData[idx]?.seen;
+  showConfirm(willSee ? 'Mark as seen?' : 'Mark as unseen?', willSee ? 'Mark seen' : 'Mark unseen', () => {
+    fetch('/api/history/seen', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({id})
+    })
+    .then(r => r.json())
+    .then(d => { if (d.ok) { historyData[idx].seen = d.seen; _drawAircraft(); } });
+  });
 }
 
 function deleteHistEntry(id, idx) {
