@@ -93,8 +93,8 @@ select.inline-select:focus{border-color:var(--accent)}
     <div class="card-title">📍 Location & Alert Thresholds</div>
     <div class="card-desc">Set your home coordinates and the conditions that trigger an alert.</div>
     <div class="form-row">
-      <div><label>Home Latitude</label><input type="number" id="home_lat" step="0.0001" value="{{ cfg.home_lat }}"></div>
-      <div><label>Home Longitude</label><input type="number" id="home_lon" step="0.0001" value="{{ cfg.home_lon }}"></div>
+      <div><label>Home Latitude</label><input type="number" id="home_lat" step="0.0001" min="-90" max="90" value="{{ cfg.home_lat }}"></div>
+      <div><label>Home Longitude</label><input type="number" id="home_lon" step="0.0001" min="-180" max="180" value="{{ cfg.home_lon }}"></div>
     </div>
     <div style="margin-bottom:14px">
       <button type="button" class="btn btn-secondary btn-sm" onclick="openMapPicker()">📍 Drop a pin</button>
@@ -269,6 +269,16 @@ function showToast(msg, type='success') {
   setTimeout(() => t.className = 'toast', 3000);
 }
 
+const NUMERIC_BOUNDS = {
+  home_lat:         [-90, 90,      'Home Latitude'],
+  home_lon:         [-180, 180,    'Home Longitude'],
+  radius_km:        [1, 100,       'Alert Radius'],
+  alt_threshold_ft: [500, 50000,   'Altitude Threshold'],
+  poll_interval:    [10, 120,      'Aircraft Poll'],
+  iss_check_hours:  [1, 12,        'ISS Re-check'],
+  iss_warn_mins:    [5, 60,        'ISS Alert Lead Time'],
+};
+
 async function save() {
   const payload = {};
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
@@ -276,6 +286,16 @@ async function save() {
    'discord_webhook','opensky_client_id','opensky_client_secret','n2yo_api_key',
    'alerts_enabled','iss_alerts_enabled','use_location_time','units_speed','units_temp'].forEach(k => payload[k] = getVal(k));
   payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
+
+  for (const [key, [lo, hi, label]] of Object.entries(NUMERIC_BOUNDS)) {
+    const v = payload[key];
+    if (typeof v !== 'number' || isNaN(v) || v < lo || v > hi) {
+      showToast(`❌ ${label} must be between ${lo} and ${hi}`, 'error');
+      document.getElementById(key).focus();
+      return;
+    }
+  }
+
   try {
     const r = await fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if (r.ok) showToast('✅ Settings saved');
