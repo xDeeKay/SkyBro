@@ -880,7 +880,7 @@ def main():
         except Exception as e:
             log.error(f"Astronomy error: {e}", exc_info=True)
         Path("/tmp/heartbeat").write_text(str(time.time()))
-        time.sleep(cfg["poll_interval"])
+        time.sleep(max(1, cfg["poll_interval"]))
 
 if __name__ == "__main__":
     main()

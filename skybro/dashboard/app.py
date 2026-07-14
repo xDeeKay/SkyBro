@@ -31,6 +31,23 @@ DEFAULTS = {
 # Fields the UI is allowed to read/write
 UI_FIELDS = list(DEFAULTS.keys())
 
+# Server-side bounds mirroring the settings page's HTML min/max, since those
+# are only client-side hints and can be bypassed via a direct API call.
+NUMERIC_BOUNDS = {
+    "home_lat":         (-90.0, 90.0),
+    "home_lon":         (-180.0, 180.0),
+    "radius_km":        (1.0, 100.0),
+    "alt_threshold_ft": (500.0, 50000.0),
+    "poll_interval":    (10, 120),
+    "iss_check_hours":  (1, 12),
+    "iss_warn_mins":    (5, 60),
+}
+ENUM_FIELDS = {
+    "units_speed": {"aviation", "metric"},
+    "units_temp":  {"imperial", "metric"},
+    "time_format": {"12h", "24h"},
+}
+
 def read_config():
     if not CFG_PATH.exists():
         return dict(DEFAULTS)
@@ -302,11 +319,16 @@ def api_config_post():
     for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret","n2yo_api_key"):
         if data.get(k) == "••••••••":
             data[k] = current.get(k, "")
-    if "radius_km" in data:
-        try:
-            data["radius_km"] = max(1.0, min(100.0, float(data["radius_km"])))
-        except (TypeError, ValueError):
-            data.pop("radius_km", None)
+    for k, (lo, hi) in NUMERIC_BOUNDS.items():
+        if k in data:
+            try:
+                clamped = max(lo, min(hi, float(data[k])))
+                data[k] = type(DEFAULTS[k])(clamped)
+            except (TypeError, ValueError):
+                data.pop(k, None)
+    for k, allowed in ENUM_FIELDS.items():
+        if k in data and data[k] not in allowed:
+            data.pop(k, None)
     saved = write_config(data)
     return jsonify({"ok": True})
 
