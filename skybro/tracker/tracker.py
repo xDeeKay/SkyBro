@@ -450,10 +450,10 @@ def fetch_states():
     if time.time() < _opensky_backoff_until:
         log.debug(f"OpenSky backoff: {int(_opensky_backoff_until - time.time())}s remaining")
         return []
-    pad = cfg["radius_km"] / 111.0 * 1.3
+    pad = min(cfg["radius_km"], 100.0) / 111.0 * 1.3
     params = {
-        "lamin": cfg["home_lat"] - pad, "lomin": cfg["home_lon"] - pad,
-        "lamax": cfg["home_lat"] + pad, "lomax": cfg["home_lon"] + pad,
+        "lamin": max(-90.0, cfg["home_lat"] - pad), "lomin": max(-180.0, cfg["home_lon"] - pad),
+        "lamax": min(90.0, cfg["home_lat"] + pad), "lomax": min(180.0, cfg["home_lon"] + pad),
     }
 
     def _request():

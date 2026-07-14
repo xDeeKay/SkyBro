@@ -302,6 +302,11 @@ def api_config_post():
     for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret","n2yo_api_key"):
         if data.get(k) == "••••••••":
             data[k] = current.get(k, "")
+    if "radius_km" in data:
+        try:
+            data["radius_km"] = max(1.0, min(100.0, float(data["radius_km"])))
+        except (TypeError, ValueError):
+            data.pop("radius_km", None)
     saved = write_config(data)
     return jsonify({"ok": True})
 
