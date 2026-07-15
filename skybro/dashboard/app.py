@@ -6,7 +6,7 @@ Settings are persisted to /data/config.json (hot-reloaded by tracker).
 
 import os, json, sqlite3, time
 
-APP_VERSION = "1.5.6"
+APP_VERSION = "1.5.7"
 from datetime import datetime
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, abort
