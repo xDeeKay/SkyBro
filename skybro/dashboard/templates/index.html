@@ -1458,12 +1458,25 @@ function _astroMoon(mi) {
 }
 
 // ── Source status bar ─────────────────────────────────────────────────────────
-function agoStr(ts) {
-  if (!ts) return 'never';
-  const s = Math.floor(Date.now()/1000) - ts;
-  if (s < 60)  return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s/60)}m ago`;
-  return `${Math.floor(s/3600)}h ago`;
+// Fixed poll intervals mirrored from tracker.py's WEATHER_INTERVAL/ASTRONOMY_INTERVAL
+// (not user-configurable, so no config field to read them from).
+const REFRESH_SECS = {
+  opensky:   {{ cfg.poll_interval }},
+  iss:       {{ cfg.iss_check_hours }} * 3600,
+  weather:   900,
+  astronomy: 3600,
+};
+
+let _statusMeta = {};
+
+function fmtCountdown(ms) {
+  const s   = Math.floor(ms / 1000);
+  const h   = Math.floor(s / 3600);
+  const m   = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const mm  = String(m).padStart(2, '0');
+  const ss  = String(sec).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
 function renderStatus(rows) {
@@ -1472,25 +1485,44 @@ function renderStatus(rows) {
   ['opensky','iss','weather','astronomy'].forEach(src => {
     const r    = _sourceStatus[src];
     const dot  = document.getElementById('sd-'+src);
-    const lbl  = document.getElementById('st-'+src);
     const item = dot ? dot.closest('.src-item') : null;
     if (item) delete item.dataset.tip;
-    if (!r) { dot.className='src-dot'; lbl.textContent='no data'; return; }
+    if (!r) { dot.className = 'src-dot'; _statusMeta[src] = null; return; }
     dot.className = 'src-dot ' + r.status;
-    if (r.status === 'ok') {
-      lbl.textContent = agoStr(r.last_success);
-    } else if (r.status === 'no_key') {
-      lbl.textContent = 'no key';
+    if (r.status === 'no_key') {
+      _statusMeta[src] = { mode: 'static', text: 'no key' };
     } else if (r.status === 'backoff') {
-      const m = (r.detail||'').match(/(\d+)\s*min/);
-      lbl.textContent = m ? `retry ${m[1]}m` : 'rate limited';
+      const match = (r.detail||'').match(/(\d+)\s*min/);
+      const mins  = match ? parseInt(match[1], 10) : 1;
       if (item && r.detail) item.dataset.tip = r.detail;
+      _statusMeta[src] = { mode: 'countdown', prefix: 'retry', deadline: r.last_error*1000 + mins*60000 };
     } else {
-      lbl.textContent = 'error';
-      if (item && r.detail) item.dataset.tip = r.detail;
+      const lastAttempt = Math.max(r.last_success||0, r.last_error||0);
+      if (r.status === 'error' && item && r.detail) item.dataset.tip = r.detail;
+      _statusMeta[src] = {
+        mode: 'countdown',
+        prefix: r.status === 'ok' ? 'next' : 'retry',
+        deadline: lastAttempt*1000 + REFRESH_SECS[src]*1000,
+      };
     }
   });
+  tickStatus();
 }
+
+function tickStatus() {
+  const now = Date.now();
+  ['opensky','iss','weather','astronomy'].forEach(src => {
+    const lbl  = document.getElementById('st-'+src);
+    const meta = _statusMeta[src];
+    if (!lbl) return;
+    if (!meta) { lbl.textContent = 'no data'; return; }
+    if (meta.mode === 'static') { lbl.textContent = meta.text; return; }
+    const remaining = meta.deadline - now;
+    lbl.textContent = remaining <= 0 ? `${meta.prefix} any moment` : `${meta.prefix} ${fmtCountdown(remaining)}`;
+  });
+}
+
+setInterval(tickStatus, 1000);
 
 // ── Sidebar collapse ──────────────────────────────────────────────────────────
 const sidebar    = document.querySelector('.sidebar');
