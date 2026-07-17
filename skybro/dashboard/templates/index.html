@@ -196,8 +196,10 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .src-item{flex:1;display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:11px;color:var(--muted);min-width:0;border-right:1px solid var(--border);position:relative}
 .src-item:last-child{border-right:none}
 .src-item[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;line-height:1.4;padding:5px 9px;border-radius:6px;width:220px;white-space:normal;z-index:200;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.5)}
-.src-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--border)}
-.src-dot.ok{background:var(--green)}.src-dot.error{background:var(--red)}.src-dot.backoff{background:var(--amber)}.src-dot.no_key{background:var(--amber)}
+.src-item::before{content:'';position:absolute;top:0;left:0;border-style:solid;border-width:7px 7px 0 0;border-color:var(--border) transparent transparent transparent}
+.src-item.ok::before{border-top-color:var(--green)}
+.src-item.error::before{border-top-color:var(--red)}
+.src-item.backoff::before,.src-item.no_key::before{border-top-color:var(--amber)}
 .src-info{min-width:0;overflow:hidden;flex:1;text-align:center}
 .src-name{font-weight:600;white-space:nowrap}.src-detail{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .pc-photo{width:100%;height:80px;object-fit:cover;border-radius:5px;margin-bottom:7px;display:block}
@@ -274,10 +276,10 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tab-pane" id="pane-astronomy"></div>
     <button class="back-top" id="back-top" title="Back to top">^</button>
     <div class="src-bar" id="src-bar">
-      <div class="src-item"><div class="src-dot" id="sd-opensky"></div><div class="src-info"><div class="src-name">Aircraft</div><div class="src-detail" id="st-opensky">—</div></div></div>
-      <div class="src-item"><div class="src-dot" id="sd-iss"></div><div class="src-info"><div class="src-name">Satellites</div><div class="src-detail" id="st-iss">—</div></div></div>
-      <div class="src-item"><div class="src-dot" id="sd-weather"></div><div class="src-info"><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
-      <div class="src-item"><div class="src-dot" id="sd-astronomy"></div><div class="src-info"><div class="src-name">Astronomy</div><div class="src-detail" id="st-astronomy">—</div></div></div>
+      <div class="src-item" id="si-opensky"><div class="src-info"><div class="src-name">Aircraft</div><div class="src-detail" id="st-opensky">—</div></div></div>
+      <div class="src-item" id="si-iss"><div class="src-info"><div class="src-name">Satellites</div><div class="src-detail" id="st-iss">—</div></div></div>
+      <div class="src-item" id="si-weather"><div class="src-info"><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
+      <div class="src-item" id="si-astronomy"><div class="src-info"><div class="src-name">Astronomy</div><div class="src-detail" id="st-astronomy">—</div></div></div>
     </div>
   </div>
   <button class="sidebar-tab" id="sidebar-tab" title="Toggle sidebar">›</button>
@@ -1484,11 +1486,10 @@ function renderStatus(rows) {
   (rows||[]).forEach(r => _sourceStatus[r.source] = r);
   ['opensky','iss','weather','astronomy'].forEach(src => {
     const r    = _sourceStatus[src];
-    const dot  = document.getElementById('sd-'+src);
-    const item = dot ? dot.closest('.src-item') : null;
+    const item = document.getElementById('si-'+src);
     if (item) delete item.dataset.tip;
-    if (!r) { dot.className = 'src-dot'; _statusMeta[src] = null; return; }
-    dot.className = 'src-dot ' + r.status;
+    if (!r) { if (item) item.className = 'src-item'; _statusMeta[src] = null; return; }
+    if (item) item.className = 'src-item ' + r.status;
     if (r.status === 'no_key') {
       _statusMeta[src] = { mode: 'static', text: 'no key' };
     } else if (r.status === 'backoff') {
