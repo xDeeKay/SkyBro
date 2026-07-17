@@ -140,7 +140,8 @@ def init_db():
             last_success INTEGER DEFAULT 0,
             last_error   INTEGER DEFAULT 0,
             status TEXT DEFAULT 'unknown',
-            detail TEXT DEFAULT ''
+            detail TEXT DEFAULT '',
+            last_interval INTEGER DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS photo_cache (
             icao24 TEXT PRIMARY KEY,
@@ -174,7 +175,8 @@ def migrate_db():
                        ("seen_aircraft",   "geo_alt_ft REAL DEFAULT 0"),
                        ("seen_aircraft",   "squawk TEXT"),
                        ("seen_aircraft",   "spi INTEGER DEFAULT 0"),
-                       ("seen_aircraft",   "position_source INTEGER DEFAULT 0")]:
+                       ("seen_aircraft",   "position_source INTEGER DEFAULT 0"),
+                       ("source_status",   "last_interval INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -248,21 +250,25 @@ def update_source_status(source, success, detail='', status_override=None):
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         now = int(time.time())
-        row = c.execute("SELECT last_success, last_error FROM source_status WHERE source=?",
+        row = c.execute("SELECT last_success, last_error, last_interval FROM source_status WHERE source=?",
                         (source,)).fetchone()
-        prev_success = row[0] if row else 0
-        prev_error   = row[1] if row else 0
+        prev_success  = row[0] if row else 0
+        prev_error    = row[1] if row else 0
+        prev_interval = row[2] if row else 0
         if success:
+            # Observed gap between successful polls, not the configured poll_interval,
+            # since e.g. aircraft photo fetching can stretch a cycle well past it.
+            interval = (now - prev_success) if prev_success else prev_interval
             c.execute("""INSERT OR REPLACE INTO source_status
-                         (source, last_success, last_error, status, detail)
-                         VALUES (?,?,?,?,?)""",
-                      (source, now, prev_error, 'ok', ''))
+                         (source, last_success, last_error, status, detail, last_interval)
+                         VALUES (?,?,?,?,?,?)""",
+                      (source, now, prev_error, 'ok', '', interval))
         else:
             st = status_override or 'error'
             c.execute("""INSERT OR REPLACE INTO source_status
-                         (source, last_success, last_error, status, detail)
-                         VALUES (?,?,?,?,?)""",
-                      (source, prev_success, now, st, detail))
+                         (source, last_success, last_error, status, detail, last_interval)
+                         VALUES (?,?,?,?,?,?)""",
+                      (source, prev_success, now, st, detail, prev_interval))
         conn.commit()
         conn.close()
     except Exception as e:

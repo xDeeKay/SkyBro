@@ -1499,11 +1499,14 @@ function renderStatus(rows) {
       _statusMeta[src] = { mode: 'countdown', prefix: 'retry', deadline: r.last_error*1000 + mins*60000 };
     } else {
       const lastAttempt = Math.max(r.last_success||0, r.last_error||0);
+      // Prefer the tracker's own observed interval over the configured poll_interval,
+      // since e.g. aircraft photo fetching can stretch a real cycle well past it.
+      const interval = r.last_interval > 0 ? r.last_interval : REFRESH_SECS[src];
       if (r.status === 'error' && item && r.detail) item.dataset.tip = r.detail;
       _statusMeta[src] = {
         mode: 'countdown',
         prefix: r.status === 'ok' ? '' : 'retry',
-        deadline: lastAttempt*1000 + REFRESH_SECS[src]*1000,
+        deadline: lastAttempt*1000 + interval*1000,
       };
     }
   });
