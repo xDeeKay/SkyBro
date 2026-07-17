@@ -415,7 +415,7 @@ if (FIRST_RUN) {
         body: JSON.stringify({home_lat: city.lat, home_lon: city.lon})
       }).catch(() => {});
     }
-  } catch (e) { /* Intl.DateTimeFormat unsupported — keep Singapore fallback */ }
+  } catch (e) { /* Intl.DateTimeFormat unsupported, keep Singapore fallback */ }
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
@@ -760,8 +760,8 @@ function _drawSatellites() {
       html += `<div class="empty">Satellite passes unavailable<br><small>Add an n2yo API key in Settings to enable ${_satSubTab} tracking.</small></div>`;
     } else {
       const emptyHint = _satSubTab === 'Starlink'
-        ? 'Computed from CelesTrak TLEs — refreshes every 6h'
-        : 'Fetches every 2h — check n2yo key in Settings';
+        ? 'Computed from CelesTrak TLEs, refreshes every 6h'
+        : 'Fetches every 2h, check n2yo key in Settings';
       html += `<div class="empty">No upcoming ${_satSubTab} passes<br><small>${emptyHint}</small></div>`;
     }
   } else {
@@ -1223,9 +1223,9 @@ function _astroTonight(a) {
   if (!a.ts) {
     const ast = _sourceStatus.astronomy;
     if (ast && ast.status === 'error') {
-      return `<div class="empty" style="padding:24px">Astronomy data unavailable<br><small>Calculation failed — check back shortly.</small></div>`;
+      return `<div class="empty" style="padding:24px">Astronomy data unavailable<br><small>Calculation failed, check back shortly.</small></div>`;
     }
-    return `<div class="empty" style="padding:24px">Astronomy data loading…<br><small>Calculates on first startup — check back shortly.</small></div>`;
+    return `<div class="empty" style="padding:24px">Astronomy data loading…<br><small>Calculates on first startup, check back shortly.</small></div>`;
   }
   const tw = a.twilight || {}, mi = a.moon || {};
   const illum = mi.illumination != null ? mi.illumination : 0;
@@ -1354,7 +1354,7 @@ function _astroTonight(a) {
       </div>
       ${_aTonightOpen.meteors ? `<div class="astro-sec-body">${meteorCards}</div>` : ''}
     </div>` : ''}
-    ${!tonightPlanets.length && !tonightDSO.length && !activeMeteors.length ? `<div class="astro-empty" style="padding:24px">Nothing found — check back after dusk</div>` : ''}`;
+    ${!tonightPlanets.length && !tonightDSO.length && !activeMeteors.length ? `<div class="astro-empty" style="padding:24px">Nothing found, check back after dusk</div>` : ''}`;
 }
 
 function _astroPlanets(a) {
@@ -1365,7 +1365,7 @@ function _astroPlanets(a) {
   ).sort((x,y) => y.alt_deg - x.alt_deg);
 
   let html = `<div class="sub-filter">${_searchBar('Search planets…')}<div style="display:flex;gap:4px">${_horizonBtn()}</div></div>`;
-  if (!list.length) return html + `<div class="astro-empty">${_aHorizon?'No planets above horizon — disable Horizon filter to see all':'No planets match'}</div>`;
+  if (!list.length) return html + `<div class="astro-empty">${_aHorizon?'No planets above horizon, disable Horizon filter to see all':'No planets match'}</div>`;
   return html + list.map(p => {
     const upCol = p.is_up ? 'var(--green)' : 'var(--muted)';
     const altStr = p.is_up ? `↑ ${p.alt_deg}° ${p.az_compass}` : '↓ below horizon';
@@ -1597,7 +1597,7 @@ async function refresh() {
       document.getElementById('s-weather').removeAttribute('title');
     } else if (_sourceStatus.weather && _sourceStatus.weather.status === 'error') {
       document.getElementById('s-weather').textContent = '⚠️';
-      document.getElementById('s-weather').title = "Weather data unavailable — Open-Meteo isn't responding";
+      document.getElementById('s-weather').title = "Weather data unavailable, Open-Meteo isn't responding";
     }
   } catch(e) { console.error('Refresh error:', e); }
 }
@@ -1682,7 +1682,7 @@ document.addEventListener('DOMContentLoaded', () => {
 if (FIRST_RUN && !sessionStorage.getItem('skybro_first_run_dismissed')) {
   const html = _detectedCity
     ? `👋 Welcome to SkyBro!<br><br>We've set your location to ${_detectedCity} based on your timezone.<br><br>You can refine this in Settings, and optionally add API keys for aircraft and satellite tracking.`
-    : `👋 Welcome to SkyBro!<br><br>We couldn't detect your location automatically — please set your home coordinates in Settings.<br><br>You can also optionally add API keys there for aircraft and satellite tracking.`;
+    : `👋 Welcome to SkyBro!<br><br>We couldn't detect your location automatically. Please set your home coordinates in Settings.<br><br>You can also optionally add API keys there for aircraft and satellite tracking.`;
   document.getElementById('frm-text').innerHTML = html;
   document.getElementById('first-run-modal').style.display = 'flex';
   document.getElementById('frm-ok').addEventListener('click', () => {

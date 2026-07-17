@@ -1,7 +1,7 @@
 """
 SkyBro — Astronomy module
 Calculates planet positions, DSO visibility, twilight times, and meteor showers
-using the ephem library. All heavy lifting is local — no API keys needed except
+using the ephem library. All heavy lifting is local, no API keys needed except
 for the optional Bortle/SQM lookup from clearoutside.com (primary) and
 lightpollutionmap.info (fallback).
 """
@@ -154,7 +154,7 @@ MESSIER = [
 METEOR_SHOWERS = [
     ("Quadrantids",       "01-01", "01-05", "01-04", 120, "Boo", "2003 EH1",          "Best from Northern Hemisphere; poor southern viewing"),
     ("Lyrids",            "04-14", "04-30", "04-22",  18, "Lyr", "Comet Thatcher",     ""),
-    ("Eta Aquariids",     "04-19", "05-28", "05-06",  50, "Aqr", "Halley's Comet",     "Excellent from Southern Hemisphere — one of the year's best"),
+    ("Eta Aquariids",     "04-19", "05-28", "05-06",  50, "Aqr", "Halley's Comet",     "Excellent from Southern Hemisphere, one of the year's best"),
     ("Delta Aquariids",   "07-12", "08-23", "07-29",  25, "Aqr", "Comet Marsden",      "Best from Southern Hemisphere"),
     ("Alpha Capricornids","07-03", "08-15", "08-01",   5, "Cap", "Comet 169P/NEAT",    "Slow bright fireballs"),
     ("Perseids",          "07-14", "09-01", "08-12", 100, "Per", "Comet Swift-Tuttle", "Radiant stays low from Southern Hemisphere"),
@@ -397,7 +397,7 @@ def _bortle(lat, lon):
     except Exception as e:
         log.warning(f"Bortle (clearoutside): {e}")
 
-    # Fallback: lightpollutionmap.info — fixed to use params= for proper URL encoding
+    # Fallback: lightpollutionmap.info, fixed to use params= for proper URL encoding
     try:
         r = requests.get(
             "https://www.lightpollutionmap.info/QueryRaster/",

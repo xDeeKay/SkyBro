@@ -32,8 +32,8 @@ description: >-
   Includes a sky visibility score for tonight.
 
 
-  All settings — home coordinates, alert radius, altitude threshold, satellite
-  lead time, and notification credentials are configurable through the built-in
+  All settings (home coordinates, alert radius, altitude threshold, satellite
+  lead time, and notification credentials) are configurable through the built-in
   settings page. No config file editing required. Changes apply within 15
   seconds without restarting.
 

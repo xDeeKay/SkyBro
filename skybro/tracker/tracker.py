@@ -82,7 +82,7 @@ def load_config():
         log.info("Config reloaded")
         if (cfg.get("home_lat"), cfg.get("home_lon")) != (prev_lat, prev_lon):
             _weather_last = _moon_last = _astronomy_last = _sat_last_check = _starlink_last = 0.0
-            log.info("Home location changed — forcing immediate weather/moon/astronomy/satellite refresh")
+            log.info("Home location changed, forcing immediate weather/moon/astronomy/satellite refresh")
     except Exception as e:
         log.warning(f"Config load error: {e}")
 
@@ -294,7 +294,7 @@ def send_discord(title, description, color=0x4f7cff, fields=None, thumb_url=None
     try:
         requests.post(cfg["discord_webhook"], json={"embeds": [embed]}, timeout=10)
     except Exception as e:
-        # Don't log str(e) — the webhook URL itself is the secret and may appear in it
+        # Don't log str(e): the webhook URL itself is the secret and may appear in it
         log.error(f"Discord error: {type(e).__name__}")
 
 def notify(title, body, fields=None, priority=0, color=0x4f7cff, thumb_url=None):
@@ -465,7 +465,7 @@ def fetch_states():
     try:
         r = _request()
         if r.status_code == 401:
-            # Token expired mid-session — clear cache and retry once
+            # Token expired mid-session: clear cache and retry once
             _opensky_token = None
             _opensky_token_expiry = 0.0
             log.info("OpenSky: 401 received, refreshing token and retrying")
@@ -473,11 +473,11 @@ def fetch_states():
         if r.status_code == 429:
             wait_mins = _opensky_backoff_step // 60
             _opensky_backoff_until = time.time() + _opensky_backoff_step
-            log.warning(f"OpenSky rate limited (429) — backing off {wait_mins} min "
+            log.warning(f"OpenSky rate limited (429), backing off {wait_mins} min "
                         f"(next step: {min(_opensky_backoff_step*2, 3600)//60} min)")
             _opensky_backoff_step = min(_opensky_backoff_step * 2, 3600)
             update_source_status('opensky', False,
-                                 f"Rate limited — retry in {wait_mins} min", 'backoff')
+                                 f"Rate limited, retry in {wait_mins} min", 'backoff')
             return []
         r.raise_for_status()
         _opensky_backoff_step  = 300
@@ -734,7 +734,7 @@ def check_satellites():
     _sat_last_check = time.time()
     api_key = cfg.get("n2yo_api_key", "")
     if not api_key:
-        log.info("Satellites: n2yo API key not configured — skipping")
+        log.info("Satellites: n2yo API key not configured, skipping")
         update_source_status('iss', False, "No API key configured", 'no_key')
         return
     lat, lon = cfg["home_lat"], cfg["home_lon"]
@@ -788,7 +788,7 @@ def dispatch_iss_alerts():
         dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
         notify(
             "🛰️ ISS flyover coming up",
-            f"Visible pass in ~{mins} min (at {dt} local)\nDuration: {duration}s — look up!",
+            f"Visible pass in ~{mins} min (at {dt} local)\nDuration: {duration}s. Look up!",
             priority=1, color=0x1abc9c,
             fields=[
                 {"name": "Time",     "value": dt,             "inline": True},
