@@ -6,6 +6,7 @@ Config is read from /data/config.json and hot-reloaded when it changes.
 """
 
 import time, math, json, logging, sqlite3, requests, os, csv, io, re
+from concurrent.futures import ThreadPoolExecutor
 import ephem
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -140,8 +141,7 @@ def init_db():
             last_success INTEGER DEFAULT 0,
             last_error   INTEGER DEFAULT 0,
             status TEXT DEFAULT 'unknown',
-            detail TEXT DEFAULT '',
-            last_interval INTEGER DEFAULT 0
+            detail TEXT DEFAULT ''
         );
         CREATE TABLE IF NOT EXISTS photo_cache (
             icao24 TEXT PRIMARY KEY,
@@ -175,8 +175,7 @@ def migrate_db():
                        ("seen_aircraft",   "geo_alt_ft REAL DEFAULT 0"),
                        ("seen_aircraft",   "squawk TEXT"),
                        ("seen_aircraft",   "spi INTEGER DEFAULT 0"),
-                       ("seen_aircraft",   "position_source INTEGER DEFAULT 0"),
-                       ("source_status",   "last_interval INTEGER DEFAULT 0")]:
+                       ("seen_aircraft",   "position_source INTEGER DEFAULT 0")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -250,25 +249,21 @@ def update_source_status(source, success, detail='', status_override=None):
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         now = int(time.time())
-        row = c.execute("SELECT last_success, last_error, last_interval FROM source_status WHERE source=?",
+        row = c.execute("SELECT last_success, last_error FROM source_status WHERE source=?",
                         (source,)).fetchone()
-        prev_success  = row[0] if row else 0
-        prev_error    = row[1] if row else 0
-        prev_interval = row[2] if row else 0
+        prev_success = row[0] if row else 0
+        prev_error   = row[1] if row else 0
         if success:
-            # Observed gap between successful polls, not the configured poll_interval,
-            # since e.g. aircraft photo fetching can stretch a cycle well past it.
-            interval = (now - prev_success) if prev_success else prev_interval
             c.execute("""INSERT OR REPLACE INTO source_status
-                         (source, last_success, last_error, status, detail, last_interval)
-                         VALUES (?,?,?,?,?,?)""",
-                      (source, now, prev_error, 'ok', '', interval))
+                         (source, last_success, last_error, status, detail)
+                         VALUES (?,?,?,?,?)""",
+                      (source, now, prev_error, 'ok', ''))
         else:
             st = status_override or 'error'
             c.execute("""INSERT OR REPLACE INTO source_status
-                         (source, last_success, last_error, status, detail, last_interval)
-                         VALUES (?,?,?,?,?,?)""",
-                      (source, prev_success, now, st, detail, prev_interval))
+                         (source, last_success, last_error, status, detail)
+                         VALUES (?,?,?,?,?)""",
+                      (source, prev_success, now, st, detail))
         conn.commit()
         conn.close()
     except Exception as e:
@@ -353,6 +348,8 @@ def _wikipedia_type_photo(model):
     except Exception as e:
         log.debug(f"Wikipedia type photo ({model}): {e}")
     return "", ""
+
+PHOTO_FETCH_WORKERS = 8
 
 def fetch_aircraft_photo(icao24):
     """Return (photo_url, thumb_url) from cache, Planespotters (hex+reg), or Wikipedia type photo."""
@@ -581,18 +578,18 @@ def process_states(states):
     conn.close()
     # ── No DB connections open beyond this point until Phase 4 ───────────────
 
-    # ── Phase 3: fetch photos — each call opens/closes its own connection ─────
+    # ── Phase 3: fetch photos concurrently, same cycle for every aircraft ─────
+    # needs_photo already covers alert_queue's icao24s too (alerted aircraft are
+    # always a subset of visible aircraft), so one bounded-concurrency pass over
+    # it fetches both the live-map thumbnail and any alert-notification photo.
+    # Concurrency keeps a burst of new aircraft from stacking into a long,
+    # sequential delay that would otherwise push out the next OpenSky poll.
     newly_fetched = {}
-    for icao24 in needs_photo:
-        _, thumb = fetch_aircraft_photo(icao24)
-        if thumb:
-            newly_fetched[icao24] = thumb
-    for alert in alert_queue:
-        icao24 = alert['icao24']
-        if icao24 not in photo_cache_map and icao24 not in newly_fetched:
-            _, thumb = fetch_aircraft_photo(icao24)
-            if thumb:
-                newly_fetched[icao24] = thumb
+    if needs_photo:
+        with ThreadPoolExecutor(max_workers=PHOTO_FETCH_WORKERS) as pool:
+            for icao24, (_, thumb) in zip(needs_photo, pool.map(fetch_aircraft_photo, needs_photo)):
+                if thumb:
+                    newly_fetched[icao24] = thumb
 
     # ── Phase 4: single write to update photo_urls ────────────────────────────
     if newly_fetched:

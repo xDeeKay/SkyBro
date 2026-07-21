@@ -1460,8 +1460,10 @@ function _astroMoon(mi) {
 }
 
 // ── Source status bar ─────────────────────────────────────────────────────────
-// Fixed poll intervals mirrored from tracker.py's WEATHER_INTERVAL/ASTRONOMY_INTERVAL
-// (not user-configurable, so no config field to read them from).
+// opensky/iss start from the config values at page load, then get kept in sync
+// with Settings changes in refresh() below (poll_interval/iss_check_hours are
+// user-configurable). weather/astronomy are fixed, mirrored from tracker.py's
+// WEATHER_INTERVAL/ASTRONOMY_INTERVAL, which aren't user-configurable at all.
 const REFRESH_SECS = {
   opensky:   {{ cfg.poll_interval }},
   iss:       {{ cfg.iss_check_hours }} * 3600,
@@ -1496,17 +1498,17 @@ function renderStatus(rows) {
       const match = (r.detail||'').match(/(\d+)\s*min/);
       const mins  = match ? parseInt(match[1], 10) : 1;
       if (item && r.detail) item.dataset.tip = r.detail;
-      _statusMeta[src] = { mode: 'countdown', prefix: 'retry', deadline: r.last_error*1000 + mins*60000 };
-    } else {
-      const lastAttempt = Math.max(r.last_success||0, r.last_error||0);
-      // Prefer the tracker's own observed interval over the configured poll_interval,
-      // since e.g. aircraft photo fetching can stretch a real cycle well past it.
-      const interval = r.last_interval > 0 ? r.last_interval : REFRESH_SECS[src];
-      if (r.status === 'error' && item && r.detail) item.dataset.tip = r.detail;
+      _statusMeta[src] = { mode: 'countdown', prefix: 'limited', zeroText: 'Resuming...', deadline: r.last_error*1000 + mins*60000 };
+    } else if (r.status === 'error') {
+      if (item && r.detail) item.dataset.tip = r.detail;
       _statusMeta[src] = {
-        mode: 'countdown',
-        prefix: r.status === 'ok' ? '' : 'retry',
-        deadline: lastAttempt*1000 + interval*1000,
+        mode: 'countdown', prefix: 'retry', zeroText: 'Retrying...',
+        deadline: Math.max(r.last_success||0, r.last_error||0)*1000 + REFRESH_SECS[src]*1000,
+      };
+    } else {
+      _statusMeta[src] = {
+        mode: 'countdown', prefix: '', zeroText: 'Updating...',
+        deadline: Math.max(r.last_success||0, r.last_error||0)*1000 + REFRESH_SECS[src]*1000,
       };
     }
   });
@@ -1522,8 +1524,7 @@ function tickStatus() {
     if (!meta) { lbl.textContent = 'no data'; return; }
     if (meta.mode === 'static') { lbl.textContent = meta.text; return; }
     const remaining = meta.deadline - now;
-    const text = remaining <= 0 ? 'any moment' : fmtCountdown(remaining);
-    lbl.textContent = meta.prefix ? `${meta.prefix} ${text}` : text;
+    lbl.textContent = remaining <= 0 ? meta.zeroText : `${meta.prefix} ${fmtCountdown(remaining)}`.trim();
   });
 }
 
@@ -1573,7 +1574,7 @@ document.querySelectorAll('.tab').forEach(t => {
 // ── Single refresh function ───────────────────────────────────────────────────
 async function refresh() {
   try {
-    const [aircraft, satellites, history, stats, cur, hourly, daily, astronomy] = await Promise.all([
+    const [aircraft, satellites, history, stats, cur, hourly, daily, astronomy, liveCfg] = await Promise.all([
       fetch('/api/live').then(r=>r.json()),
       fetch('/api/satellites').then(r=>r.json()),
       fetch(_histUrl(0, Math.max(25,_histOffset))).then(r=>r.json()),
@@ -1582,10 +1583,15 @@ async function refresh() {
       fetch('/api/weather/hourly').then(r=>r.json()),
       fetch('/api/weather/daily').then(r=>r.json()),
       fetch('/api/astronomy').then(r=>r.json()),
+      fetch('/api/config').then(r=>r.json()),
     ]);
     if (cur && cur.timezone) locationTZ = cur.timezone;
     if (stats.use_location_time !== undefined) USE_LOC_TZ = stats.use_location_time;
     if (stats.time_format) TIME_24H = (stats.time_format === '24h');
+    // Keep the status footer's countdown in sync with Settings changes, even
+    // if they were made from another tab/device with this dashboard left open.
+    if (liveCfg.poll_interval)   REFRESH_SECS.opensky = liveCfg.poll_interval;
+    if (liveCfg.iss_check_hours) REFRESH_SECS.iss     = liveCfg.iss_check_hours * 3600;
     updateMap(aircraft);
     renderNearby(aircraft);
     renderSatellites(satellites);
@@ -1609,8 +1615,8 @@ async function refresh() {
 
 // /api/status is a cheap local DB read (no external calls), so it's polled on
 // its own faster cycle, independent of the main 15s refresh(). Otherwise the
-// footer's countdown can sit at "any moment" for up to a full refresh() cycle
-// after a source is actually due, since poll_interval defaults to the same 15s.
+// footer's "Updating..." state can linger for up to a full refresh() cycle
+// after the real update lands, since poll_interval defaults to the same 15s.
 async function refreshStatus() {
   try {
     const status = await fetch('/api/status').then(r=>r.json());
