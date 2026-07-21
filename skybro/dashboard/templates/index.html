@@ -1493,21 +1493,24 @@ function renderStatus(rows) {
     if (!r) { if (item) item.className = 'src-item'; _statusMeta[src] = null; return; }
     if (item) item.className = 'src-item ' + r.status;
     if (r.status === 'no_key') {
-      _statusMeta[src] = { mode: 'static', text: 'no key' };
+      _statusMeta[src] = { mode: 'static', text: 'No Key' };
     } else if (r.status === 'backoff') {
       const match = (r.detail||'').match(/(\d+)\s*min/);
       const mins  = match ? parseInt(match[1], 10) : 1;
       if (item && r.detail) item.dataset.tip = r.detail;
-      _statusMeta[src] = { mode: 'countdown', prefix: 'limited', zeroText: 'Resuming...', deadline: r.last_error*1000 + mins*60000 };
+      _statusMeta[src] = {
+        mode: 'countdown', showNumber: false, prefix: 'Rate Limited.', zeroText: 'Retrying...',
+        deadline: r.last_error*1000 + mins*60000,
+      };
     } else if (r.status === 'error') {
       if (item && r.detail) item.dataset.tip = r.detail;
       _statusMeta[src] = {
-        mode: 'countdown', prefix: 'retry', zeroText: 'Retrying...',
+        mode: 'countdown', showNumber: false, prefix: 'Error.', zeroText: 'Retrying...',
         deadline: Math.max(r.last_success||0, r.last_error||0)*1000 + REFRESH_SECS[src]*1000,
       };
     } else {
       _statusMeta[src] = {
-        mode: 'countdown', prefix: '', zeroText: 'Updating...',
+        mode: 'countdown', showNumber: true, prefix: '', zeroText: 'Fetching...',
         deadline: Math.max(r.last_success||0, r.last_error||0)*1000 + REFRESH_SECS[src]*1000,
       };
     }
@@ -1524,7 +1527,7 @@ function tickStatus() {
     if (!meta) { lbl.textContent = 'no data'; return; }
     if (meta.mode === 'static') { lbl.textContent = meta.text; return; }
     const remaining = meta.deadline - now;
-    lbl.textContent = remaining <= 0 ? meta.zeroText : `${meta.prefix} ${fmtCountdown(remaining)}`.trim();
+    lbl.textContent = remaining <= 0 ? meta.zeroText : (meta.showNumber ? fmtCountdown(remaining) : meta.prefix);
   });
 }
 
@@ -1615,7 +1618,7 @@ async function refresh() {
 
 // /api/status is a cheap local DB read (no external calls), so it's polled on
 // its own faster cycle, independent of the main 15s refresh(). Otherwise the
-// footer's "Updating..." state can linger for up to a full refresh() cycle
+// footer's "Fetching..." state can linger for up to a full refresh() cycle
 // after the real update lands, since poll_interval defaults to the same 15s.
 async function refreshStatus() {
   try {
