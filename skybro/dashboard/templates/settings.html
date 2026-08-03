@@ -54,7 +54,6 @@ input:checked+.slider:before{transform:translateX(18px)}
 select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
 select.inline-select:focus{border-color:var(--accent)}
 .section-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin:28px 2px 10px}
-.notif-card{margin-bottom:12px}
 .notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 textarea.mono-textarea{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
@@ -62,11 +61,10 @@ textarea.mono-textarea{
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.5;transition:border-color .15s
 }
 textarea.mono-textarea:focus{border-color:var(--accent)}
-.target-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
-.target-row{display:flex;gap:8px}
-.target-row input{flex:1}
+.target-list{margin-bottom:10px}
+.target-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px}
 .btn-remove{
-  background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+  background:var(--surface);border:1px solid var(--border);color:var(--muted);
   border-radius:6px;width:34px;flex-shrink:0;cursor:pointer;font-size:14px;transition:.15s
 }
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
@@ -74,6 +72,19 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 .token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
 .field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-top:16px}
 .field-label:first-child{margin-top:0}
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto}
+.tab{padding:10px 16px;text-align:center;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:var(--text)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+.subtabs{display:flex;gap:6px;margin-bottom:18px}
+.subtab{padding:7px 14px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;background:var(--surface);border:1px solid var(--border);transition:all .15s;user-select:none}
+.subtab.active{color:#fff;background:var(--accent);border-color:var(--accent)}
+.subtab:hover:not(.active){color:var(--text)}
+.subtab-pane{display:none}
+.subtab-pane.active{display:block}
 /* Map modal */
 .modal-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
 .modal-backdrop.open{display:flex}
@@ -109,174 +120,179 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
   <h1>Settings</h1>
   <p class="sub">Changes are saved instantly and picked up by the tracker within 15 seconds. No restart needed.</p>
 
+  <div class="tabs" id="settings-tabs">
+    <div class="tab active" data-tab="location">📍 Location</div>
+    <div class="tab" data-tab="display">🖥️ Display</div>
+    <div class="tab" data-tab="polling">⏱ Polling</div>
+    <div class="tab" data-tab="notifications">🔔 Notifications</div>
+    <div class="tab" data-tab="opensky">🔑 OpenSky</div>
+    <div class="tab" data-tab="n2yo">🛰️ n2yo</div>
+    <div class="tab" data-tab="danger">⚠️ Danger zone</div>
+  </div>
+
   <!-- Location & Thresholds -->
-  <div class="card">
-    <div class="card-title">📍 Location & Alert Thresholds</div>
-    <div class="card-desc">Set your home coordinates and the conditions that trigger an alert.</div>
-    <div class="form-row">
-      <div><label>Home Latitude</label><input type="number" id="home_lat" step="0.0001" min="-90" max="90" value="{{ cfg.home_lat }}"></div>
-      <div><label>Home Longitude</label><input type="number" id="home_lon" step="0.0001" min="-180" max="180" value="{{ cfg.home_lon }}"></div>
-    </div>
-    <div style="margin-bottom:14px">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="openMapPicker()">📍 Drop a pin</button>
-    </div>
-    <div class="form-row">
-      <div>
-        <label>Alert Radius (km)</label>
-        <input type="number" id="radius_km" step="0.5" min="1" max="100" value="{{ cfg.radius_km }}">
-        <div class="hint">Planes within this distance trigger an alert</div>
+  <div class="tab-pane active" id="pane-location">
+    <div class="card">
+      <div class="card-title">📍 Location & Alert Thresholds</div>
+      <div class="card-desc">Set your home coordinates and the conditions that trigger an alert.</div>
+      <div class="form-row">
+        <div><label>Home Latitude</label><input type="number" id="home_lat" step="0.0001" min="-90" max="90" value="{{ cfg.home_lat }}"></div>
+        <div><label>Home Longitude</label><input type="number" id="home_lon" step="0.0001" min="-180" max="180" value="{{ cfg.home_lon }}"></div>
       </div>
-      <div>
-        <label>Altitude Threshold (ft)</label>
-        <input type="number" id="alt_threshold_ft" step="500" min="500" max="50000" value="{{ cfg.alt_threshold_ft }}">
-        <div class="hint">Only alert if a plane is below this altitude</div>
+      <div style="margin-bottom:14px">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="openMapPicker()">📍 Drop a pin</button>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Alert Radius (km)</label>
+          <input type="number" id="radius_km" step="0.5" min="1" max="100" value="{{ cfg.radius_km }}">
+          <div class="hint">Planes within this distance trigger an alert</div>
+        </div>
+        <div>
+          <label>Altitude Threshold (ft)</label>
+          <input type="number" id="alt_threshold_ft" step="500" min="500" max="50000" value="{{ cfg.alt_threshold_ft }}">
+          <div class="hint">Only alert if a plane is below this altitude</div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Display Time -->
-  <div class="card">
-    <div class="card-title">🖥️ Display</div>
-    <div class="card-desc">Control how times and units appear across the dashboard.</div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">Use location time</div><div class="toggle-sub">Show times in the timezone of your set location, not this device's local time</div></div>
-      <label class="toggle"><input type="checkbox" id="use_location_time" {% if cfg.use_location_time %}checked{% endif %}><span class="slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">24-hour clock</div><div class="toggle-sub">Use 24-hour time instead of 12-hour AM/PM</div></div>
-      <label class="toggle"><input type="checkbox" id="time_format_24h" {% if cfg.time_format == '24h' %}checked{% endif %}><span class="slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Choose the units for altitude, speed, and vertical rate across the dashboard and alerts</div></div>
-      <select id="units_speed" class="inline-select">
-        <option value="aviation" {% if cfg.units_speed == 'aviation' %}selected{% endif %}>Aviation (ft · kts)</option>
-        <option value="metric" {% if cfg.units_speed == 'metric' %}selected{% endif %}>Metric (m · km/h)</option>
-      </select>
-    </div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">Temperature</div><div class="toggle-sub">Choose the units for temperature in weather forecasts</div></div>
-      <select id="units_temp" class="inline-select">
-        <option value="imperial" {% if cfg.units_temp == 'imperial' %}selected{% endif %}>Fahrenheit (°F)</option>
-        <option value="metric" {% if cfg.units_temp == 'metric' %}selected{% endif %}>Celsius (°C)</option>
-      </select>
+  <div class="tab-pane" id="pane-display">
+    <div class="card">
+      <div class="card-title">🖥️ Display</div>
+      <div class="card-desc">Control how times and units appear across the dashboard.</div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Use location time</div><div class="toggle-sub">Show times in the timezone of your set location, not this device's local time</div></div>
+        <label class="toggle"><input type="checkbox" id="use_location_time" {% if cfg.use_location_time %}checked{% endif %}><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">24-hour clock</div><div class="toggle-sub">Use 24-hour time instead of 12-hour AM/PM</div></div>
+        <label class="toggle"><input type="checkbox" id="time_format_24h" {% if cfg.time_format == '24h' %}checked{% endif %}><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Choose the units for altitude, speed, and vertical rate across the dashboard and alerts</div></div>
+        <select id="units_speed" class="inline-select">
+          <option value="aviation" {% if cfg.units_speed == 'aviation' %}selected{% endif %}>Aviation (ft · kts)</option>
+          <option value="metric" {% if cfg.units_speed == 'metric' %}selected{% endif %}>Metric (m · km/h)</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Temperature</div><div class="toggle-sub">Choose the units for temperature in weather forecasts</div></div>
+        <select id="units_temp" class="inline-select">
+          <option value="imperial" {% if cfg.units_temp == 'imperial' %}selected{% endif %}>Fahrenheit (°F)</option>
+          <option value="metric" {% if cfg.units_temp == 'metric' %}selected{% endif %}>Celsius (°C)</option>
+        </select>
+      </div>
     </div>
   </div>
 
   <!-- Polling -->
-  <div class="card">
-    <div class="card-title">⏱ Polling Intervals</div>
-    <div class="card-desc">Controls how often each data source is checked. OpenSky rate-limits anonymous users to ~10s minimum.</div>
-    <div class="form-row">
-      <div><label>Aircraft Poll (seconds)</label><input type="number" id="poll_interval" min="10" max="120" value="{{ cfg.poll_interval }}"></div>
-      <div><label>ISS Re-check (hours)</label><input type="number" id="iss_check_hours" min="1" max="12" value="{{ cfg.iss_check_hours }}"></div>
-    </div>
-    <div class="form-row single">
-      <div>
-        <label>ISS Alert Lead Time (minutes)</label>
-        <input type="number" id="iss_warn_mins" min="5" max="60" value="{{ cfg.iss_warn_mins }}">
-        <div class="hint">Send an ISS alert this many minutes before the pass</div>
+  <div class="tab-pane" id="pane-polling">
+    <div class="card">
+      <div class="card-title">⏱ Polling Intervals</div>
+      <div class="card-desc">Controls how often each data source is checked. OpenSky rate-limits anonymous users to ~10s minimum.</div>
+      <div class="form-row">
+        <div><label>Aircraft Poll (seconds)</label><input type="number" id="poll_interval" min="10" max="120" value="{{ cfg.poll_interval }}"></div>
+        <div><label>ISS Re-check (hours)</label><input type="number" id="iss_check_hours" min="1" max="12" value="{{ cfg.iss_check_hours }}"></div>
+      </div>
+      <div class="form-row single">
+        <div>
+          <label>ISS Alert Lead Time (minutes)</label>
+          <input type="number" id="iss_warn_mins" min="5" max="60" value="{{ cfg.iss_warn_mins }}">
+          <div class="hint">Send an ISS alert this many minutes before the pass</div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Notifications -->
-  <div class="section-label">🔔 Notifications</div>
-  <div class="card" style="padding-bottom:14px">
-    <div class="card-desc" style="margin-bottom:0">
-      Sent via <a href="https://github.com/caronc/apprise#popular-notification-services" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>,
-      which supports 150+ services (Discord, Pushover, Telegram, Slack, email, and more). Each category below has its own
-      targets, message template, and enable switch.
-    </div>
-  </div>
-
-  <div class="card notif-card" data-category="aircraft">
-    <div class="notif-hdr">
-      <div class="card-title" style="margin-bottom:0">✈️ Aircraft alerts</div>
-      <label class="toggle"><input type="checkbox" id="notif_aircraft_enabled" {% if cfg.notifications.aircraft.enabled %}checked{% endif %}><span class="slider"></span></label>
-    </div>
-    <div class="card-desc">Alert when a plane enters your radius and altitude window.</div>
-
-    <label class="field-label">Apprise targets</label>
-    <div class="target-list" id="targets_aircraft"></div>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
-
-    <label class="field-label">Filters (optional)</label>
-    <textarea class="mono-textarea" id="filters_aircraft" rows="3" placeholder="-callsign=VIPR.*&#10;country=Australia">{{ cfg.notifications.aircraft.filters }}</textarea>
-    <div class="hint">
-      One rule per line. <code>field=pattern</code> only notifies matches for that field; <code>-field=pattern</code> excludes matches.
-      Fields: <code>callsign</code>, <code>country</code>, <code>model</code>, <code>airframe</code> (heli/widebody/military/light/jet). Patterns are case-insensitive regex.
+  <div class="tab-pane" id="pane-notifications">
+    <div class="card" style="padding-bottom:14px">
+      <div class="card-desc" style="margin-bottom:0">
+        Sent via <a href="https://github.com/caronc/apprise#popular-notification-services" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>,
+        which supports 150+ services (Discord, Pushover, Telegram, Slack, email, and more). Each target below has its own
+        enable switch, message template, and test button.
+      </div>
     </div>
 
-    <label class="field-label">Title template</label>
-    <input type="text" id="title_aircraft" value="{{ cfg.notifications.aircraft.template.title }}">
-    <label class="field-label">Body template</label>
-    <textarea class="mono-textarea" id="body_aircraft" rows="3">{{ cfg.notifications.aircraft.template.body }}</textarea>
-    <div class="token-legend">
-      {% for tok in ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe'] %}
-      <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
-      {% endfor %}
+    <div class="subtabs" id="notif-subtabs">
+      <div class="subtab active" data-subtab="aircraft">✈️ Aircraft</div>
+      <div class="subtab" data-subtab="satellites">🛰️ Satellites</div>
     </div>
 
-    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
-      <button class="btn btn-secondary" onclick="testAlert('aircraft')">Send test alert</button>
-      <span id="test-result-aircraft" style="font-size:12px;color:var(--muted)"></span>
-    </div>
-  </div>
+    <div class="subtab-pane active" id="subpane-aircraft">
+      <div class="card">
+        <div class="card-title">Filters (optional)</div>
+        <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
+        <textarea class="mono-textarea" id="filters_aircraft" rows="3" placeholder="-callsign=VIPR.*&#10;country=Australia">{{ cfg.notifications.aircraft.filters }}</textarea>
+        <div class="hint">
+          One rule per line. <code>field=pattern</code> only notifies matches for that field; <code>-field=pattern</code> excludes matches.
+          Fields: <code>callsign</code>, <code>country</code>, <code>model</code>, <code>airframe</code> (heli/widebody/military/light/jet). Patterns are case-insensitive regex.
+        </div>
+      </div>
 
-  <div class="card notif-card" data-category="satellites">
-    <div class="notif-hdr">
-      <div class="card-title" style="margin-bottom:0">🛰️ Satellite alerts</div>
-      <label class="toggle"><input type="checkbox" id="notif_satellites_enabled" {% if cfg.notifications.satellites.enabled %}checked{% endif %}><span class="slider"></span></label>
-    </div>
-    <div class="card-desc">Alert before upcoming ISS flyovers (Hubble/Tiangong/Starlink are tracked but don't push alerts yet).</div>
+      <div class="hint" style="margin:0 2px 12px">
+        Title/body template placeholders:
+        <div class="token-legend">
+          {% for tok in ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe'] %}
+          <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
+          {% endfor %}
+        </div>
+      </div>
 
-    <label class="field-label">Apprise targets</label>
-    <div class="target-list" id="targets_satellites"></div>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
-
-    <label class="field-label">Title template</label>
-    <input type="text" id="title_satellites" value="{{ cfg.notifications.satellites.template.title }}">
-    <label class="field-label">Body template</label>
-    <textarea class="mono-textarea" id="body_satellites" rows="3">{{ cfg.notifications.satellites.template.body }}</textarea>
-    <div class="token-legend">
-      {% for tok in ['sat_name','time','minutes','duration'] %}
-      <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
-      {% endfor %}
+      <div class="target-list" id="targets_aircraft"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
     </div>
 
-    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
-      <button class="btn btn-secondary" onclick="testAlert('satellites')">Send test alert</button>
-      <span id="test-result-satellites" style="font-size:12px;color:var(--muted)"></span>
+    <div class="subtab-pane" id="subpane-satellites">
+      <div class="hint" style="margin:0 2px 12px">
+        Title/body template placeholders:
+        <div class="token-legend">
+          {% for tok in ['sat_name','time','minutes','duration'] %}
+          <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="target-list" id="targets_satellites"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
     </div>
   </div>
 
   <!-- OpenSky OAuth2 (optional) -->
-  <div class="card">
-    <div class="card-title">🔑 OpenSky Credentials (optional)</div>
-    <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials.</div>
-    <div class="form-row">
-      <div><label>Client ID</label><input type="text" id="opensky_client_id" value="{{ cfg.opensky_client_id }}"></div>
-      <div><label>Client Secret</label><input type="password" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}"></div>
-    </div>
-  </div>
-
-  <!-- n2yo API key -->
-  <div class="card">
-    <div class="card-title">🛰️ n2yo API Key (for ISS passes)</div>
-    <div class="card-desc">Required for ISS flyover alerts. Sign up for free at n2yo.com. The API key arrives by email. Leave blank to disable ISS tracking.</div>
-    <div class="form-row single">
-      <div>
-        <label>n2yo API Key</label>
-        <input type="text" id="n2yo_api_key" placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX" value="{{ cfg.n2yo_api_key }}">
+  <div class="tab-pane" id="pane-opensky">
+    <div class="card">
+      <div class="card-title">🔑 OpenSky Credentials (optional)</div>
+      <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials.</div>
+      <div class="form-row">
+        <div><label>Client ID</label><input type="text" id="opensky_client_id" value="{{ cfg.opensky_client_id }}"></div>
+        <div><label>Client Secret</label><input type="password" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}"></div>
       </div>
     </div>
   </div>
 
-  <div class="card" style="border-color:#e74c3c22">
-    <div class="card-title" style="color:var(--red)">⚠️ Danger zone</div>
-    <div class="card-desc">These actions cannot be undone.</div>
-    <button class="btn btn-secondary" id="reset-history-btn" onclick="confirmResetHistory()">Reset aircraft history</button>
-    <span id="reset-result" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
+  <!-- n2yo API key -->
+  <div class="tab-pane" id="pane-n2yo">
+    <div class="card">
+      <div class="card-title">🛰️ n2yo API Key (for ISS passes)</div>
+      <div class="card-desc">Required for ISS flyover alerts. Sign up for free at n2yo.com. The API key arrives by email. Leave blank to disable ISS tracking.</div>
+      <div class="form-row single">
+        <div>
+          <label>n2yo API Key</label>
+          <input type="text" id="n2yo_api_key" placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX" value="{{ cfg.n2yo_api_key }}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="pane-danger">
+    <div class="card" style="border-color:#e74c3c22">
+      <div class="card-title" style="color:var(--red)">⚠️ Danger zone</div>
+      <div class="card-desc">These actions cannot be undone.</div>
+      <button class="btn btn-secondary" id="reset-history-btn" onclick="confirmResetHistory()">Reset aircraft history</button>
+      <span id="reset-result" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
+    </div>
   </div>
 
   <div class="actions">
@@ -345,64 +361,155 @@ const NUMERIC_BOUNDS = {
   iss_check_hours:  [1, 12,        'ISS Re-check'],
   iss_warn_mins:    [5, 60,        'ISS Alert Lead Time'],
 };
+const FIELD_TAB = {
+  home_lat:'location', home_lon:'location', radius_km:'location', alt_threshold_ft:'location',
+  poll_interval:'polling', iss_check_hours:'polling', iss_warn_mins:'polling',
+};
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function showTab(tabId) {
+  document.querySelectorAll('#settings-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tabId}`));
+}
+document.querySelectorAll('#settings-tabs .tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+function showSubtab(id) {
+  document.querySelectorAll('#notif-subtabs .subtab').forEach(t => t.classList.toggle('active', t.dataset.subtab === id));
+  document.querySelectorAll('.subtab-pane').forEach(p => p.classList.toggle('active', p.id === `subpane-${id}`));
+}
+document.querySelectorAll('#notif-subtabs .subtab').forEach(t => t.addEventListener('click', () => showSubtab(t.dataset.subtab)));
 
 // ── Notifications ────────────────────────────────────────────────────────────
 const NOTIF_DATA = {{ cfg.notifications | tojson }};
 
-function addTargetRow(category, id, url) {
-  const list = document.getElementById(`targets_${category}`);
-  const row = document.createElement('div');
-  row.className = 'target-row';
-  row.dataset.id = id || '';
-  const input = document.createElement('input');
-  input.type = 'password';
-  input.className = 'target-url';
-  input.placeholder = 'e.g. discord://webhook_id/webhook_token';
-  input.value = url || '';
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn-remove';
-  btn.textContent = '✕';
-  btn.onclick = () => row.remove();
-  row.appendChild(input);
-  row.appendChild(btn);
-  list.appendChild(row);
+function buildTargetCard(category, target) {
+  target = target || {};
+  const tmpl = target.template || {};
+  const card = document.createElement('div');
+  card.className = 'target-card';
+  card.dataset.id = target.id || '';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'notif-hdr';
+  const hdrLabel = document.createElement('div');
+  hdrLabel.style.cssText = 'font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px';
+  hdrLabel.textContent = 'Target';
+  const hdrActions = document.createElement('div');
+  hdrActions.style.cssText = 'display:flex;align-items:center;gap:10px';
+  const toggleLabel = document.createElement('label');
+  toggleLabel.className = 'toggle';
+  const enabledInput = document.createElement('input');
+  enabledInput.type = 'checkbox';
+  enabledInput.className = 'target-enabled';
+  enabledInput.checked = target.enabled !== false;
+  const slider = document.createElement('span');
+  slider.className = 'slider';
+  toggleLabel.append(enabledInput, slider);
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn-remove';
+  removeBtn.title = 'Remove target';
+  removeBtn.textContent = '✕';
+  removeBtn.onclick = () => card.remove();
+  hdrActions.append(toggleLabel, removeBtn);
+  hdr.append(hdrLabel, hdrActions);
+
+  const urlLabel = document.createElement('label');
+  urlLabel.className = 'field-label';
+  urlLabel.style.marginTop = '10px';
+  urlLabel.textContent = 'Apprise URL';
+  const urlInput = document.createElement('input');
+  urlInput.type = 'password';
+  urlInput.className = 'target-url';
+  urlInput.placeholder = 'e.g. discord://webhook_id/webhook_token';
+  urlInput.value = target.url || '';
+
+  const titleLabel = document.createElement('label');
+  titleLabel.className = 'field-label';
+  titleLabel.textContent = 'Title template';
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.className = 'target-title';
+  titleInput.value = tmpl.title || '';
+
+  const bodyLabel = document.createElement('label');
+  bodyLabel.className = 'field-label';
+  bodyLabel.textContent = 'Body template';
+  const bodyInput = document.createElement('textarea');
+  bodyInput.className = 'mono-textarea target-body';
+  bodyInput.rows = 3;
+  bodyInput.value = tmpl.body || '';
+
+  const testRow = document.createElement('div');
+  testRow.style.cssText = 'margin-top:12px;display:flex;align-items:center;gap:10px';
+  const testBtn = document.createElement('button');
+  testBtn.type = 'button';
+  testBtn.className = 'btn btn-secondary btn-sm';
+  testBtn.textContent = 'Send test alert';
+  const resultSpan = document.createElement('span');
+  resultSpan.className = 'test-result';
+  resultSpan.style.cssText = 'font-size:12px;color:var(--muted)';
+  testBtn.onclick = () => testTarget(category, card, resultSpan);
+  testRow.append(testBtn, resultSpan);
+
+  card.append(hdr, urlLabel, urlInput, titleLabel, titleInput, bodyLabel, bodyInput, testRow);
+  return card;
 }
 
-function addTarget(category) { addTargetRow(category, '', ''); }
+function addTarget(category) {
+  document.getElementById(`targets_${category}`).appendChild(buildTargetCard(category, {}));
+}
 
 function renderTargets(category) {
-  const urls = (NOTIF_DATA[category] && NOTIF_DATA[category].apprise_urls) || [];
-  urls.forEach(row => addTargetRow(category, row.id, row.url));
-  if (!urls.length) addTargetRow(category, '', '');
+  const list = document.getElementById(`targets_${category}`);
+  const targets = (NOTIF_DATA[category] && NOTIF_DATA[category].targets) || [];
+  targets.forEach(t => list.appendChild(buildTargetCard(category, t)));
 }
 renderTargets('aircraft');
 renderTargets('satellites');
 
 function collectTargets(category) {
-  return Array.from(document.querySelectorAll(`#targets_${category} .target-row`))
-    .map(row => ({ id: row.dataset.id || undefined, url: row.querySelector('.target-url').value.trim() }))
-    .filter(r => r.url);
+  return Array.from(document.querySelectorAll(`#targets_${category} .target-card`))
+    .map(card => ({
+      id: card.dataset.id || undefined,
+      url: card.querySelector('.target-url').value.trim(),
+      enabled: card.querySelector('.target-enabled').checked,
+      template: {
+        title: card.querySelector('.target-title').value,
+        body:  card.querySelector('.target-body').value,
+      },
+    }))
+    .filter(t => t.url);
+}
+
+async function testTarget(category, card, resultEl) {
+  resultEl.textContent = 'Sending…';
+  const payload = {
+    url: card.querySelector('.target-url').value.trim(),
+    template: {
+      title: card.querySelector('.target-title').value,
+      body:  card.querySelector('.target-body').value,
+    },
+  };
+  try {
+    const r = await fetch(`/api/test-alert/${category}`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    resultEl.textContent = data.error || data.result || 'unknown';
+    if (data.error) showToast('⚠ '+data.error, 'error');
+    else showToast('✅ Test alert sent');
+  } catch(e) { resultEl.textContent = 'Error: '+e.message; }
 }
 
 function collectNotifications() {
   return {
     aircraft: {
-      enabled: document.getElementById('notif_aircraft_enabled').checked,
-      apprise_urls: collectTargets('aircraft'),
       filters: document.getElementById('filters_aircraft').value,
-      template: {
-        title: document.getElementById('title_aircraft').value,
-        body:  document.getElementById('body_aircraft').value,
-      },
+      targets: collectTargets('aircraft'),
     },
     satellites: {
-      enabled: document.getElementById('notif_satellites_enabled').checked,
-      apprise_urls: collectTargets('satellites'),
-      template: {
-        title: document.getElementById('title_satellites').value,
-        body:  document.getElementById('body_satellites').value,
-      },
+      targets: collectTargets('satellites'),
     },
   };
 }
@@ -419,6 +526,7 @@ async function save() {
     const v = payload[key];
     if (typeof v !== 'number' || isNaN(v) || v < lo || v > hi) {
       showToast(`❌ ${label} must be between ${lo} and ${hi}`, 'error');
+      showTab(FIELD_TAB[key]);
       document.getElementById(key).focus();
       return;
     }
@@ -444,19 +552,6 @@ async function doResetHistory() {
     el.textContent = d.ok ? '✅ History cleared' : '❌ Failed';
   } catch(e) { el.textContent = '❌ ' + e.message; }
   setTimeout(() => { el.textContent = ''; }, 4000);
-}
-
-async function testAlert(category) {
-  const el = document.getElementById(`test-result-${category}`);
-  el.textContent = 'Sending…';
-  try {
-    const r = await fetch(`/api/test-alert/${category}`, {method:'POST'});
-    const data = await r.json();
-    const msgs = Object.entries(data).map(([k,v]) => `${k}: ${v}`).join(' · ');
-    el.textContent = msgs;
-    if (data.error) showToast('⚠ '+data.error, 'error');
-    else showToast('✅ Test alert sent');
-  } catch(e) { el.textContent = 'Error: '+e.message; }
 }
 
 // ── Location picker ───────────────────────────────────────────────────────────

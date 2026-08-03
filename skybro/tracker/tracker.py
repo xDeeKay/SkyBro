@@ -67,10 +67,8 @@ DEFAULTS = {
     "opensky_client_secret": "",
     "n2yo_api_key":       "",
     "notifications": {
-        "aircraft":   {"enabled": True, "apprise_urls": [], "filters": "",
-                        "template": dict(DEFAULT_TEMPLATES["aircraft"])},
-        "satellites": {"enabled": True, "apprise_urls": [],
-                        "template": dict(DEFAULT_TEMPLATES["satellites"])},
+        "aircraft":   {"filters": "", "targets": []},
+        "satellites": {"targets": []},
     },
     "use_location_time":  False,
     "time_format":        "12h",
@@ -88,7 +86,9 @@ def _migrate_legacy_notifications(raw_cfg):
     """One-time, idempotent conversion of the old Pushover/Discord fields into
     the new Apprise-based notifications structure. Both aircraft and satellites
     categories get the same migrated targets, since today Pushover/Discord fire
-    for both plane alerts and ISS passes with no distinction."""
+    for both plane alerts and ISS passes with no distinction. The old category-
+    level alerts_enabled/iss_alerts_enabled applied uniformly to every target,
+    so it's carried over as each migrated target's own `enabled` flag."""
     if "notifications" in raw_cfg:
         return raw_cfg, False
     urls = []
@@ -98,17 +98,17 @@ def _migrate_legacy_notifications(raw_cfg):
     discord_url = _parse_discord_webhook(raw_cfg.get("discord_webhook"))
     if discord_url:
         urls.append({"id": uuid.uuid4().hex[:8], "url": discord_url})
+    aircraft_enabled   = raw_cfg.get("alerts_enabled", True)
+    satellites_enabled = raw_cfg.get("iss_alerts_enabled", True)
     raw_cfg["notifications"] = {
         "aircraft": {
-            "enabled": raw_cfg.get("alerts_enabled", True),
-            "apprise_urls": [dict(u) for u in urls],
             "filters": "",
-            "template": dict(DEFAULT_TEMPLATES["aircraft"]),
+            "targets": [{**u, "enabled": aircraft_enabled,
+                         "template": dict(DEFAULT_TEMPLATES["aircraft"])} for u in urls],
         },
         "satellites": {
-            "enabled": raw_cfg.get("iss_alerts_enabled", True),
-            "apprise_urls": [dict(u) for u in urls],
-            "template": dict(DEFAULT_TEMPLATES["satellites"]),
+            "targets": [{**u, "enabled": satellites_enabled,
+                         "template": dict(DEFAULT_TEMPLATES["satellites"])} for u in urls],
         },
     }
     for k in ("pushover_token", "pushover_user", "discord_webhook",
@@ -368,28 +368,26 @@ def _render_template(tmpl, values):
 
 def notify_category(key, values, photo_url=None, notify_type=None):
     notif = cfg.get("notifications", {}).get(key, {})
-    if not notif.get("enabled", True):
-        return
-    targets = [t.get("url") for t in notif.get("apprise_urls", []) if t.get("url")]
-    if not targets:
-        return
     if key == "aircraft" and not _passes_filters(_compile_filters(notif.get("filters", "")), values):
         return
     defaults = DEFAULT_TEMPLATES.get(key, {})
-    tmpl = notif.get("template", {})
-    title = _render_template(tmpl.get("title") or defaults.get("title", ""), values)
-    body  = _render_template(tmpl.get("body")  or defaults.get("body", ""),  values)
-    a = apprise.Apprise()
-    for url in targets:
+    for target in notif.get("targets", []):
+        url = target.get("url")
+        if not target.get("enabled", True) or not url:
+            continue
+        tmpl = target.get("template", {})
+        title = _render_template(tmpl.get("title") or defaults.get("title", ""), values)
+        body  = _render_template(tmpl.get("body")  or defaults.get("body", ""),  values)
+        a = apprise.Apprise()
         a.add(url)
-    try:
-        a.notify(title=title, body=body,
-                  notify_type=notify_type or apprise.NotifyType.INFO,
-                  attach=[photo_url] if photo_url else None)
-        log.info(f"Alert sent: {title}")
-    except Exception as e:
-        # Don't log str(e): target URLs are secrets and may appear in it
-        log.error(f"Notify error ({key}): {type(e).__name__}")
+        try:
+            a.notify(title=title, body=body,
+                      notify_type=notify_type or apprise.NotifyType.INFO,
+                      attach=[photo_url] if photo_url else None)
+            log.info(f"Alert sent ({key}): {title}")
+        except Exception as e:
+            # Don't log str(e): the target URL is a secret and may appear in it
+            log.error(f"Notify error ({key}/{target.get('id','?')}): {type(e).__name__}")
 
 # ── Aircraft photos ───────────────────────────────────────────────────────────
 def get_cached_photo(icao24):
@@ -865,8 +863,8 @@ def check_satellites():
     log.info(f"Satellites: {total} total passes across {len(SATELLITES)} objects")
 
 def dispatch_iss_alerts():
-    if not cfg.get("notifications", {}).get("satellites", {}).get("enabled", True):
-        return
+    # No category-level enable/disable anymore — each target has its own
+    # `enabled` flag, checked inside notify_category().
     now  = int(time.time())
     warn = cfg["iss_warn_mins"] * 60
     conn = sqlite3.connect(DB_PATH)
