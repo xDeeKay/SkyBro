@@ -8,7 +8,7 @@ A real-time sky tracker for your Umbrel home server. Runs 24/7 in the background
 - Raspberry Pi 4 or 5 (arm64)
 - Free [OpenSky Network](https://opensky-network.org) account with OAuth2 client credentials
 - Free [n2yo.com](https://www.n2yo.com) API key for satellite pass predictions
-- [Pushover](https://pushover.net) and/or Discord webhook for notifications (optional)
+- One or more [Apprise](https://github.com/caronc/apprise) notification targets for alerts (optional) — supports Pushover, Discord, Telegram, Slack, email, and 150+ other services
 
 ## Install
 
@@ -33,11 +33,11 @@ A real-time sky tracker for your Umbrel home server. Runs 24/7 in the background
 
 ## Alerts
 
-Alerts fire via **Pushover** and/or **Discord webhook** when:
-- ✈️ A plane enters your configured radius **and** is below your altitude threshold
-- 🛰️ An ISS pass is approaching within your configured lead time
+Alerts are sent via [Apprise](https://github.com/caronc/apprise) (150+ notification services) for two independent categories, each with its own targets:
+- ✈️ **Aircraft**: a plane enters your configured radius **and** is below your altitude threshold. Optional include/exclude filters (callsign, country, model, airframe type) let you e.g. mute a specific operator or only alert for military traffic. Includes an aircraft photo pulled from Planespotters.net (attached where the target service supports it).
+- 🛰️ **Satellites**: an ISS pass is approaching within your configured lead time
 
-Discord alerts include an aircraft photo pulled from Planespotters.net. All settings are managed through the in-app Settings page. Changes apply within 15 seconds without restarting.
+Each category's message title/body is an editable template with placeholders (e.g. `{callsign}`, `{model}`, `{sat_name}`). Existing Pushover/Discord config from older versions is converted to Apprise targets automatically on upgrade. All settings are managed through the in-app Settings page. Changes apply within 15 seconds without restarting.
 
 ## Dashboard tabs
 
@@ -77,7 +77,7 @@ Sent from the tracker in the background (runs continuously while SkyBro is runni
 | CelesTrak | Nothing beyond a plain HTTPS request; it's a public data download | Every 6h, for Starlink pass data |
 | Open-Meteo | Your exact configured coordinates | Every weather poll (~15 min) |
 | Clear Outside, or lightpollutionmap.info as a fallback | Your exact configured coordinates | Every astronomy poll (~1h) |
-| Pushover and/or your Discord webhook | The alert content (aircraft or satellite pass details, plus a photo for Discord) | Only when an alert actually fires, and only for the service(s) you've configured |
+| Your configured Apprise target(s) | The alert content (aircraft or satellite pass details, plus a photo attachment for aircraft alerts where the target supports it) | Only when an alert actually fires, and only for the category/target(s) you've configured |
 
 Sent directly from your browser (not the server), so these requests originate from whatever device you're viewing the dashboard on:
 
@@ -124,7 +124,7 @@ All state lives under the single mounted volume at `/data`:
 | File | Contents |
 |---|---|
 | `skybro.db` | SQLite database: history, flight paths, satellite passes, weather, astronomy |
-| `config.json` | All user settings (home location, alert radius/altitude, notification credentials, API keys). Written by the dashboard, hot-reloaded by the tracker every poll cycle (≤30s) |
+| `config.json` | All user settings (home location, alert radius/altitude, notification targets/filters/templates, API keys). Written by the dashboard, hot-reloaded by the tracker every poll cycle (≤30s) |
 | `aircraft_db.json` | OpenSky aircraft model/registration lookup (~520k entries), auto-downloaded on first run if missing |
 
 There are no required environment variables. All configuration is done through the Settings page in the browser and persisted to `config.json`. Optional env vars: `GIT_SHA` (dashboard only, build-time, only affects the dev version badge text) and `PORT` (dashboard only, default `5000`, the port gunicorn binds to inside the container).
@@ -134,7 +134,7 @@ There are no required environment variables. All configuration is done through t
 **Optional integrations** (all configured via Settings, app runs and degrades gracefully in-UI if any are missing):
 - OpenSky Network OAuth2 client credentials: required for aircraft tracking
 - n2yo.com API key: required for satellite pass predictions
-- Pushover token/user and/or a Discord webhook URL: required for push alerts
+- One or more Apprise target URLs: required for push alerts
 
 ## Maintenance
 

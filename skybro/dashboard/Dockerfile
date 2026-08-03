@@ -3,7 +3,7 @@ WORKDIR /app
 ARG GIT_SHA=""
 ENV GIT_SHA=${GIT_SHA}
 ENV PORT=5000
-RUN pip install --no-cache-dir flask requests gunicorn
+RUN pip install --no-cache-dir flask requests gunicorn apprise
 RUN groupadd -g 1000 skybro && useradd -u 1000 -g skybro -m skybro
 COPY . .
 RUN chmod +x /app/entrypoint.sh

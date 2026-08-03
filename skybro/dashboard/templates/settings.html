@@ -50,9 +50,30 @@ input:checked+.slider:before{transform:translateX(18px)}
 .toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
 .toast.success{background:var(--green);color:#000;opacity:1}
 .toast.error{background:var(--red);color:#fff;opacity:1}
-.hint{font-size:11px;color:var(--muted);margin-top:4px}
+.hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
 select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
 select.inline-select:focus{border-color:var(--accent)}
+.section-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin:28px 2px 10px}
+.notif-card{margin-bottom:12px}
+.notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+textarea.mono-textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;color:var(--text);font-size:12px;outline:none;resize:vertical;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.5;transition:border-color .15s
+}
+textarea.mono-textarea:focus{border-color:var(--accent)}
+.target-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.target-row{display:flex;gap:8px}
+.target-row input{flex:1}
+.btn-remove{
+  background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+  border-radius:6px;width:34px;flex-shrink:0;cursor:pointer;font-size:14px;transition:.15s
+}
+.btn-remove:hover{color:var(--red);border-color:var(--red)}
+.token-legend{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
+.field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-top:16px}
+.field-label:first-child{margin-top:0}
 /* Map modal */
 .modal-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
 .modal-backdrop.open{display:flex}
@@ -159,27 +180,73 @@ select.inline-select:focus{border-color:var(--accent)}
   </div>
 
   <!-- Notifications -->
-  <div class="card">
-    <div class="card-title">🔔 Notifications</div>
-    <div class="card-desc">Configure Pushover and/or Discord. Leave blank to disable that channel.</div>
-    <div class="form-row">
-      <div><label>Pushover App Token</label><input type="password" id="pushover_token" placeholder="••••••••" value="{{ cfg.pushover_token }}"></div>
-      <div><label>Pushover User Key</label><input type="password" id="pushover_user" placeholder="••••••••" value="{{ cfg.pushover_user }}"></div>
+  <div class="section-label">🔔 Notifications</div>
+  <div class="card" style="padding-bottom:14px">
+    <div class="card-desc" style="margin-bottom:0">
+      Sent via <a href="https://github.com/caronc/apprise#popular-notification-services" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>,
+      which supports 150+ services (Discord, Pushover, Telegram, Slack, email, and more). Each category below has its own
+      targets, message template, and enable switch.
     </div>
-    <div class="form-row single">
-      <div><label>Discord Webhook URL</label><input type="text" id="discord_webhook" placeholder="https://discord.com/api/webhooks/…" value="{{ cfg.discord_webhook }}"></div>
+  </div>
+
+  <div class="card notif-card" data-category="aircraft">
+    <div class="notif-hdr">
+      <div class="card-title" style="margin-bottom:0">✈️ Aircraft alerts</div>
+      <label class="toggle"><input type="checkbox" id="notif_aircraft_enabled" {% if cfg.notifications.aircraft.enabled %}checked{% endif %}><span class="slider"></span></label>
     </div>
-    <div class="toggle-row" style="margin-top:8px">
-      <div><div class="toggle-label">Enable plane alerts</div><div class="toggle-sub">Alert when a plane enters your radius and altitude window</div></div>
-      <label class="toggle"><input type="checkbox" id="alerts_enabled" {% if cfg.alerts_enabled %}checked{% endif %}><span class="slider"></span></label>
+    <div class="card-desc">Alert when a plane enters your radius and altitude window.</div>
+
+    <label class="field-label">Apprise targets</label>
+    <div class="target-list" id="targets_aircraft"></div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
+
+    <label class="field-label">Filters (optional)</label>
+    <textarea class="mono-textarea" id="filters_aircraft" rows="3" placeholder="-callsign=VIPR.*&#10;country=Australia">{{ cfg.notifications.aircraft.filters }}</textarea>
+    <div class="hint">
+      One rule per line. <code>field=pattern</code> only notifies matches for that field; <code>-field=pattern</code> excludes matches.
+      Fields: <code>callsign</code>, <code>country</code>, <code>model</code>, <code>airframe</code> (heli/widebody/military/light/jet). Patterns are case-insensitive regex.
     </div>
-    <div class="toggle-row">
-      <div><div class="toggle-label">Enable ISS alerts</div><div class="toggle-sub">Alert before upcoming ISS flyovers</div></div>
-      <label class="toggle"><input type="checkbox" id="iss_alerts_enabled" {% if cfg.iss_alerts_enabled %}checked{% endif %}><span class="slider"></span></label>
+
+    <label class="field-label">Title template</label>
+    <input type="text" id="title_aircraft" value="{{ cfg.notifications.aircraft.template.title }}">
+    <label class="field-label">Body template</label>
+    <textarea class="mono-textarea" id="body_aircraft" rows="3">{{ cfg.notifications.aircraft.template.body }}</textarea>
+    <div class="token-legend">
+      {% for tok in ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe'] %}
+      <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
+      {% endfor %}
     </div>
-    <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
-      <button class="btn btn-secondary" onclick="testAlert()">Send test alert</button>
-      <span id="test-result" style="font-size:12px;color:var(--muted)"></span>
+
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+      <button class="btn btn-secondary" onclick="testAlert('aircraft')">Send test alert</button>
+      <span id="test-result-aircraft" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <div class="card notif-card" data-category="satellites">
+    <div class="notif-hdr">
+      <div class="card-title" style="margin-bottom:0">🛰️ Satellite alerts</div>
+      <label class="toggle"><input type="checkbox" id="notif_satellites_enabled" {% if cfg.notifications.satellites.enabled %}checked{% endif %}><span class="slider"></span></label>
+    </div>
+    <div class="card-desc">Alert before upcoming ISS flyovers (Hubble/Tiangong/Starlink are tracked but don't push alerts yet).</div>
+
+    <label class="field-label">Apprise targets</label>
+    <div class="target-list" id="targets_satellites"></div>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
+
+    <label class="field-label">Title template</label>
+    <input type="text" id="title_satellites" value="{{ cfg.notifications.satellites.template.title }}">
+    <label class="field-label">Body template</label>
+    <textarea class="mono-textarea" id="body_satellites" rows="3">{{ cfg.notifications.satellites.template.body }}</textarea>
+    <div class="token-legend">
+      {% for tok in ['sat_name','time','minutes','duration'] %}
+      <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+      <button class="btn btn-secondary" onclick="testAlert('satellites')">Send test alert</button>
+      <span id="test-result-satellites" style="font-size:12px;color:var(--muted)"></span>
     </div>
   </div>
 
@@ -279,13 +346,74 @@ const NUMERIC_BOUNDS = {
   iss_warn_mins:    [5, 60,        'ISS Alert Lead Time'],
 };
 
+// ── Notifications ────────────────────────────────────────────────────────────
+const NOTIF_DATA = {{ cfg.notifications | tojson }};
+
+function addTargetRow(category, id, url) {
+  const list = document.getElementById(`targets_${category}`);
+  const row = document.createElement('div');
+  row.className = 'target-row';
+  row.dataset.id = id || '';
+  const input = document.createElement('input');
+  input.type = 'password';
+  input.className = 'target-url';
+  input.placeholder = 'e.g. discord://webhook_id/webhook_token';
+  input.value = url || '';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn-remove';
+  btn.textContent = '✕';
+  btn.onclick = () => row.remove();
+  row.appendChild(input);
+  row.appendChild(btn);
+  list.appendChild(row);
+}
+
+function addTarget(category) { addTargetRow(category, '', ''); }
+
+function renderTargets(category) {
+  const urls = (NOTIF_DATA[category] && NOTIF_DATA[category].apprise_urls) || [];
+  urls.forEach(row => addTargetRow(category, row.id, row.url));
+  if (!urls.length) addTargetRow(category, '', '');
+}
+renderTargets('aircraft');
+renderTargets('satellites');
+
+function collectTargets(category) {
+  return Array.from(document.querySelectorAll(`#targets_${category} .target-row`))
+    .map(row => ({ id: row.dataset.id || undefined, url: row.querySelector('.target-url').value.trim() }))
+    .filter(r => r.url);
+}
+
+function collectNotifications() {
+  return {
+    aircraft: {
+      enabled: document.getElementById('notif_aircraft_enabled').checked,
+      apprise_urls: collectTargets('aircraft'),
+      filters: document.getElementById('filters_aircraft').value,
+      template: {
+        title: document.getElementById('title_aircraft').value,
+        body:  document.getElementById('body_aircraft').value,
+      },
+    },
+    satellites: {
+      enabled: document.getElementById('notif_satellites_enabled').checked,
+      apprise_urls: collectTargets('satellites'),
+      template: {
+        title: document.getElementById('title_satellites').value,
+        body:  document.getElementById('body_satellites').value,
+      },
+    },
+  };
+}
+
 async function save() {
   const payload = {};
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
-   'iss_check_hours','iss_warn_mins','pushover_token','pushover_user',
-   'discord_webhook','opensky_client_id','opensky_client_secret','n2yo_api_key',
-   'alerts_enabled','iss_alerts_enabled','use_location_time','units_speed','units_temp'].forEach(k => payload[k] = getVal(k));
+   'iss_check_hours','iss_warn_mins','opensky_client_id','opensky_client_secret','n2yo_api_key',
+   'use_location_time','units_speed','units_temp'].forEach(k => payload[k] = getVal(k));
   payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
+  payload.notifications = collectNotifications();
 
   for (const [key, [lo, hi, label]] of Object.entries(NUMERIC_BOUNDS)) {
     const v = payload[key];
@@ -318,11 +446,11 @@ async function doResetHistory() {
   setTimeout(() => { el.textContent = ''; }, 4000);
 }
 
-async function testAlert() {
-  const el = document.getElementById('test-result');
+async function testAlert(category) {
+  const el = document.getElementById(`test-result-${category}`);
   el.textContent = 'Sending…';
   try {
-    const r = await fetch('/api/test-alert', {method:'POST'});
+    const r = await fetch(`/api/test-alert/${category}`, {method:'POST'});
     const data = await r.json();
     const msgs = Object.entries(data).map(([k,v]) => `${k}: ${v}`).join(' · ');
     el.textContent = msgs;

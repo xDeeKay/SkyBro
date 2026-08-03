@@ -1,12 +1,13 @@
 """
 SkyBro Tracker Service
 Polls OpenSky Network for nearby aircraft and n2yo for ISS passes.
-Sends alerts via Pushover and/or Discord webhook.
+Sends alerts via Apprise (150+ notification services) per notification category.
 Config is read from /data/config.json and hot-reloaded when it changes.
 """
 
-import time, math, json, logging, sqlite3, requests, os, csv, io, re
+import time, math, json, logging, sqlite3, requests, os, csv, io, re, uuid
 from concurrent.futures import ThreadPoolExecutor
+import apprise
 import ephem
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -43,6 +44,17 @@ SATELLITES = [
 ]
 
 # ── Default config ────────────────────────────────────────────────────────────
+DEFAULT_TEMPLATES = {
+    "aircraft": {
+        "title": "{emoji} {callsign} overhead",
+        "body":  "{model} ({registration})\n{airframe} • {country}\n{speed} • {vertical_speed}",
+    },
+    "satellites": {
+        "title": "🛰️ {sat_name} flyover coming up",
+        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
+    },
+}
+
 DEFAULTS = {
     "home_lat":           1.3521,
     "home_lon":           103.8198,
@@ -51,20 +63,60 @@ DEFAULTS = {
     "poll_interval":      15,
     "iss_check_hours":    2,
     "iss_warn_mins":      20,
-    "pushover_token":     "",
-    "pushover_user":      "",
-    "discord_webhook":    "",
     "opensky_client_id":     "",
     "opensky_client_secret": "",
     "n2yo_api_key":       "",
-    "alerts_enabled":     True,
-    "iss_alerts_enabled": True,
+    "notifications": {
+        "aircraft":   {"enabled": True, "apprise_urls": [], "filters": "",
+                        "template": dict(DEFAULT_TEMPLATES["aircraft"])},
+        "satellites": {"enabled": True, "apprise_urls": [],
+                        "template": dict(DEFAULT_TEMPLATES["satellites"])},
+    },
     "use_location_time":  False,
     "time_format":        "12h",
 }
 
 cfg = dict(DEFAULTS)
 _cfg_mtime = 0.0
+
+def _parse_discord_webhook(url):
+    """Convert a Discord webhook URL into an apprise discord://id/token target."""
+    m = re.search(r'/webhooks/(\d+)/([^/?]+)', url or '')
+    return f"discord://{m.group(1)}/{m.group(2)}" if m else None
+
+def _migrate_legacy_notifications(raw_cfg):
+    """One-time, idempotent conversion of the old Pushover/Discord fields into
+    the new Apprise-based notifications structure. Both aircraft and satellites
+    categories get the same migrated targets, since today Pushover/Discord fire
+    for both plane alerts and ISS passes with no distinction."""
+    if "notifications" in raw_cfg:
+        return raw_cfg, False
+    urls = []
+    if raw_cfg.get("pushover_token") and raw_cfg.get("pushover_user"):
+        urls.append({"id": uuid.uuid4().hex[:8],
+                      "url": f"pover://{raw_cfg['pushover_user']}@{raw_cfg['pushover_token']}"})
+    discord_url = _parse_discord_webhook(raw_cfg.get("discord_webhook"))
+    if discord_url:
+        urls.append({"id": uuid.uuid4().hex[:8], "url": discord_url})
+    raw_cfg["notifications"] = {
+        "aircraft": {
+            "enabled": raw_cfg.get("alerts_enabled", True),
+            "apprise_urls": [dict(u) for u in urls],
+            "filters": "",
+            "template": dict(DEFAULT_TEMPLATES["aircraft"]),
+        },
+        "satellites": {
+            "enabled": raw_cfg.get("iss_alerts_enabled", True),
+            "apprise_urls": [dict(u) for u in urls],
+            "template": dict(DEFAULT_TEMPLATES["satellites"]),
+        },
+    }
+    for k in ("pushover_token", "pushover_user", "discord_webhook",
+              "alerts_enabled", "iss_alerts_enabled"):
+        raw_cfg.pop(k, None)
+    if urls:
+        log.info(f"Migrated legacy Pushover/Discord config to {len(urls)} Apprise target(s)")
+    return raw_cfg, True
 
 def load_config():
     global cfg, _cfg_mtime, _weather_last, _moon_last, _astronomy_last, _sat_last_check, _starlink_last
@@ -78,8 +130,11 @@ def load_config():
         prev_lat, prev_lon = cfg.get("home_lat"), cfg.get("home_lon")
         with open(CFG_PATH) as f:
             loaded = json.load(f)
+        loaded, migrated = _migrate_legacy_notifications(loaded)
+        if migrated:
+            save_config({**DEFAULTS, **loaded})
         cfg = {**DEFAULTS, **loaded}
-        _cfg_mtime = mtime
+        _cfg_mtime = CFG_PATH.stat().st_mtime if migrated else mtime
         log.info("Config reloaded")
         if (cfg.get("home_lat"), cfg.get("home_lon")) != (prev_lat, prev_lon):
             _weather_last = _moon_last = _astronomy_last = _sat_last_check = _starlink_last = 0.0
@@ -270,40 +325,71 @@ def update_source_status(source, success, detail='', status_override=None):
         log.debug(f"source_status update error: {e}")
 
 # ── Notifications ─────────────────────────────────────────────────────────────
-def send_pushover(title, message, priority=0):
-    if not cfg.get("pushover_token") or not cfg.get("pushover_user"):
-        return
-    try:
-        requests.post("https://api.pushover.net/1/messages.json", data={
-            "token": cfg["pushover_token"], "user": cfg["pushover_user"],
-            "title": title, "message": message, "priority": priority,
-        }, timeout=10)
-    except Exception as e:
-        log.error(f"Pushover error: {e}")
+_FILTER_FIELDS = {"callsign", "country", "model", "airframe"}
+_TOKEN_RE = re.compile(r"\{(\w+)\}")
 
-def send_discord(title, description, color=0x4f7cff, fields=None, thumb_url=None):
-    if not cfg.get("discord_webhook"):
-        return
-    embed = {
-        "title": title, "description": description, "color": color,
-        "fields": fields or [],
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "footer": {"text": "SkyBro"},
-    }
-    if thumb_url:
-        embed["thumbnail"] = {"url": thumb_url}
-    try:
-        requests.post(cfg["discord_webhook"], json={"embeds": [embed]}, timeout=10)
-    except Exception as e:
-        # Don't log str(e): the webhook URL itself is the secret and may appear in it
-        log.error(f"Discord error: {type(e).__name__}")
+def _compile_filters(rule_text):
+    """Parse the aircraft filter DSL: one 'field=pattern' (include) or
+    '-field=pattern' (exclude) rule per line. See CLAUDE.md for full semantics."""
+    compiled = {}
+    for line in (rule_text or "").splitlines():
+        line = line.strip()
+        if not line or "=" not in line:
+            continue
+        exclude = line.startswith("-")
+        if exclude:
+            line = line[1:]
+        field, _, pattern = line.partition("=")
+        field, pattern = field.strip().lower(), pattern.strip()
+        if field not in _FILTER_FIELDS or not pattern:
+            continue
+        try:
+            rx = re.compile(pattern, re.IGNORECASE)
+        except re.error:
+            log.debug(f"Skipping invalid filter pattern for {field}")
+            continue
+        bucket = compiled.setdefault(field, {"include": [], "exclude": []})
+        bucket["exclude" if exclude else "include"].append(rx)
+    return compiled
 
-def notify(title, body, fields=None, priority=0, color=0x4f7cff, thumb_url=None):
-    if not cfg.get("alerts_enabled", True):
+def _passes_filters(compiled, values):
+    for field, rules in compiled.items():
+        value = values.get(field) or ""
+        if any(rx.search(value) for rx in rules["exclude"]):
+            return False
+        if rules["include"] and not any(rx.search(value) for rx in rules["include"]):
+            return False
+    return True
+
+def _render_template(tmpl, values):
+    """Safe {token} substitution — never str.format, so a user-edited template
+    can't reach object attributes/indices. Unknown tokens are left as-is."""
+    return _TOKEN_RE.sub(lambda m: str(values.get(m.group(1), m.group(0))), tmpl or "")
+
+def notify_category(key, values, photo_url=None, notify_type=None):
+    notif = cfg.get("notifications", {}).get(key, {})
+    if not notif.get("enabled", True):
         return
-    send_pushover(title, body, priority)
-    send_discord(title, body, color, fields, thumb_url)
-    log.info(f"Alert sent: {title}")
+    targets = [t.get("url") for t in notif.get("apprise_urls", []) if t.get("url")]
+    if not targets:
+        return
+    if key == "aircraft" and not _passes_filters(_compile_filters(notif.get("filters", "")), values):
+        return
+    defaults = DEFAULT_TEMPLATES.get(key, {})
+    tmpl = notif.get("template", {})
+    title = _render_template(tmpl.get("title") or defaults.get("title", ""), values)
+    body  = _render_template(tmpl.get("body")  or defaults.get("body", ""),  values)
+    a = apprise.Apprise()
+    for url in targets:
+        a.add(url)
+    try:
+        a.notify(title=title, body=body,
+                  notify_type=notify_type or apprise.NotifyType.INFO,
+                  attach=[photo_url] if photo_url else None)
+        log.info(f"Alert sent: {title}")
+    except Exception as e:
+        # Don't log str(e): target URLs are secrets and may appear in it
+        log.error(f"Notify error ({key}): {type(e).__name__}")
 
 # ── Aircraft photos ───────────────────────────────────────────────────────────
 def get_cached_photo(icao24):
@@ -607,23 +693,16 @@ def process_states(states):
     for alert in alert_queue:
         icao24    = alert['icao24']
         photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
-        ac_emoji = '🚁' if _is_heli(alert.get('category', 0), alert['callsign'], alert['model']) else '✈️'
-        title = f"{ac_emoji} {alert['callsign']} overhead"
+        airframe = _classify_airframe(alert.get('category', 0), alert['callsign'], alert['model'])
+        ac_emoji = {'heli': '🚁', 'military': '🎖️', 'widebody': '✈️', 'light': '🛩️', 'jet': '✈️'}[airframe]
         _metric = cfg.get("units_speed", "aviation") == "metric"
-        alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
         spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
-        body  = (f"{alert['model']} • {alert['direction']} at {alert['dist_km']} km\n"
-                 f"{alt_str} • {spd_str} • {alert['vr_str']}")
-        notify(title, body, color=0x4f7cff, thumb_url=photo_url, fields=[
-            {"name": "Callsign",     "value": alert['callsign'],                            "inline": True},
-            {"name": "Registration", "value": alert['reg'] or "N/A",                        "inline": True},
-            {"name": "Model",        "value": alert['model'],                               "inline": True},
-            {"name": "Distance",     "value": f"{alert['dist_km']} km {alert['direction']}", "inline": True},
-            {"name": "Altitude",     "value": alt_str,                                      "inline": True},
-            {"name": "Speed",        "value": spd_str,                                      "inline": True},
-            {"name": "V/S",          "value": alert['vr_str'],                              "inline": True},
-            {"name": "Country",      "value": alert['country'],                             "inline": True},
-        ])
+        notify_category("aircraft", {
+            'emoji': ac_emoji, 'callsign': alert['callsign'], 'model': alert['model'],
+            'registration': alert['reg'] or "N/A", 'country': alert['country'],
+            'direction': alert['direction'], 'speed': spd_str,
+            'vertical_speed': alert['vr_str'], 'airframe': airframe,
+        }, photo_url=photo_url)
 
     live_icaos = {s[0] for s in states if s[6] and s[5]}
     for icao in list(_alerted):
@@ -633,13 +712,26 @@ def process_states(states):
 # ── Satellites ────────────────────────────────────────────────────────────────
 _sat_last_check = 0.0
 
-def _is_heli(category, callsign, model):
-    if category == 8: return True
+_HELI_CALLSIGN_RE = re.compile(r'^(RSCU|TIGR|HEMS|LIFEF|HELIAIR|POLAIR|NGAIR|CHC|PHG)')
+_HELI_MODEL_RE     = re.compile(r'helicopt|eurocopter|sikorsky|robinson|airbus h|leonardo|bell \d|ec\d{3}|h130|h145|h160|aw\d{3}|r22|r44|r66|bo.?105|bk.?117|ka-\d|mi-\d')
+_WIDEBODY_MODEL_RE = re.compile(r'b74\d|b76\d|b77\d|b78\d|747|767|777|787|a33\d|a34\d|a35\d|a380|dc-10|md-11|dreamliner')
+_MILITARY_MODEL_RE = re.compile(r'\bf-\d|f/a-|eurofighter|typhoon|gripen|rafale|hornet|b-52|c-17|c-130|hercules|harrier|su-\d|mig-\d|pc.?21|p-8a|poseidon|globemaster|wedgetail')
+_LIGHT_MODEL_RE     = re.compile(r'cessna|piper|beechcraft|cirrus sr|diamond da|tecnam|c172|c152|c182|pa-\d|da2\d|da4\d|sr2\d|tbm |pc-12|pc-6|robin')
+
+def _classify_airframe(category, callsign, model):
+    """Mirrors index.html's aircraftType() JS so filter/template values match
+    what the dashboard shows (silhouette selection stays client-side)."""
+    if category == 8: return 'heli'
+    if category == 6: return 'widebody'
     cs = (callsign or '').upper()
-    m  = (model or '').lower()
     if not model or model == 'Unknown':
-        return bool(re.match(r'^(RSCU|TIGR|HEMS|LIFEF|HELIAIR|POLAIR|NGAIR|CHC|PHG)', cs))
-    return bool(re.search(r'helicopt|eurocopter|sikorsky|robinson|airbus h|leonardo|bell \d|ec\d{3}|h130|h145|h160|aw\d{3}|r22|r44|r66|bo.?105|bk.?117|ka-\d|mi-\d', m))
+        return 'heli' if _HELI_CALLSIGN_RE.match(cs) else 'jet'
+    m = model.lower()
+    if _HELI_MODEL_RE.search(m): return 'heli'
+    if _WIDEBODY_MODEL_RE.search(m): return 'widebody'
+    if _MILITARY_MODEL_RE.search(m): return 'military'
+    if _LIGHT_MODEL_RE.search(m): return 'light'
+    return 'jet'
 
 def _az_compass(deg):
     dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
@@ -773,7 +865,7 @@ def check_satellites():
     log.info(f"Satellites: {total} total passes across {len(SATELLITES)} objects")
 
 def dispatch_iss_alerts():
-    if not cfg.get("iss_alerts_enabled", True):
+    if not cfg.get("notifications", {}).get("satellites", {}).get("enabled", True):
         return
     now  = int(time.time())
     warn = cfg["iss_warn_mins"] * 60
@@ -789,15 +881,9 @@ def dispatch_iss_alerts():
     for pass_time, duration in rows:
         mins = (pass_time - now) // 60
         dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
-        notify(
-            "🛰️ ISS flyover coming up",
-            f"Visible pass in ~{mins} min (at {dt} local)\nDuration: {duration}s. Look up!",
-            priority=1, color=0x1abc9c,
-            fields=[
-                {"name": "Time",     "value": dt,             "inline": True},
-                {"name": "In",       "value": f"{mins} min",  "inline": True},
-                {"name": "Duration", "value": f"{duration}s", "inline": True},
-            ])
+        notify_category("satellites", {
+            'sat_name': 'ISS', 'time': dt, 'minutes': str(mins), 'duration': str(duration),
+        }, notify_type=apprise.NotifyType.WARNING)
         c.execute("UPDATE iss_alerts SET alerted=1 WHERE pass_time=?", (pass_time,))
     conn.commit(); conn.close()
 

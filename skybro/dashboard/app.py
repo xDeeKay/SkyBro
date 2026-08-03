@@ -4,11 +4,12 @@ Serves the live map UI, API endpoints, and the settings page.
 Settings are persisted to /data/config.json (hot-reloaded by tracker).
 """
 
-import os, json, sqlite3, time
+import os, json, re, secrets, sqlite3, time
 
-APP_VERSION = "1.5.7"
+APP_VERSION = "1.6.0"
 from datetime import datetime
 from pathlib import Path
+import apprise
 from flask import Flask, render_template, jsonify, request, abort
 
 app = Flask(__name__)
@@ -16,20 +17,80 @@ DATA_DIR = Path("/data")
 DB_PATH  = DATA_DIR / "skybro.db"
 CFG_PATH = DATA_DIR / "config.json"
 
+DEFAULT_TEMPLATES = {
+    "aircraft": {
+        "title": "{emoji} {callsign} overhead",
+        "body":  "{model} ({registration})\n{airframe} • {country}\n{speed} • {vertical_speed}",
+    },
+    "satellites": {
+        "title": "🛰️ {sat_name} flyover coming up",
+        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
+    },
+}
+
 DEFAULTS = {
     "home_lat": 1.3521, "home_lon": 103.8198,
     "radius_km": 15.0, "alt_threshold_ft": 5000.0,
     "poll_interval": 15, "iss_check_hours": 2, "iss_warn_mins": 20,
-    "pushover_token": "", "pushover_user": "",
-    "discord_webhook": "", "opensky_client_id": "", "opensky_client_secret": "",
+    "opensky_client_id": "", "opensky_client_secret": "",
     "n2yo_api_key": "",
-    "alerts_enabled": True, "iss_alerts_enabled": True,
+    "notifications": {
+        "aircraft":   {"enabled": True, "apprise_urls": [], "filters": "",
+                        "template": dict(DEFAULT_TEMPLATES["aircraft"])},
+        "satellites": {"enabled": True, "apprise_urls": [],
+                        "template": dict(DEFAULT_TEMPLATES["satellites"])},
+    },
     "use_location_time": False, "time_format": "12h",
     "units_speed": "aviation", "units_temp": "imperial",
 }
 
 # Fields the UI is allowed to read/write
 UI_FIELDS = list(DEFAULTS.keys())
+
+APPRISE_URL_CAP = 20
+FILTERS_CAP     = 5000
+TEMPLATE_CAP    = 500
+_TOKEN_RE       = re.compile(r"\{(\w+)\}")
+
+def _render_template(tmpl, values):
+    return _TOKEN_RE.sub(lambda m: str(values.get(m.group(1), m.group(0))), tmpl or "")
+
+def _parse_discord_webhook(url):
+    """Convert a Discord webhook URL into an apprise discord://id/token target."""
+    m = re.search(r'/webhooks/(\d+)/([^/?]+)', url or '')
+    return f"discord://{m.group(1)}/{m.group(2)}" if m else None
+
+def _migrate_legacy_notifications(raw_cfg):
+    """One-time, idempotent conversion of the old Pushover/Discord fields into
+    the new Apprise-based notifications structure. Both aircraft and satellites
+    categories get the same migrated targets, since today Pushover/Discord fire
+    for both plane alerts and ISS passes with no distinction."""
+    if "notifications" in raw_cfg:
+        return raw_cfg, False
+    urls = []
+    if raw_cfg.get("pushover_token") and raw_cfg.get("pushover_user"):
+        urls.append({"id": secrets.token_hex(4),
+                      "url": f"pover://{raw_cfg['pushover_user']}@{raw_cfg['pushover_token']}"})
+    discord_url = _parse_discord_webhook(raw_cfg.get("discord_webhook"))
+    if discord_url:
+        urls.append({"id": secrets.token_hex(4), "url": discord_url})
+    raw_cfg["notifications"] = {
+        "aircraft": {
+            "enabled": raw_cfg.get("alerts_enabled", True),
+            "apprise_urls": [dict(u) for u in urls],
+            "filters": "",
+            "template": dict(DEFAULT_TEMPLATES["aircraft"]),
+        },
+        "satellites": {
+            "enabled": raw_cfg.get("iss_alerts_enabled", True),
+            "apprise_urls": [dict(u) for u in urls],
+            "template": dict(DEFAULT_TEMPLATES["satellites"]),
+        },
+    }
+    for k in ("pushover_token", "pushover_user", "discord_webhook",
+              "alerts_enabled", "iss_alerts_enabled"):
+        raw_cfg.pop(k, None)
+    return raw_cfg, True
 
 # Server-side bounds mirroring the settings page's HTML min/max, since those
 # are only client-side hints and can be bypassed via a direct API call.
@@ -53,7 +114,16 @@ def read_config():
         return dict(DEFAULTS)
     try:
         with open(CFG_PATH) as f:
-            return {**DEFAULTS, **json.load(f)}
+            loaded = json.load(f)
+        loaded, migrated = _migrate_legacy_notifications(loaded)
+        merged = {**DEFAULTS, **loaded}
+        if migrated:
+            # Write directly, not via write_config() (which itself calls
+            # read_config() to merge — that would recurse).
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            with open(CFG_PATH, "w") as f:
+                json.dump(merged, f, indent=2)
+        return merged
     except Exception:
         return dict(DEFAULTS)
 
@@ -298,15 +368,64 @@ def api_stats():
     except Exception:
         return jsonify({"live":0,"today":0,"total":0,"countries":0})
 
+def _mask_notifications(notifications):
+    masked = json.loads(json.dumps(notifications))
+    for cat in masked.values():
+        for row in cat.get("apprise_urls", []):
+            if row.get("url"):
+                row["url"] = "••••••••"
+    return masked
+
+def _clean_notif_category(key, submitted, current):
+    """Validate/sanitize one category's submitted notifications block,
+    restoring masked target URLs (by row id) from the currently-saved value
+    so an unedited row doesn't get overwritten with the literal mask."""
+    submitted = submitted if isinstance(submitted, dict) else {}
+    current = current if isinstance(current, dict) else {}
+    cur_urls_by_id = {u.get("id"): u.get("url", "")
+                       for u in (current.get("apprise_urls") or []) if u.get("id")}
+    out_urls = []
+    for row in (submitted.get("apprise_urls") or [])[:APPRISE_URL_CAP]:
+        if not isinstance(row, dict):
+            continue
+        url, row_id = (row.get("url") or "").strip(), row.get("id")
+        if url == "••••••••" and row_id in cur_urls_by_id:
+            url = cur_urls_by_id[row_id]
+        elif not row_id or row_id not in cur_urls_by_id:
+            row_id = secrets.token_hex(4)
+        if url:
+            out_urls.append({"id": row_id, "url": url})
+    tmpl = submitted.get("template") if isinstance(submitted.get("template"), dict) else {}
+    result = {
+        "enabled": bool(submitted.get("enabled", True)),
+        "apprise_urls": out_urls,
+        "template": {
+            "title": str(tmpl.get("title", ""))[:TEMPLATE_CAP],
+            "body":  str(tmpl.get("body", ""))[:TEMPLATE_CAP],
+        },
+    }
+    if key == "aircraft":
+        lines = [l for l in str(submitted.get("filters", ""))[:FILTERS_CAP].splitlines()
+                 if re.match(r'^-?\w+=.+$', l.strip())]
+        result["filters"] = "\n".join(lines)
+    return result
+
+def _clean_notifications(submitted, current):
+    submitted = submitted if isinstance(submitted, dict) else {}
+    current = current if isinstance(current, dict) else {}
+    return {key: _clean_notif_category(key, submitted.get(key) or {}, current.get(key) or {})
+            for key in ("aircraft", "satellites")}
+
 @app.route("/api/config", methods=["GET"])
 def api_config_get():
     cfg = read_config()
     # Only return known fields. Never echo stray/legacy keys that may
     # still be sitting in config.json (e.g. old opensky_user/opensky_pass).
     masked = {k: cfg.get(k, DEFAULTS[k]) for k in UI_FIELDS}
-    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret","n2yo_api_key"):
+    for k in ("opensky_client_secret","n2yo_api_key"):
         if masked.get(k):
             masked[k] = "••••••••"
+    masked["notifications"] = _mask_notifications(cfg.get("notifications", DEFAULTS["notifications"]))
     return jsonify(masked)
 
 @app.route("/api/config", methods=["POST"])
@@ -316,9 +435,11 @@ def api_config_post():
         abort(400)
     # Don't overwrite masked secrets with placeholder
     current = read_config()
-    for k in ("pushover_token","pushover_user","discord_webhook","opensky_client_secret","n2yo_api_key"):
+    for k in ("opensky_client_secret","n2yo_api_key"):
         if data.get(k) == "••••••••":
             data[k] = current.get(k, "")
+    if "notifications" in data:
+        data["notifications"] = _clean_notifications(data["notifications"], current.get("notifications", {}))
     for k, (lo, hi) in NUMERIC_BOUNDS.items():
         if k in data:
             try:
@@ -332,31 +453,41 @@ def api_config_post():
     saved = write_config(data)
     return jsonify({"ok": True})
 
-@app.route("/api/test-alert", methods=["POST"])
-def api_test_alert():
-    """Send a test notification using current config."""
-    import requests as req
+SAMPLE_PLACEHOLDERS = {
+    "aircraft": {
+        "emoji": "✈️", "callsign": "QFA123", "model": "BOEING 737-8AS",
+        "registration": "VH-ABC", "country": "Australia", "direction": "NW",
+        "speed": "450 kts", "vertical_speed": "↑ 800 fpm", "airframe": "jet",
+    },
+    "satellites": {
+        "sat_name": "ISS", "time": "20:15", "minutes": "12", "duration": "420",
+    },
+}
+
+@app.route("/api/test-alert/<category>", methods=["POST"])
+def api_test_alert(category):
+    """Send a test notification for one category using its saved targets/template."""
+    if category not in ("aircraft", "satellites"):
+        abort(404)
     cfg = read_config()
+    notif = cfg.get("notifications", {}).get(category, {})
+    urls = [u for u in notif.get("apprise_urls", []) if u.get("url")]
+    if not urls:
+        return jsonify({"error": "No Apprise targets configured for this category"})
+    values = SAMPLE_PLACEHOLDERS[category]
+    defaults = DEFAULT_TEMPLATES[category]
+    tmpl = notif.get("template", {})
+    title = "✅ " + _render_template(tmpl.get("title") or defaults["title"], values)
+    body  = _render_template(tmpl.get("body") or defaults["body"], values)
     results = {}
-    if cfg.get("pushover_token") and cfg.get("pushover_user"):
-        try:
-            r = req.post("https://api.pushover.net/1/messages.json", data={
-                "token": cfg["pushover_token"], "user": cfg["pushover_user"],
-                "title": "✅ SkyBro test", "message": "Alerts are working!",
-            }, timeout=10)
-            results["pushover"] = "ok" if r.ok else f"error {r.status_code}"
-        except Exception as e:
-            results["pushover"] = str(e)
-    if cfg.get("discord_webhook"):
-        try:
-            r = req.post(cfg["discord_webhook"], json={"embeds":[{
-                "title":"✅ SkyBro test","description":"Alerts are working!","color":0x2ecc71
-            }]}, timeout=10)
-            results["discord"] = "ok" if r.ok else f"error {r.status_code}"
-        except Exception as e:
-            results["discord"] = str(e)
-    if not results:
-        results["error"] = "No notification services configured"
+    for i, u in enumerate(urls):
+        scheme = u["url"].split("://", 1)[0] if "://" in u["url"] else "target"
+        label = f"{scheme}_{i+1}"
+        a = apprise.Apprise()
+        if not a.add(u["url"]):
+            results[label] = "invalid URL"
+            continue
+        results[label] = "ok" if a.notify(title=title, body=body) else "failed"
     return jsonify(results)
 
 if __name__ == "__main__":
