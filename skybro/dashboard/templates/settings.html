@@ -86,6 +86,9 @@ select.target-template:focus{border-color:var(--accent)}
 .template-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
 .template-card input,.template-card textarea{margin-top:8px}
 .template-kind-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 6px}
+.template-card.protected{opacity:.6}
+.template-card.protected input,.template-card.protected textarea{cursor:not-allowed;background:var(--surface)}
+.template-protected-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 /* Tabs */
 .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto}
 .tab{padding:10px 16px;text-align:center;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
@@ -266,13 +269,17 @@ select.target-template:focus{border-color:var(--accent)}
     <div class="subtab-pane" id="subpane-templates">
       <div class="card-desc" style="margin:0 2px 14px">
         Reusable message templates. A target picks one from the dropdown instead of writing its own message —
-        edit a template once and every target using it updates. Pick "Custom" on a target to write a one-off message instead.
+        edit a template once and every target using it updates. "Default Aircraft"/"Default Satellite" are fixed
+        fallback templates and can't be edited or removed; add your own template if you want different wording.
       </div>
-      <div class="target-list" id="template-list"></div>
-      <div style="display:flex;gap:8px">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add aircraft template</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add satellite template</button>
-      </div>
+
+      <div class="section-label" style="margin-top:0">✈️ Aircraft templates</div>
+      <div class="target-list" id="template-list-aircraft"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add aircraft template</button>
+
+      <div class="section-label">🛰️ Satellite templates</div>
+      <div class="target-list" id="template-list-satellite"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add satellite template</button>
     </div>
   </div>
 
@@ -416,7 +423,6 @@ function schemeLabel(url) {
 
 function buildTargetCard(category, target) {
   target = target || {};
-  const tmpl = target.template || {};
   const kind = CATEGORY_KIND[category];
   const card = document.createElement('div');
   card.className = 'target-card';
@@ -457,27 +463,7 @@ function buildTargetCard(category, target) {
   const templateSelect = document.createElement('select');
   templateSelect.className = 'target-template';
   templateSelect.dataset.kind = kind;
-
-  const titleInput = document.createElement('input');
-  titleInput.type = 'text';
-  titleInput.className = 'target-title';
-  titleInput.placeholder = 'Title template';
-  titleInput.value = tmpl.title || '';
-
-  const bodyInput = document.createElement('textarea');
-  bodyInput.className = 'mono-textarea target-body';
-  bodyInput.rows = 3;
-  bodyInput.placeholder = 'Body template';
-  bodyInput.value = tmpl.body || '';
-
-  function refreshCustomVisibility() {
-    const custom = templateSelect.value === '';
-    titleInput.style.display = custom ? '' : 'none';
-    bodyInput.style.display  = custom ? '' : 'none';
-  }
-  templateSelect.addEventListener('change', refreshCustomVisibility);
   populateTemplateSelect(templateSelect, kind, target.template_id);
-  refreshCustomVisibility();
 
   const filtersDetails = document.createElement('details');
   const filtersSummary = document.createElement('summary');
@@ -501,31 +487,27 @@ function buildTargetCard(category, target) {
   testBtn.onclick = () => testTarget(category, card, resultSpan);
   testRow.append(testBtn, resultSpan);
 
-  card.append(hdr, urlInput, templateSelect, titleInput, bodyInput, filtersDetails, testRow);
+  card.append(hdr, urlInput, templateSelect, filtersDetails, testRow);
   return card;
 }
 
 function populateTemplateSelect(select, kind, selectedId) {
   const prevValue = select.value;
   select.innerHTML = '';
-  const customOpt = document.createElement('option');
-  customOpt.value = '';
-  customOpt.textContent = 'Custom (write your own message)';
-  select.appendChild(customOpt);
   TEMPLATES.filter(t => t.kind === kind).forEach(t => {
     const opt = document.createElement('option');
     opt.value = t.id;
     opt.textContent = t.name;
     select.appendChild(opt);
   });
-  const want = selectedId !== undefined ? (selectedId || '') : prevValue;
-  select.value = [...select.options].some(o => o.value === want) ? want : '';
+  const want = selectedId !== undefined ? selectedId : prevValue;
+  const options = [...select.options];
+  select.value = options.some(o => o.value === want) ? want : (options[0] ? options[0].value : '');
 }
 
 function refreshTemplateSelects() {
   document.querySelectorAll('select.target-template').forEach(sel => {
     populateTemplateSelect(sel, sel.dataset.kind);
-    sel.dispatchEvent(new Event('change'));
   });
 }
 
@@ -544,20 +526,13 @@ NOTIF_CATEGORIES.forEach(renderTargets);
 
 function collectTargets(category) {
   return Array.from(document.querySelectorAll(`#targets_${category} .target-card`))
-    .map(card => {
-      const templateId = card.querySelector('.target-template').value || null;
-      return {
-        id: card.dataset.id || undefined,
-        url: card.querySelector('.target-url').value.trim(),
-        enabled: card.querySelector('.target-enabled').checked,
-        template_id: templateId,
-        template: {
-          title: card.querySelector('.target-title').value,
-          body:  card.querySelector('.target-body').value,
-        },
-        filters: card.querySelector('.target-filters').value,
-      };
-    })
+    .map(card => ({
+      id: card.dataset.id || undefined,
+      url: card.querySelector('.target-url').value.trim(),
+      enabled: card.querySelector('.target-enabled').checked,
+      template_id: card.querySelector('.target-template').value,
+      filters: card.querySelector('.target-filters').value,
+    }))
     .filter(t => t.url);
 }
 
@@ -565,11 +540,7 @@ async function testTarget(category, card, resultEl) {
   resultEl.textContent = 'Sending…';
   const payload = {
     url: card.querySelector('.target-url').value.trim(),
-    template_id: card.querySelector('.target-template').value || null,
-    template: {
-      title: card.querySelector('.target-title').value,
-      body:  card.querySelector('.target-body').value,
-    },
+    template_id: card.querySelector('.target-template').value,
   };
   try {
     const r = await fetch(`/api/test-alert/${category}`, {
@@ -597,8 +568,9 @@ function collectNotifications() {
 const PROTECTED_TEMPLATE_IDS = new Set(['default_aircraft', 'default_satellite']);
 
 function buildTemplateCard(tmpl) {
+  const protectedTmpl = PROTECTED_TEMPLATE_IDS.has(tmpl.id);
   const card = document.createElement('div');
-  card.className = 'template-card';
+  card.className = 'template-card' + (protectedTmpl ? ' protected' : '');
   card.dataset.id = tmpl.id;
   card.dataset.kind = tmpl.kind;
 
@@ -616,7 +588,13 @@ function buildTemplateCard(tmpl) {
   const hdrActions = document.createElement('div');
   hdrActions.style.cssText = 'display:flex;align-items:center;gap:10px';
   hdrActions.appendChild(kindBadge);
-  if (!PROTECTED_TEMPLATE_IDS.has(tmpl.id)) {
+  if (protectedTmpl) {
+    nameInput.disabled = true;
+    const badge = document.createElement('span');
+    badge.className = 'template-protected-badge';
+    badge.textContent = 'Protected';
+    hdrActions.appendChild(badge);
+  } else {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'btn-remove';
@@ -639,12 +617,14 @@ function buildTemplateCard(tmpl) {
   titleInput.className = 'template-title';
   titleInput.placeholder = 'Title template';
   titleInput.value = tmpl.title || '';
+  titleInput.disabled = protectedTmpl;
 
   const bodyInput = document.createElement('textarea');
   bodyInput.className = 'mono-textarea template-body';
   bodyInput.rows = 3;
   bodyInput.placeholder = 'Body template';
   bodyInput.value = tmpl.body || '';
+  bodyInput.disabled = protectedTmpl;
 
   const legend = document.createElement('div');
   legend.className = 'hint';
@@ -656,9 +636,11 @@ function buildTemplateCard(tmpl) {
 }
 
 function renderTemplates() {
-  const list = document.getElementById('template-list');
-  list.innerHTML = '';
-  TEMPLATES.forEach(t => list.appendChild(buildTemplateCard(t)));
+  ['aircraft', 'satellite'].forEach(kind => {
+    const list = document.getElementById(`template-list-${kind}`);
+    list.innerHTML = '';
+    TEMPLATES.filter(t => t.kind === kind).forEach(t => list.appendChild(buildTemplateCard(t)));
+  });
 }
 renderTemplates();
 
@@ -668,12 +650,12 @@ function addTemplate(kind) {
   const tmpl = {id, name: kind === 'aircraft' ? 'New Aircraft Template' : 'New Satellite Template',
                 kind, title: seed.title, body: seed.body};
   TEMPLATES.push(tmpl);
-  document.getElementById('template-list').appendChild(buildTemplateCard(tmpl));
+  document.getElementById(`template-list-${kind}`).appendChild(buildTemplateCard(tmpl));
   refreshTemplateSelects();
 }
 
 function collectTemplates() {
-  return Array.from(document.querySelectorAll('#template-list .template-card')).map(card => ({
+  return Array.from(document.querySelectorAll('#subpane-templates .template-card')).map(card => ({
     id: card.dataset.id,
     kind: card.dataset.kind,
     name: card.querySelector('.template-name').value,

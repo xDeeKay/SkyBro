@@ -113,14 +113,12 @@ def _migrate_legacy_notifications(raw_cfg):
         "aircraft": {
             "filters": "",
             "targets": [{**u, "enabled": aircraft_enabled,
-                         "template_id": "default_aircraft", "template": {"title": "", "body": ""},
-                         "filters": ""} for u in urls],
+                         "template_id": "default_aircraft", "filters": ""} for u in urls],
         },
         "satellites": {
             "filters": "",
             "targets": [{**u, "enabled": satellites_enabled,
-                         "template_id": "default_satellite", "template": {"title": "", "body": ""},
-                         "filters": ""} for u in urls],
+                         "template_id": "default_satellite", "filters": ""} for u in urls],
         },
     }
     if "templates" not in raw_cfg:
@@ -407,12 +405,9 @@ def notify_category(key, values, photo_url=None, notify_type=None):
             continue
         if not _passes_filters(_compile_filters(target.get("filters", ""), key), values):
             continue
-        # Field-level fallback, not whole-object: an inline template with a
-        # blank title but a real body (or vice versa) shouldn't lose the
-        # other field to an empty string when it could fall back to default.
-        tmpl = templates_by_id.get(target.get("template_id")) or target.get("template") or {}
-        title = _render_template(tmpl.get("title") or default_tmpl.get("title", ""), values)
-        body  = _render_template(tmpl.get("body")  or default_tmpl.get("body", ""),  values)
+        tmpl = templates_by_id.get(target.get("template_id")) or default_tmpl
+        title = _render_template(tmpl.get("title", ""), values)
+        body  = _render_template(tmpl.get("body", ""),  values)
         a = apprise.Apprise()
         a.add(url)
         try:

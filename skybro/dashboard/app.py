@@ -89,14 +89,12 @@ def _migrate_legacy_notifications(raw_cfg):
         "aircraft": {
             "filters": "",
             "targets": [{**u, "enabled": aircraft_enabled,
-                         "template_id": "default_aircraft", "template": {"title": "", "body": ""},
-                         "filters": ""} for u in urls],
+                         "template_id": "default_aircraft", "filters": ""} for u in urls],
         },
         "satellites": {
             "filters": "",
             "targets": [{**u, "enabled": satellites_enabled,
-                         "template_id": "default_satellite", "template": {"title": "", "body": ""},
-                         "filters": ""} for u in urls],
+                         "template_id": "default_satellite", "filters": ""} for u in urls],
         },
     }
     if "templates" not in raw_cfg:
@@ -424,19 +422,14 @@ def _clean_notif_category(key, submitted, current, valid_template_ids):
             row_id = secrets.token_hex(4)
         if not url:
             continue
-        tmpl = row.get("template") if isinstance(row.get("template"), dict) else {}
         template_id = row.get("template_id")
         if template_id not in valid_template_ids:
-            template_id = None
+            template_id = _CATEGORY_DEFAULT_TEMPLATE_ID.get(key)
         out_targets.append({
             "id": row_id,
             "url": url,
             "enabled": bool(row.get("enabled", True)),
             "template_id": template_id,
-            "template": {
-                "title": str(tmpl.get("title", ""))[:TEMPLATE_CAP],
-                "body":  str(tmpl.get("body", ""))[:TEMPLATE_CAP],
-            },
             "filters": _clean_filter_text(row.get("filters", "")),
         })
     return {"targets": out_targets, "filters": _clean_filter_text(submitted.get("filters", ""))}
@@ -445,17 +438,29 @@ NOTIF_CATEGORIES = ["aircraft", "satellites"]
 TEMPLATES_CAP = 20
 TEMPLATE_NAME_CAP = 60
 
+_PROTECTED_TEMPLATE_IDS = {t["id"] for t in DEFAULT_TEMPLATES_LIST}
+
 def _clean_templates(submitted, current):
     """Caps count/lengths, keeps `kind` immutable for an existing id (aircraft
     vs satellite token sets differ), and always guarantees the two protected
-    default templates survive even if a client payload omits them."""
+    default templates survive with their canonical content — the UI disables
+    their fields, but this is the defense-in-depth enforcement: a submitted
+    row for a protected id is ignored in favor of the hardcoded default,
+    regardless of what it contains."""
     submitted = submitted if isinstance(submitted, list) else []
     cur_by_id = {t.get("id"): t for t in (current or []) if isinstance(t, dict) and t.get("id")}
+    default_by_id = {t["id"]: t for t in DEFAULT_TEMPLATES_LIST}
     out, seen_ids = [], set()
     for row in submitted[:TEMPLATES_CAP]:
         if not isinstance(row, dict):
             continue
         rid = row.get("id")
+        if rid in _PROTECTED_TEMPLATE_IDS:
+            if rid in seen_ids:
+                continue
+            seen_ids.add(rid)
+            out.append(dict(default_by_id[rid]))
+            continue
         cur = cur_by_id.get(rid)
         kind = cur.get("kind") if cur else row.get("kind")
         if kind not in ("aircraft", "satellite"):
@@ -550,11 +555,9 @@ def api_test_alert(category):
     values = SAMPLE_PLACEHOLDERS[category]
     templates_by_id = {t["id"]: t for t in read_config().get("templates", [])}
     defaults = templates_by_id.get(_CATEGORY_DEFAULT_TEMPLATE_ID[category], {})
-    tmpl = templates_by_id.get(data.get("template_id"))
-    if not tmpl:
-        tmpl = data.get("template") if isinstance(data.get("template"), dict) else {}
-    title = "✅ " + _render_template(tmpl.get("title") or defaults.get("title", ""), values)
-    body  = _render_template(tmpl.get("body") or defaults.get("body", ""), values)
+    tmpl = templates_by_id.get(data.get("template_id")) or defaults
+    title = "✅ " + _render_template(tmpl.get("title", ""), values)
+    body  = _render_template(tmpl.get("body", ""), values)
     a = apprise.Apprise()
     if not a.add(url):
         return jsonify({"error": "Invalid Apprise URL"})
