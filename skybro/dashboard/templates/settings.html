@@ -80,6 +80,9 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 .target-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
 .target-card input,.target-card textarea{margin-top:8px}
 .target-card input:first-of-type{margin-top:0}
+.target-card .field-group{margin-top:10px}
+.target-card .field-group label{margin-bottom:4px}
+.target-card .field-group input,.target-card .field-group select,.target-card .field-group textarea{margin-top:0}
 .target-hdr-label{font-size:12px;color:var(--text);font-weight:600}
 .btn-remove{
   background:var(--surface);border:1px solid var(--border);color:var(--muted);
@@ -88,12 +91,12 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
 .token-legend{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
-select.target-template{
+select.target-template,select.target-service{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
   padding:8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
   font-family:inherit;margin-top:8px
 }
-select.target-template:focus{border-color:var(--accent)}
+select.target-template:focus,select.target-service:focus{border-color:var(--accent)}
 .target-card details{margin-top:8px}
 .target-card summary{font-size:11px;color:var(--muted);cursor:pointer;user-select:none;padding:4px 0}
 .target-card summary:hover{color:var(--text)}
@@ -507,13 +510,53 @@ const TOKENS_BY_KIND = {
 };
 const NOTIF_DATA = {{ cfg.notifications | tojson }};
 let TEMPLATES = {{ cfg.templates | tojson }};
-const SCHEME_NAMES = {pover:'Pushover', discord:'Discord', tgram:'Telegram', slack:'Slack', mailto:'Email', mailtos:'Email'};
+
+// Service picker for the target URL builder: one entry per Apprise plugin
+// (scheme, display name, minimal URL template, labeled fields), computed
+// server-side from Apprise's own plugin metadata so the list of ~150
+// services stays correct across apprise version bumps without hand-keeping.
+const APPRISE_SCHEMAS = {{ apprise_schemas | tojson }};
+const APPRISE_SCHEMA_BY_SCHEME = Object.fromEntries(APPRISE_SCHEMAS.map(s => [s.scheme, s]));
+// URL components where percent-encoding a value would break the URL's
+// structure rather than protect it (delimiters/hostnames), as opposed to
+// opaque credential strings which are safe, and safer, to encode.
+const APPRISE_STRUCTURAL_FIELDS = new Set(['host', 'port', 'path', 'schema']);
 
 function schemeLabel(url) {
   const m = /^([a-z0-9]+):\/\//i.exec((url || '').trim());
   if (!m) return 'New target';
   const scheme = m[1].toLowerCase();
-  return SCHEME_NAMES[scheme] || (scheme.charAt(0).toUpperCase() + scheme.slice(1));
+  const known = APPRISE_SCHEMA_BY_SCHEME[scheme];
+  return known ? known.name : (scheme.charAt(0).toUpperCase() + scheme.slice(1));
+}
+
+function buildServiceFields(container, schema, urlInput, hdrLabel) {
+  container.innerHTML = '';
+  if (!schema) return;
+  const values = {};
+  function updateBuiltUrl() {
+    let url = schema.template.replace('{schema}', schema.scheme);
+    schema.fields.forEach(f => {
+      const v = values[f.key] || '';
+      const encoded = APPRISE_STRUCTURAL_FIELDS.has(f.key) ? v : encodeURIComponent(v);
+      url = url.split('{' + f.key + '}').join(encoded);
+    });
+    urlInput.value = url;
+    hdrLabel.textContent = schema.name;
+  }
+  schema.fields.forEach(f => {
+    const wrap = document.createElement('div');
+    wrap.className = 'field-group';
+    const lbl = document.createElement('label');
+    lbl.textContent = f.label;
+    const inp = document.createElement('input');
+    inp.type = f.private ? 'password' : 'text';
+    inp.autocomplete = 'off';
+    inp.addEventListener('input', () => { values[f.key] = inp.value; updateBuiltUrl(); });
+    wrap.append(lbl, inp);
+    container.appendChild(wrap);
+  });
+  updateBuiltUrl();
 }
 
 function buildTargetCard(category, target) {
@@ -555,10 +598,50 @@ function buildTargetCard(category, target) {
   urlInput.value = target.url || '';
   urlInput.addEventListener('input', () => { hdrLabel.textContent = schemeLabel(urlInput.value); });
 
+  const urlGroup = document.createElement('div');
+  urlGroup.className = 'field-group';
+  const urlLabel = document.createElement('label');
+  urlLabel.textContent = 'Apprise URL';
+  urlGroup.append(urlLabel, urlInput);
+
+  const serviceGroup = document.createElement('div');
+  serviceGroup.className = 'field-group';
+  const serviceLabel = document.createElement('label');
+  serviceLabel.textContent = 'Notification service';
+  const serviceSelect = document.createElement('select');
+  serviceSelect.className = 'target-service';
+  const customOpt = document.createElement('option');
+  customOpt.value = '';
+  customOpt.textContent = 'Custom URL (paste your own)';
+  serviceSelect.appendChild(customOpt);
+  APPRISE_SCHEMAS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.scheme;
+    opt.textContent = s.name;
+    serviceSelect.appendChild(opt);
+  });
+  const serviceHint = document.createElement('div');
+  serviceHint.className = 'hint';
+  serviceHint.textContent = 'Builds the simplest working URL for the picked service. Switch back to Custom URL for options like host/port or extra targets.';
+  serviceHint.style.display = 'none';
+  const fieldsContainer = document.createElement('div');
+  serviceSelect.addEventListener('change', () => {
+    const schema = APPRISE_SCHEMA_BY_SCHEME[serviceSelect.value];
+    urlGroup.style.display = schema ? 'none' : '';
+    serviceHint.style.display = schema ? '' : 'none';
+    buildServiceFields(fieldsContainer, schema, urlInput, hdrLabel);
+  });
+  serviceGroup.append(serviceLabel, serviceSelect, serviceHint, fieldsContainer);
+
+  const templateGroup = document.createElement('div');
+  templateGroup.className = 'field-group';
+  const templateLabel = document.createElement('label');
+  templateLabel.textContent = 'Message template';
   const templateSelect = document.createElement('select');
   templateSelect.className = 'target-template';
   templateSelect.dataset.kind = kind;
   populateTemplateSelect(templateSelect, kind, target.template_id);
+  templateGroup.append(templateLabel, templateSelect);
 
   const filtersDetails = document.createElement('details');
   const filtersSummary = document.createElement('summary');
@@ -582,7 +665,7 @@ function buildTargetCard(category, target) {
   testBtn.onclick = () => testTarget(category, card, resultSpan);
   testRow.append(testBtn, resultSpan);
 
-  card.append(hdr, urlInput, templateSelect, filtersDetails, testRow);
+  card.append(hdr, serviceGroup, urlGroup, templateGroup, filtersDetails, testRow);
   return card;
 }
 

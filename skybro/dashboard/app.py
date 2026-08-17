@@ -61,6 +61,51 @@ _TOKEN_RE       = re.compile(r"\{(\w+)\}")
 def _render_template(tmpl, values):
     return _TOKEN_RE.sub(lambda m: str(values.get(m.group(1), m.group(0))), tmpl or "")
 
+def _build_apprise_schemas():
+    """Service picker for the target URL builder: one entry per Apprise
+    plugin, derived from Apprise's own plugin metadata (scheme, display name,
+    minimal URL template, and its placeholder fields) rather than hand-kept,
+    so it stays correct across apprise version bumps. Uses each plugin's
+    first/shortest template, since that's Apprise's own choice of the minimal
+    valid form. Services outside that minimal form (e.g. Pushover device
+    targeting) aren't covered; use "Custom URL" for those.
+    """
+    out = []
+    try:
+        schemas = apprise.Apprise().details().get("schemas", [])
+    except Exception:
+        return out
+    for s in schemas:
+        det = s.get("details") or {}
+        templates = det.get("templates") or ()
+        if not templates:
+            continue
+        tmpl = templates[0]
+        scheme_opts = list(s.get("secure_protocols") or ()) + list(s.get("protocols") or ())
+        if not scheme_opts:
+            continue
+        tokens = det.get("tokens") or {}
+        fields = []
+        for key in _TOKEN_RE.findall(tmpl):
+            if key == "schema":
+                continue
+            meta = tokens.get(key) or {}
+            fields.append({
+                "key": key,
+                "label": str(meta.get("name") or key.replace("_", " ").title()),
+                "private": bool(meta.get("private")),
+            })
+        out.append({
+            "scheme": scheme_opts[0],
+            "name": str(s.get("service_name") or scheme_opts[0]),
+            "template": tmpl,
+            "fields": fields,
+        })
+    out.sort(key=lambda x: x["name"].lower())
+    return out
+
+APPRISE_SCHEMAS = _build_apprise_schemas()
+
 def _parse_discord_webhook(url):
     """Convert a Discord webhook URL into an apprise discord://id/token target."""
     m = re.search(r'/webhooks/(\d+)/([^/?]+)', url or '')
@@ -175,7 +220,7 @@ def index():
 
 @app.route("/settings")
 def settings():
-    return render_template("settings.html", cfg=read_config())
+    return render_template("settings.html", cfg=read_config(), apprise_schemas=APPRISE_SCHEMAS)
 
 # ── REST API ──────────────────────────────────────────────────────────────────
 @app.route("/api/live")
