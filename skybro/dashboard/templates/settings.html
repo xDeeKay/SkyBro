@@ -61,17 +61,18 @@ textarea.mono-textarea{
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.5;transition:border-color .15s
 }
 textarea.mono-textarea:focus{border-color:var(--accent)}
-.target-list{margin-bottom:10px}
-.target-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px}
+.target-list{margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
+.target-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.target-card input,.target-card textarea{margin-top:8px}
+.target-card input:first-of-type{margin-top:0}
+.target-hdr-label{font-size:12px;color:var(--text);font-weight:600}
 .btn-remove{
   background:var(--surface);border:1px solid var(--border);color:var(--muted);
   border-radius:6px;width:34px;flex-shrink:0;cursor:pointer;font-size:14px;transition:.15s
 }
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
-.token-legend{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.token-legend{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
-.field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.4px;margin-top:16px}
-.field-label:first-child{margin-top:0}
 /* Tabs */
 .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto}
 .tab{padding:10px 16px;text-align:center;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
@@ -208,17 +209,16 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 
   <!-- Notifications -->
   <div class="tab-pane" id="pane-notifications">
-    <div class="card" style="padding-bottom:14px">
-      <div class="card-desc" style="margin-bottom:0">
-        Sent via <a href="https://github.com/caronc/apprise#popular-notification-services" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>,
-        which supports 150+ services (Discord, Pushover, Telegram, Slack, email, and more). Each target below has its own
-        enable switch, message template, and test button.
-      </div>
+    <div class="card-desc" style="margin:-8px 0 16px">
+      Sent via <a href="https://github.com/caronc/apprise#popular-notification-services" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
+      (150+ services). Each target below has its own enable switch, message template, and test button.
     </div>
 
     <div class="subtabs" id="notif-subtabs">
       <div class="subtab active" data-subtab="aircraft">✈️ Aircraft</div>
-      <div class="subtab" data-subtab="satellites">🛰️ Satellites</div>
+      {% for cat, label, emoji in [('iss','ISS','🛰️'), ('hubble','Hubble','🔭'), ('tiangong','Tiangong','🛰️'), ('starlink','Starlink','✨')] %}
+      <div class="subtab" data-subtab="{{ cat }}">{{ emoji }} {{ label }}</div>
+      {% endfor %}
     </div>
 
     <div class="subtab-pane active" id="subpane-aircraft">
@@ -233,7 +233,7 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
       </div>
 
       <div class="hint" style="margin:0 2px 12px">
-        Title/body template placeholders:
+        Placeholders:
         <div class="token-legend">
           {% for tok in ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe'] %}
           <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
@@ -245,9 +245,10 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
       <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
     </div>
 
-    <div class="subtab-pane" id="subpane-satellites">
+    {% for cat, label, emoji in [('iss','ISS','🛰️'), ('hubble','Hubble','🔭'), ('tiangong','Tiangong','🛰️'), ('starlink','Starlink','✨')] %}
+    <div class="subtab-pane" id="subpane-{{ cat }}">
       <div class="hint" style="margin:0 2px 12px">
-        Title/body template placeholders:
+        Placeholders:
         <div class="token-legend">
           {% for tok in ['sat_name','time','minutes','duration'] %}
           <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
@@ -255,9 +256,10 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
         </div>
       </div>
 
-      <div class="target-list" id="targets_satellites"></div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
+      <div class="target-list" id="targets_{{ cat }}"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('{{ cat }}')">+ Add target</button>
     </div>
+    {% endfor %}
   </div>
 
   <!-- OpenSky OAuth2 (optional) -->
@@ -380,7 +382,17 @@ function showSubtab(id) {
 document.querySelectorAll('#notif-subtabs .subtab').forEach(t => t.addEventListener('click', () => showSubtab(t.dataset.subtab)));
 
 // ── Notifications ────────────────────────────────────────────────────────────
+const NOTIF_CATEGORIES = ['aircraft', 'iss', 'hubble', 'tiangong', 'starlink'];
 const NOTIF_DATA = {{ cfg.notifications | tojson }};
+const DEFAULT_TEMPLATES = {{ default_templates | tojson }};
+const SCHEME_NAMES = {pover:'Pushover', discord:'Discord', tgram:'Telegram', slack:'Slack', mailto:'Email', mailtos:'Email'};
+
+function schemeLabel(url) {
+  const m = /^([a-z0-9]+):\/\//i.exec((url || '').trim());
+  if (!m) return 'New target';
+  const scheme = m[1].toLowerCase();
+  return SCHEME_NAMES[scheme] || (scheme.charAt(0).toUpperCase() + scheme.slice(1));
+}
 
 function buildTargetCard(category, target) {
   target = target || {};
@@ -392,8 +404,8 @@ function buildTargetCard(category, target) {
   const hdr = document.createElement('div');
   hdr.className = 'notif-hdr';
   const hdrLabel = document.createElement('div');
-  hdrLabel.style.cssText = 'font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px';
-  hdrLabel.textContent = 'Target';
+  hdrLabel.className = 'target-hdr-label';
+  hdrLabel.textContent = schemeLabel(target.url);
   const hdrActions = document.createElement('div');
   hdrActions.style.cssText = 'display:flex;align-items:center;gap:10px';
   const toggleLabel = document.createElement('label');
@@ -414,34 +426,27 @@ function buildTargetCard(category, target) {
   hdrActions.append(toggleLabel, removeBtn);
   hdr.append(hdrLabel, hdrActions);
 
-  const urlLabel = document.createElement('label');
-  urlLabel.className = 'field-label';
-  urlLabel.style.marginTop = '10px';
-  urlLabel.textContent = 'Apprise URL';
   const urlInput = document.createElement('input');
   urlInput.type = 'password';
   urlInput.className = 'target-url';
-  urlInput.placeholder = 'e.g. discord://webhook_id/webhook_token';
+  urlInput.placeholder = 'Apprise URL, e.g. discord://webhook_id/webhook_token';
   urlInput.value = target.url || '';
+  urlInput.addEventListener('input', () => { hdrLabel.textContent = schemeLabel(urlInput.value); });
 
-  const titleLabel = document.createElement('label');
-  titleLabel.className = 'field-label';
-  titleLabel.textContent = 'Title template';
   const titleInput = document.createElement('input');
   titleInput.type = 'text';
   titleInput.className = 'target-title';
+  titleInput.placeholder = 'Title template';
   titleInput.value = tmpl.title || '';
 
-  const bodyLabel = document.createElement('label');
-  bodyLabel.className = 'field-label';
-  bodyLabel.textContent = 'Body template';
   const bodyInput = document.createElement('textarea');
   bodyInput.className = 'mono-textarea target-body';
   bodyInput.rows = 3;
+  bodyInput.placeholder = 'Body template';
   bodyInput.value = tmpl.body || '';
 
   const testRow = document.createElement('div');
-  testRow.style.cssText = 'margin-top:12px;display:flex;align-items:center;gap:10px';
+  testRow.style.cssText = 'margin-top:10px;display:flex;align-items:center;gap:10px';
   const testBtn = document.createElement('button');
   testBtn.type = 'button';
   testBtn.className = 'btn btn-secondary btn-sm';
@@ -452,12 +457,15 @@ function buildTargetCard(category, target) {
   testBtn.onclick = () => testTarget(category, card, resultSpan);
   testRow.append(testBtn, resultSpan);
 
-  card.append(hdr, urlLabel, urlInput, titleLabel, titleInput, bodyLabel, bodyInput, testRow);
+  card.append(hdr, urlInput, titleInput, bodyInput, testRow);
   return card;
 }
 
 function addTarget(category) {
-  document.getElementById(`targets_${category}`).appendChild(buildTargetCard(category, {}));
+  const d = DEFAULT_TEMPLATES[category] || {};
+  document.getElementById(`targets_${category}`).appendChild(
+    buildTargetCard(category, {enabled: true, template: {title: d.title || '', body: d.body || ''}})
+  );
 }
 
 function renderTargets(category) {
@@ -465,8 +473,7 @@ function renderTargets(category) {
   const targets = (NOTIF_DATA[category] && NOTIF_DATA[category].targets) || [];
   targets.forEach(t => list.appendChild(buildTargetCard(category, t)));
 }
-renderTargets('aircraft');
-renderTargets('satellites');
+NOTIF_CATEGORIES.forEach(renderTargets);
 
 function collectTargets(category) {
   return Array.from(document.querySelectorAll(`#targets_${category} .target-card`))
@@ -503,15 +510,16 @@ async function testTarget(category, card, resultEl) {
 }
 
 function collectNotifications() {
-  return {
+  const result = {
     aircraft: {
       filters: document.getElementById('filters_aircraft').value,
       targets: collectTargets('aircraft'),
     },
-    satellites: {
-      targets: collectTargets('satellites'),
-    },
   };
+  NOTIF_CATEGORIES.filter(c => c !== 'aircraft').forEach(cat => {
+    result[cat] = { targets: collectTargets(cat) };
+  });
+  return result;
 }
 
 async function save() {

@@ -44,16 +44,42 @@ SATELLITES = [
 ]
 
 # ── Default config ────────────────────────────────────────────────────────────
+# The four tracked satellite types share one default/legacy message template —
+# only ISS ever alerted before this session, so its wording is what "legacy"
+# means for all of them.
+SATELLITE_CATEGORIES = [("iss", "ISS"), ("hubble", "Hubble"),
+                         ("tiangong", "Tiangong"), ("starlink", "Starlink")]
+_SATELLITE_KEYS = {key for key, _ in SATELLITE_CATEGORIES}
+
+# Used only by _migrate_legacy_notifications, to reproduce the exact original
+# pre-Apprise message wording so an upgrading install's notifications look
+# unchanged. The original Discord embed's inline field grid (Callsign,
+# Registration, Model, Distance, Altitude, Speed, V/S, Country) has no Apprise
+# equivalent and doesn't carry over — this reproduces the description text,
+# which was always the whole message on Pushover anyway.
+LEGACY_TEMPLATES = {
+    "aircraft": {
+        "title": "{emoji} {callsign} overhead",
+        "body":  "{model} • {direction} at {distance_km} km\n{altitude_ft} • {speed} • {vertical_speed}",
+    },
+    "satellite": {
+        "title": "🛰️ {sat_name} flyover coming up",
+        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
+    },
+}
+
+# Used as the render-time fallback for a target with a blank template, and
+# pre-filled into a brand-new target's fields the moment it's added.
 DEFAULT_TEMPLATES = {
     "aircraft": {
         "title": "{emoji} {callsign} overhead",
         "body":  "{model} ({registration})\n{airframe} • {country}\n{speed} • {vertical_speed}",
     },
-    "satellites": {
-        "title": "🛰️ {sat_name} flyover coming up",
-        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
-    },
+    "satellite": dict(LEGACY_TEMPLATES["satellite"]),
 }
+
+def _default_template_for(key):
+    return DEFAULT_TEMPLATES["satellite"] if key in _SATELLITE_KEYS else DEFAULT_TEMPLATES.get(key, {})
 
 DEFAULTS = {
     "home_lat":           1.3521,
@@ -67,8 +93,8 @@ DEFAULTS = {
     "opensky_client_secret": "",
     "n2yo_api_key":       "",
     "notifications": {
-        "aircraft":   {"filters": "", "targets": []},
-        "satellites": {"targets": []},
+        "aircraft":  {"filters": "", "targets": []},
+        **{key: {"targets": []} for key, _ in SATELLITE_CATEGORIES},
     },
     "use_location_time":  False,
     "time_format":        "12h",
@@ -84,11 +110,13 @@ def _parse_discord_webhook(url):
 
 def _migrate_legacy_notifications(raw_cfg):
     """One-time, idempotent conversion of the old Pushover/Discord fields into
-    the new Apprise-based notifications structure. Both aircraft and satellites
-    categories get the same migrated targets, since today Pushover/Discord fire
-    for both plane alerts and ISS passes with no distinction. The old category-
-    level alerts_enabled/iss_alerts_enabled applied uniformly to every target,
-    so it's carried over as each migrated target's own `enabled` flag."""
+    the new Apprise-based notifications structure, using LEGACY_TEMPLATES so
+    the migrated wording matches exactly what was sent before. Only aircraft
+    and iss get the migrated targets — Hubble/Tiangong/Starlink never alerted
+    before, so they start empty rather than gaining new active notifications
+    on upgrade. The old category-level alerts_enabled/iss_alerts_enabled
+    applied uniformly to every target, so it's carried over as each migrated
+    target's own `enabled` flag."""
     if "notifications" in raw_cfg:
         return raw_cfg, False
     urls = []
@@ -98,18 +126,21 @@ def _migrate_legacy_notifications(raw_cfg):
     discord_url = _parse_discord_webhook(raw_cfg.get("discord_webhook"))
     if discord_url:
         urls.append({"id": uuid.uuid4().hex[:8], "url": discord_url})
-    aircraft_enabled   = raw_cfg.get("alerts_enabled", True)
-    satellites_enabled = raw_cfg.get("iss_alerts_enabled", True)
+    aircraft_enabled = raw_cfg.get("alerts_enabled", True)
+    iss_enabled       = raw_cfg.get("iss_alerts_enabled", True)
     raw_cfg["notifications"] = {
         "aircraft": {
             "filters": "",
             "targets": [{**u, "enabled": aircraft_enabled,
-                         "template": dict(DEFAULT_TEMPLATES["aircraft"])} for u in urls],
+                         "template": dict(LEGACY_TEMPLATES["aircraft"])} for u in urls],
         },
-        "satellites": {
-            "targets": [{**u, "enabled": satellites_enabled,
-                         "template": dict(DEFAULT_TEMPLATES["satellites"])} for u in urls],
+        "iss": {
+            "targets": [{**u, "enabled": iss_enabled,
+                         "template": dict(LEGACY_TEMPLATES["satellite"])} for u in urls],
         },
+        "hubble":   {"targets": []},
+        "tiangong": {"targets": []},
+        "starlink": {"targets": []},
     }
     for k in ("pushover_token", "pushover_user", "discord_webhook",
               "alerts_enabled", "iss_alerts_enabled"):
@@ -370,7 +401,7 @@ def notify_category(key, values, photo_url=None, notify_type=None):
     notif = cfg.get("notifications", {}).get(key, {})
     if key == "aircraft" and not _passes_filters(_compile_filters(notif.get("filters", "")), values):
         return
-    defaults = DEFAULT_TEMPLATES.get(key, {})
+    defaults = _default_template_for(key)
     for target in notif.get("targets", []):
         url = target.get("url")
         if not target.get("enabled", True) or not url:
@@ -692,14 +723,16 @@ def process_states(states):
         icao24    = alert['icao24']
         photo_url = newly_fetched.get(icao24) or photo_cache_map.get(icao24, "") or None
         airframe = _classify_airframe(alert.get('category', 0), alert['callsign'], alert['model'])
-        ac_emoji = {'heli': '🚁', 'military': '🎖️', 'widebody': '✈️', 'light': '🛩️', 'jet': '✈️'}[airframe]
+        ac_emoji = '🚁' if airframe == 'heli' else '✈️'
         _metric = cfg.get("units_speed", "aviation") == "metric"
         spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
+        alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
         notify_category("aircraft", {
             'emoji': ac_emoji, 'callsign': alert['callsign'], 'model': alert['model'],
             'registration': alert['reg'] or "N/A", 'country': alert['country'],
             'direction': alert['direction'], 'speed': spd_str,
             'vertical_speed': alert['vr_str'], 'airframe': airframe,
+            'altitude_ft': alt_str, 'distance_km': alert['dist_km'],
         }, photo_url=photo_url)
 
     live_icaos = {s[0] for s in states if s[6] and s[5]}
@@ -862,7 +895,7 @@ def check_satellites():
     update_source_status('iss', True)
     log.info(f"Satellites: {total} total passes across {len(SATELLITES)} objects")
 
-def dispatch_iss_alerts():
+def dispatch_satellite_alerts():
     # No category-level enable/disable anymore — each target has its own
     # `enabled` flag, checked inside notify_category().
     now  = int(time.time())
@@ -872,17 +905,21 @@ def dispatch_iss_alerts():
     wr = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
     utc_off = json.loads(wr[0]).get("utc_offset_seconds", 0) if wr else 0
     local_tz = timezone(timedelta(seconds=utc_off))
-    rows = c.execute(
-        "SELECT pass_time, duration FROM iss_alerts "
-        "WHERE alerted=0 AND sat_name='ISS' AND pass_time BETWEEN ? AND ?",
-        (now, now + warn)).fetchall()
-    for pass_time, duration in rows:
-        mins = (pass_time - now) // 60
-        dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
-        notify_category("satellites", {
-            'sat_name': 'ISS', 'time': dt, 'minutes': str(mins), 'duration': str(duration),
-        }, notify_type=apprise.NotifyType.WARNING)
-        c.execute("UPDATE iss_alerts SET alerted=1 WHERE pass_time=?", (pass_time,))
+    for category, sat_name in SATELLITE_CATEGORIES:
+        rows = c.execute(
+            "SELECT pass_time, duration FROM iss_alerts "
+            "WHERE alerted=0 AND sat_name=? AND pass_time BETWEEN ? AND ?",
+            (sat_name, now, now + warn)).fetchall()
+        for pass_time, duration in rows:
+            mins = (pass_time - now) // 60
+            dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
+            notify_category(category, {
+                'sat_name': sat_name, 'time': dt, 'minutes': str(mins), 'duration': str(duration),
+            }, notify_type=apprise.NotifyType.WARNING)
+            # Scope by sat_name too: pass_time alone can collide across satellite
+            # types sharing the same second-resolution timestamp.
+            c.execute("UPDATE iss_alerts SET alerted=1 WHERE pass_time=? AND sat_name=?",
+                      (pass_time, sat_name))
     conn.commit(); conn.close()
 
 # ── Weather ───────────────────────────────────────────────────────────────────
@@ -945,7 +982,7 @@ def main():
             update_source_status('opensky', False, str(e))
         try:
             check_satellites()
-            dispatch_iss_alerts()
+            dispatch_satellite_alerts()
         except Exception as e:
             log.error(f"Satellites error: {e}", exc_info=True)
             update_source_status('iss', False, str(e))

@@ -17,16 +17,37 @@ DATA_DIR = Path("/data")
 DB_PATH  = DATA_DIR / "skybro.db"
 CFG_PATH = DATA_DIR / "config.json"
 
+SATELLITE_CATEGORIES = ["iss", "hubble", "tiangong", "starlink"]
+
+# Used only by _migrate_legacy_notifications, to reproduce the exact original
+# pre-Apprise message wording so an upgrading install's notifications look
+# unchanged. The original Discord embed's inline field grid (Callsign,
+# Registration, Model, Distance, Altitude, Speed, V/S, Country) has no Apprise
+# equivalent and doesn't carry over — this reproduces the description text,
+# which was always the whole message on Pushover anyway.
+LEGACY_TEMPLATES = {
+    "aircraft": {
+        "title": "{emoji} {callsign} overhead",
+        "body":  "{model} • {direction} at {distance_km} km\n{altitude_ft} • {speed} • {vertical_speed}",
+    },
+    "satellite": {
+        "title": "🛰️ {sat_name} flyover coming up",
+        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
+    },
+}
+
+# Used as the render-time fallback for a target with a blank template, and
+# pre-filled into a brand-new target's fields the moment it's added.
 DEFAULT_TEMPLATES = {
     "aircraft": {
         "title": "{emoji} {callsign} overhead",
         "body":  "{model} ({registration})\n{airframe} • {country}\n{speed} • {vertical_speed}",
     },
-    "satellites": {
-        "title": "🛰️ {sat_name} flyover coming up",
-        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
-    },
+    "satellite": dict(LEGACY_TEMPLATES["satellite"]),
 }
+
+def _default_template_for(key):
+    return DEFAULT_TEMPLATES["satellite"] if key in SATELLITE_CATEGORIES else DEFAULT_TEMPLATES.get(key, {})
 
 DEFAULTS = {
     "home_lat": 1.3521, "home_lon": 103.8198,
@@ -35,8 +56,8 @@ DEFAULTS = {
     "opensky_client_id": "", "opensky_client_secret": "",
     "n2yo_api_key": "",
     "notifications": {
-        "aircraft":   {"filters": "", "targets": []},
-        "satellites": {"targets": []},
+        "aircraft": {"filters": "", "targets": []},
+        **{key: {"targets": []} for key in SATELLITE_CATEGORIES},
     },
     "use_location_time": False, "time_format": "12h",
     "units_speed": "aviation", "units_temp": "imperial",
@@ -60,11 +81,13 @@ def _parse_discord_webhook(url):
 
 def _migrate_legacy_notifications(raw_cfg):
     """One-time, idempotent conversion of the old Pushover/Discord fields into
-    the new Apprise-based notifications structure. Both aircraft and satellites
-    categories get the same migrated targets, since today Pushover/Discord fire
-    for both plane alerts and ISS passes with no distinction. The old category-
-    level alerts_enabled/iss_alerts_enabled applied uniformly to every target,
-    so it's carried over as each migrated target's own `enabled` flag."""
+    the new Apprise-based notifications structure, using LEGACY_TEMPLATES so
+    the migrated wording matches exactly what was sent before. Only aircraft
+    and iss get the migrated targets — Hubble/Tiangong/Starlink never alerted
+    before, so they start empty rather than gaining new active notifications
+    on upgrade. The old category-level alerts_enabled/iss_alerts_enabled
+    applied uniformly to every target, so it's carried over as each migrated
+    target's own `enabled` flag."""
     if "notifications" in raw_cfg:
         return raw_cfg, False
     urls = []
@@ -74,18 +97,21 @@ def _migrate_legacy_notifications(raw_cfg):
     discord_url = _parse_discord_webhook(raw_cfg.get("discord_webhook"))
     if discord_url:
         urls.append({"id": secrets.token_hex(4), "url": discord_url})
-    aircraft_enabled   = raw_cfg.get("alerts_enabled", True)
-    satellites_enabled = raw_cfg.get("iss_alerts_enabled", True)
+    aircraft_enabled = raw_cfg.get("alerts_enabled", True)
+    iss_enabled       = raw_cfg.get("iss_alerts_enabled", True)
     raw_cfg["notifications"] = {
         "aircraft": {
             "filters": "",
             "targets": [{**u, "enabled": aircraft_enabled,
-                         "template": dict(DEFAULT_TEMPLATES["aircraft"])} for u in urls],
+                         "template": dict(LEGACY_TEMPLATES["aircraft"])} for u in urls],
         },
-        "satellites": {
-            "targets": [{**u, "enabled": satellites_enabled,
-                         "template": dict(DEFAULT_TEMPLATES["satellites"])} for u in urls],
+        "iss": {
+            "targets": [{**u, "enabled": iss_enabled,
+                         "template": dict(LEGACY_TEMPLATES["satellite"])} for u in urls],
         },
+        "hubble":   {"targets": []},
+        "tiangong": {"targets": []},
+        "starlink": {"targets": []},
     }
     for k in ("pushover_token", "pushover_user", "discord_webhook",
               "alerts_enabled", "iss_alerts_enabled"):
@@ -153,7 +179,9 @@ def index():
 
 @app.route("/settings")
 def settings():
-    return render_template("settings.html", cfg=read_config())
+    default_templates = {"aircraft": DEFAULT_TEMPLATES["aircraft"],
+                          **{key: DEFAULT_TEMPLATES["satellite"] for key in SATELLITE_CATEGORIES}}
+    return render_template("settings.html", cfg=read_config(), default_templates=default_templates)
 
 # ── REST API ──────────────────────────────────────────────────────────────────
 @app.route("/api/live")
@@ -412,11 +440,13 @@ def _clean_notif_category(key, submitted, current):
         result["filters"] = "\n".join(lines)
     return result
 
+NOTIF_CATEGORIES = ["aircraft", *SATELLITE_CATEGORIES]
+
 def _clean_notifications(submitted, current):
     submitted = submitted if isinstance(submitted, dict) else {}
     current = current if isinstance(current, dict) else {}
     return {key: _clean_notif_category(key, submitted.get(key) or {}, current.get(key) or {})
-            for key in ("aircraft", "satellites")}
+            for key in NOTIF_CATEGORIES}
 
 @app.route("/api/config", methods=["GET"])
 def api_config_get():
@@ -460,10 +490,14 @@ SAMPLE_PLACEHOLDERS = {
         "emoji": "✈️", "callsign": "QFA123", "model": "BOEING 737-8AS",
         "registration": "VH-ABC", "country": "Australia", "direction": "NW",
         "speed": "450 kts", "vertical_speed": "↑ 800 fpm", "airframe": "jet",
+        # Not advertised in the settings-page token legend, but kept working
+        # so a migrated legacy template (which used them) still renders.
+        "altitude_ft": "5,200 ft", "distance_km": "8.4",
     },
-    "satellites": {
-        "sat_name": "ISS", "time": "20:15", "minutes": "12", "duration": "420",
-    },
+    "iss":      {"sat_name": "ISS",      "time": "20:15", "minutes": "12", "duration": "420"},
+    "hubble":   {"sat_name": "Hubble",   "time": "21:03", "minutes": "8",  "duration": "310"},
+    "tiangong": {"sat_name": "Tiangong", "time": "19:47", "minutes": "15", "duration": "280"},
+    "starlink": {"sat_name": "Starlink", "time": "22:10", "minutes": "5",  "duration": "180"},
 }
 
 @app.route("/api/test-alert/<category>", methods=["POST"])
@@ -471,14 +505,14 @@ def api_test_alert(category):
     """Send a test notification for one target using whatever url/template is
     currently in its settings-page card — not necessarily saved yet, so a
     target can be test-fired before it's ever written to config.json."""
-    if category not in ("aircraft", "satellites"):
+    if category not in NOTIF_CATEGORIES:
         abort(404)
     data = request.get_json(force=True) or {}
     url = (data.get("url") or "").strip()
     if not url or url == "••••••••":
         return jsonify({"error": "Enter a target URL first"})
     values = SAMPLE_PLACEHOLDERS[category]
-    defaults = DEFAULT_TEMPLATES[category]
+    defaults = _default_template_for(category)
     tmpl = data.get("template") if isinstance(data.get("template"), dict) else {}
     title = "✅ " + _render_template(tmpl.get("title") or defaults["title"], values)
     body  = _render_template(tmpl.get("body") or defaults["body"], values)

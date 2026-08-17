@@ -33,11 +33,11 @@ A real-time sky tracker for your Umbrel home server. Runs 24/7 in the background
 
 ## Alerts
 
-Alerts are sent via [Apprise](https://github.com/caronc/apprise) (150+ notification services) for two independent categories, each with any number of targets:
+Alerts are sent via [Apprise](https://github.com/caronc/apprise) (150+ notification services) for five independent categories, each with any number of targets:
 - ✈️ **Aircraft**: a plane enters your configured radius **and** is below your altitude threshold. Optional category-level include/exclude filters (callsign, country, model, airframe type) let you e.g. mute a specific operator or only alert for military traffic, applied before any target fires. Includes an aircraft photo pulled from Planespotters.net (attached where the target service supports it).
-- 🛰️ **Satellites**: an ISS pass is approaching within your configured lead time
+- 🛰️ **ISS / Hubble / Tiangong / Starlink**: a pass for that satellite is approaching within your configured lead time — each gets its own separate targets rather than one shared "satellites" bucket.
 
-Every target has its own enable switch, editable title/body message template with placeholders (e.g. `{callsign}`, `{model}`, `{sat_name}`), and a test-alert button you can use before saving — so a detailed Discord embed and a terse Pushover ping can coexist in the same category. Existing Pushover/Discord config from older versions is converted to Apprise targets automatically on upgrade. All settings are managed through the in-app Settings page (organized into tabs, including Aircraft/Satellites sub-tabs under Notifications). Changes apply within 15 seconds without restarting.
+Every target has its own enable switch, editable title/body message template with placeholders (e.g. `{callsign}`, `{model}`, `{sat_name}`), and a test-alert button you can use before saving — so a detailed Discord embed and a terse Pushover ping can coexist in the same category. Existing Pushover/Discord config from older versions is converted to Apprise targets automatically on upgrade, with the exact original message wording preserved so nothing changes for you (new targets you add afterward get different, deliberately simplified default wording). All settings are managed through the in-app Settings page, organized into tabs, with Aircraft/ISS/Hubble/Tiangong/Starlink sub-tabs under Notifications. Changes apply within 15 seconds without restarting.
 
 ## Dashboard tabs
 
