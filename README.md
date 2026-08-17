@@ -33,11 +33,11 @@ A real-time sky tracker for your Umbrel home server. Runs 24/7 in the background
 
 ## Alerts
 
-Alerts are sent via [Apprise](https://github.com/caronc/apprise) (150+ notification services) for five independent categories, each with any number of targets:
-- ✈️ **Aircraft**: a plane enters your configured radius **and** is below your altitude threshold. Optional category-level include/exclude filters (callsign, country, model, airframe type) let you e.g. mute a specific operator or only alert for military traffic, applied before any target fires. Includes an aircraft photo pulled from Planespotters.net (attached where the target service supports it).
-- 🛰️ **ISS / Hubble / Tiangong / Starlink**: a pass for that satellite is approaching within your configured lead time — each gets its own separate targets rather than one shared "satellites" bucket.
+Alerts are sent via [Apprise](https://github.com/caronc/apprise) (150+ notification services) for two independent categories, each with any number of targets:
+- ✈️ **Aircraft**: a plane enters your configured radius **and** is below your altitude threshold. Includes an aircraft photo pulled from Planespotters.net (attached where the target service supports it).
+- 🛰️ **Satellites**: a pass for ISS, Hubble, Tiangong, or a Starlink train is approaching within your configured lead time.
 
-Every target has its own enable switch, editable title/body message template with placeholders (e.g. `{callsign}`, `{model}`, `{sat_name}`), and a test-alert button you can use before saving — so a detailed Discord embed and a terse Pushover ping can coexist in the same category. Existing Pushover/Discord config from older versions is converted to Apprise targets automatically on upgrade, with the exact original message wording preserved so nothing changes for you (new targets you add afterward get different, deliberately simplified default wording). All settings are managed through the in-app Settings page, organized into tabs, with Aircraft/ISS/Hubble/Tiangong/Starlink sub-tabs under Notifications. Changes apply within 15 seconds without restarting.
+Both categories support include/exclude filters (aircraft: callsign, country, model, airframe type; satellites: which satellite), at two levels: a category-wide rule that gates every target, plus an optional per-target rule for further tuning a single Apprise URL beyond the category-wide setting. Message wording comes from **templates**: reusable title/body pairs you create once and reuse across targets (a "Default Aircraft" and "Default Satellite" template always exist) — edit a template and every target using it updates together, or a target can opt out with its own fully custom message. Every target has its own enable switch and a test-alert button you can use before saving. Existing Pushover/Discord config from older versions is converted to Apprise targets automatically on upgrade. All settings are managed through the in-app Settings page, organized into tabs, with Aircraft/Satellites/Templates sub-tabs under Notifications. Changes apply within 15 seconds without restarting.
 
 ## Dashboard tabs
 
@@ -51,7 +51,7 @@ Card-based log of every aircraft that triggered an alert. Each card shows a Plan
 Overview counts, all-time records, a 24h activity chart, and top countries and aircraft models seen.
 
 ### 🛰️ Satellites
-Upcoming passes for ISS, Hubble Space Telescope, and Tiangong CSS with countdown timers and pass details, plus Starlink train sightings via CelesTrak. Sub-tabs show a pass count per satellite. ISS push alerts still fire as normal.
+Upcoming passes for ISS, Hubble Space Telescope, and Tiangong CSS with countdown timers and pass details, plus Starlink train sightings via CelesTrak. Sub-tabs show a pass count per satellite. All four fire push alerts through the shared Satellites notification category.
 
 ### ☁ Weather
 Current conditions, 24h hourly strip (starting from the current local hour), 7-day forecast, and an astronomy visibility score for tonight.

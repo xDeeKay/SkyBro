@@ -17,37 +17,23 @@ DATA_DIR = Path("/data")
 DB_PATH  = DATA_DIR / "skybro.db"
 CFG_PATH = DATA_DIR / "config.json"
 
-SATELLITE_CATEGORIES = ["iss", "hubble", "tiangong", "starlink"]
-
-# Used only by _migrate_legacy_notifications, to reproduce the exact original
-# pre-Apprise message wording so an upgrading install's notifications look
-# unchanged. The original Discord embed's inline field grid (Callsign,
-# Registration, Model, Distance, Altitude, Speed, V/S, Country) has no Apprise
-# equivalent and doesn't carry over — this reproduces the description text,
-# which was always the whole message on Pushover anyway.
-LEGACY_TEMPLATES = {
-    "aircraft": {
-        "title": "{emoji} {callsign} overhead",
-        "body":  "{model} • {direction} at {distance_km} km\n{altitude_ft} • {speed} • {vertical_speed}",
-    },
-    "satellite": {
-        "title": "🛰️ {sat_name} flyover coming up",
-        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
-    },
-}
-
-# Used as the render-time fallback for a target with a blank template, and
-# pre-filled into a brand-new target's fields the moment it's added.
-DEFAULT_TEMPLATES = {
-    "aircraft": {
+# Named, reusable title/body pairs. Targets reference one by id (linked
+# reference — editing a template here updates every target using it) instead
+# of each carrying its own copy. The two defaults are protected: always
+# present, never deletable (see _clean_templates).
+DEFAULT_TEMPLATES_LIST = [
+    {
+        "id": "default_aircraft", "name": "Default Aircraft", "kind": "aircraft",
         "title": "{emoji} {callsign} overhead",
         "body":  "{model} ({registration})\n{airframe} • {country}\n{speed} • {vertical_speed}",
     },
-    "satellite": dict(LEGACY_TEMPLATES["satellite"]),
-}
-
-def _default_template_for(key):
-    return DEFAULT_TEMPLATES["satellite"] if key in SATELLITE_CATEGORIES else DEFAULT_TEMPLATES.get(key, {})
+    {
+        "id": "default_satellite", "name": "Default Satellite", "kind": "satellite",
+        "title": "🛰️ {sat_name} flyover coming up",
+        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
+    },
+]
+_CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite"}
 
 DEFAULTS = {
     "home_lat": 1.3521, "home_lon": 103.8198,
@@ -56,9 +42,10 @@ DEFAULTS = {
     "opensky_client_id": "", "opensky_client_secret": "",
     "n2yo_api_key": "",
     "notifications": {
-        "aircraft": {"filters": "", "targets": []},
-        **{key: {"targets": []} for key in SATELLITE_CATEGORIES},
+        "aircraft":   {"filters": "", "targets": []},
+        "satellites": {"filters": "", "targets": []},
     },
+    "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
     "use_location_time": False, "time_format": "12h",
     "units_speed": "aviation", "units_temp": "imperial",
 }
@@ -81,13 +68,12 @@ def _parse_discord_webhook(url):
 
 def _migrate_legacy_notifications(raw_cfg):
     """One-time, idempotent conversion of the old Pushover/Discord fields into
-    the new Apprise-based notifications structure, using LEGACY_TEMPLATES so
-    the migrated wording matches exactly what was sent before. Only aircraft
-    and iss get the migrated targets — Hubble/Tiangong/Starlink never alerted
-    before, so they start empty rather than gaining new active notifications
-    on upgrade. The old category-level alerts_enabled/iss_alerts_enabled
-    applied uniformly to every target, so it's carried over as each migrated
-    target's own `enabled` flag."""
+    the new Apprise-based notifications structure. Migrated targets just point
+    at the new default templates (no attempt to reproduce old message wording —
+    the original Discord embed's inline field grid has no Apprise equivalent
+    anyway). The old category-level alerts_enabled/iss_alerts_enabled applied
+    uniformly to every target, so it's carried over as each migrated target's
+    own `enabled` flag."""
     if "notifications" in raw_cfg:
         return raw_cfg, False
     urls = []
@@ -97,26 +83,37 @@ def _migrate_legacy_notifications(raw_cfg):
     discord_url = _parse_discord_webhook(raw_cfg.get("discord_webhook"))
     if discord_url:
         urls.append({"id": secrets.token_hex(4), "url": discord_url})
-    aircraft_enabled = raw_cfg.get("alerts_enabled", True)
-    iss_enabled       = raw_cfg.get("iss_alerts_enabled", True)
+    aircraft_enabled   = raw_cfg.get("alerts_enabled", True)
+    satellites_enabled = raw_cfg.get("iss_alerts_enabled", True)
     raw_cfg["notifications"] = {
         "aircraft": {
             "filters": "",
             "targets": [{**u, "enabled": aircraft_enabled,
-                         "template": dict(LEGACY_TEMPLATES["aircraft"])} for u in urls],
+                         "template_id": "default_aircraft", "template": {"title": "", "body": ""},
+                         "filters": ""} for u in urls],
         },
-        "iss": {
-            "targets": [{**u, "enabled": iss_enabled,
-                         "template": dict(LEGACY_TEMPLATES["satellite"])} for u in urls],
+        "satellites": {
+            "filters": "",
+            "targets": [{**u, "enabled": satellites_enabled,
+                         "template_id": "default_satellite", "template": {"title": "", "body": ""},
+                         "filters": ""} for u in urls],
         },
-        "hubble":   {"targets": []},
-        "tiangong": {"targets": []},
-        "starlink": {"targets": []},
     }
+    if "templates" not in raw_cfg:
+        raw_cfg["templates"] = [dict(t) for t in DEFAULT_TEMPLATES_LIST]
     for k in ("pushover_token", "pushover_user", "discord_webhook",
               "alerts_enabled", "iss_alerts_enabled"):
         raw_cfg.pop(k, None)
     return raw_cfg, True
+
+def _seed_templates(raw_cfg):
+    """Separate from _migrate_legacy_notifications: an install can already have
+    a `notifications` key (e.g. from testing a pre-templates build) without yet
+    having `templates`, so this must not be gated by that migration's own guard."""
+    if "templates" not in raw_cfg:
+        raw_cfg["templates"] = [dict(t) for t in DEFAULT_TEMPLATES_LIST]
+        return True
+    return False
 
 # Server-side bounds mirroring the settings page's HTML min/max, since those
 # are only client-side hints and can be bypassed via a direct API call.
@@ -142,8 +139,9 @@ def read_config():
         with open(CFG_PATH) as f:
             loaded = json.load(f)
         loaded, migrated = _migrate_legacy_notifications(loaded)
+        seeded = _seed_templates(loaded)
         merged = {**DEFAULTS, **loaded}
-        if migrated:
+        if migrated or seeded:
             # Write directly, not via write_config() (which itself calls
             # read_config() to merge — that would recurse).
             DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -179,9 +177,7 @@ def index():
 
 @app.route("/settings")
 def settings():
-    default_templates = {"aircraft": DEFAULT_TEMPLATES["aircraft"],
-                          **{key: DEFAULT_TEMPLATES["satellite"] for key in SATELLITE_CATEGORIES}}
-    return render_template("settings.html", cfg=read_config(), default_templates=default_templates)
+    return render_template("settings.html", cfg=read_config())
 
 # ── REST API ──────────────────────────────────────────────────────────────────
 @app.route("/api/live")
@@ -404,7 +400,12 @@ def _mask_notifications(notifications):
                 target["url"] = "••••••••"
     return masked
 
-def _clean_notif_category(key, submitted, current):
+def _clean_filter_text(text):
+    lines = [l for l in str(text or "")[:FILTERS_CAP].splitlines()
+             if re.match(r'^-?\w+=.+$', l.strip())]
+    return "\n".join(lines)
+
+def _clean_notif_category(key, submitted, current, valid_template_ids):
     """Validate/sanitize one category's submitted notifications block,
     restoring a masked target URL (by target id) from the currently-saved
     value so an unedited row doesn't get overwritten with the literal mask."""
@@ -424,28 +425,65 @@ def _clean_notif_category(key, submitted, current):
         if not url:
             continue
         tmpl = row.get("template") if isinstance(row.get("template"), dict) else {}
+        template_id = row.get("template_id")
+        if template_id not in valid_template_ids:
+            template_id = None
         out_targets.append({
             "id": row_id,
             "url": url,
             "enabled": bool(row.get("enabled", True)),
+            "template_id": template_id,
             "template": {
                 "title": str(tmpl.get("title", ""))[:TEMPLATE_CAP],
                 "body":  str(tmpl.get("body", ""))[:TEMPLATE_CAP],
             },
+            "filters": _clean_filter_text(row.get("filters", "")),
         })
-    result = {"targets": out_targets}
-    if key == "aircraft":
-        lines = [l for l in str(submitted.get("filters", ""))[:FILTERS_CAP].splitlines()
-                 if re.match(r'^-?\w+=.+$', l.strip())]
-        result["filters"] = "\n".join(lines)
-    return result
+    return {"targets": out_targets, "filters": _clean_filter_text(submitted.get("filters", ""))}
 
-NOTIF_CATEGORIES = ["aircraft", *SATELLITE_CATEGORIES]
+NOTIF_CATEGORIES = ["aircraft", "satellites"]
+TEMPLATES_CAP = 20
+TEMPLATE_NAME_CAP = 60
 
-def _clean_notifications(submitted, current):
+def _clean_templates(submitted, current):
+    """Caps count/lengths, keeps `kind` immutable for an existing id (aircraft
+    vs satellite token sets differ), and always guarantees the two protected
+    default templates survive even if a client payload omits them."""
+    submitted = submitted if isinstance(submitted, list) else []
+    cur_by_id = {t.get("id"): t for t in (current or []) if isinstance(t, dict) and t.get("id")}
+    out, seen_ids = [], set()
+    for row in submitted[:TEMPLATES_CAP]:
+        if not isinstance(row, dict):
+            continue
+        rid = row.get("id")
+        cur = cur_by_id.get(rid)
+        kind = cur.get("kind") if cur else row.get("kind")
+        if kind not in ("aircraft", "satellite"):
+            continue
+        # A brand-new template's client-generated id must be preserved (not
+        # replaced) so a target's template_id in the same save payload, set
+        # client-side before the row existed on the server, still resolves.
+        if not cur and (not isinstance(rid, str) or not rid):
+            rid = secrets.token_hex(4)
+        if rid in seen_ids:
+            continue
+        seen_ids.add(rid)
+        out.append({
+            "id": rid,
+            "name": str(row.get("name", "")).strip()[:TEMPLATE_NAME_CAP] or "Untitled",
+            "kind": kind,
+            "title": str(row.get("title", ""))[:TEMPLATE_CAP],
+            "body":  str(row.get("body", ""))[:TEMPLATE_CAP],
+        })
+    for d in DEFAULT_TEMPLATES_LIST:
+        if d["id"] not in seen_ids:
+            out.append(dict(d))
+    return out
+
+def _clean_notifications(submitted, current, valid_template_ids):
     submitted = submitted if isinstance(submitted, dict) else {}
     current = current if isinstance(current, dict) else {}
-    return {key: _clean_notif_category(key, submitted.get(key) or {}, current.get(key) or {})
+    return {key: _clean_notif_category(key, submitted.get(key) or {}, current.get(key) or {}, valid_template_ids)
             for key in NOTIF_CATEGORIES}
 
 @app.route("/api/config", methods=["GET"])
@@ -470,8 +508,11 @@ def api_config_post():
     for k in ("opensky_client_secret","n2yo_api_key"):
         if data.get(k) == "••••••••":
             data[k] = current.get(k, "")
+    if "templates" in data:
+        data["templates"] = _clean_templates(data["templates"], current.get("templates", []))
     if "notifications" in data:
-        data["notifications"] = _clean_notifications(data["notifications"], current.get("notifications", {}))
+        valid_template_ids = {t["id"] for t in data.get("templates", current.get("templates", []))}
+        data["notifications"] = _clean_notifications(data["notifications"], current.get("notifications", {}), valid_template_ids)
     for k, (lo, hi) in NUMERIC_BOUNDS.items():
         if k in data:
             try:
@@ -490,14 +531,9 @@ SAMPLE_PLACEHOLDERS = {
         "emoji": "✈️", "callsign": "QFA123", "model": "BOEING 737-8AS",
         "registration": "VH-ABC", "country": "Australia", "direction": "NW",
         "speed": "450 kts", "vertical_speed": "↑ 800 fpm", "airframe": "jet",
-        # Not advertised in the settings-page token legend, but kept working
-        # so a migrated legacy template (which used them) still renders.
         "altitude_ft": "5,200 ft", "distance_km": "8.4",
     },
-    "iss":      {"sat_name": "ISS",      "time": "20:15", "minutes": "12", "duration": "420"},
-    "hubble":   {"sat_name": "Hubble",   "time": "21:03", "minutes": "8",  "duration": "310"},
-    "tiangong": {"sat_name": "Tiangong", "time": "19:47", "minutes": "15", "duration": "280"},
-    "starlink": {"sat_name": "Starlink", "time": "22:10", "minutes": "5",  "duration": "180"},
+    "satellites": {"sat_name": "ISS", "time": "20:15", "minutes": "12", "duration": "420"},
 }
 
 @app.route("/api/test-alert/<category>", methods=["POST"])
@@ -512,10 +548,13 @@ def api_test_alert(category):
     if not url or url == "••••••••":
         return jsonify({"error": "Enter a target URL first"})
     values = SAMPLE_PLACEHOLDERS[category]
-    defaults = _default_template_for(category)
-    tmpl = data.get("template") if isinstance(data.get("template"), dict) else {}
-    title = "✅ " + _render_template(tmpl.get("title") or defaults["title"], values)
-    body  = _render_template(tmpl.get("body") or defaults["body"], values)
+    templates_by_id = {t["id"]: t for t in read_config().get("templates", [])}
+    defaults = templates_by_id.get(_CATEGORY_DEFAULT_TEMPLATE_ID[category], {})
+    tmpl = templates_by_id.get(data.get("template_id"))
+    if not tmpl:
+        tmpl = data.get("template") if isinstance(data.get("template"), dict) else {}
+    title = "✅ " + _render_template(tmpl.get("title") or defaults.get("title", ""), values)
+    body  = _render_template(tmpl.get("body") or defaults.get("body", ""), values)
     a = apprise.Apprise()
     if not a.add(url):
         return jsonify({"error": "Invalid Apprise URL"})

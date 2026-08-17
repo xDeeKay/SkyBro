@@ -44,42 +44,23 @@ SATELLITES = [
 ]
 
 # ── Default config ────────────────────────────────────────────────────────────
-# The four tracked satellite types share one default/legacy message template —
-# only ISS ever alerted before this session, so its wording is what "legacy"
-# means for all of them.
-SATELLITE_CATEGORIES = [("iss", "ISS"), ("hubble", "Hubble"),
-                         ("tiangong", "Tiangong"), ("starlink", "Starlink")]
-_SATELLITE_KEYS = {key for key, _ in SATELLITE_CATEGORIES}
-
-# Used only by _migrate_legacy_notifications, to reproduce the exact original
-# pre-Apprise message wording so an upgrading install's notifications look
-# unchanged. The original Discord embed's inline field grid (Callsign,
-# Registration, Model, Distance, Altitude, Speed, V/S, Country) has no Apprise
-# equivalent and doesn't carry over — this reproduces the description text,
-# which was always the whole message on Pushover anyway.
-LEGACY_TEMPLATES = {
-    "aircraft": {
-        "title": "{emoji} {callsign} overhead",
-        "body":  "{model} • {direction} at {distance_km} km\n{altitude_ft} • {speed} • {vertical_speed}",
-    },
-    "satellite": {
-        "title": "🛰️ {sat_name} flyover coming up",
-        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
-    },
-}
-
-# Used as the render-time fallback for a target with a blank template, and
-# pre-filled into a brand-new target's fields the moment it's added.
-DEFAULT_TEMPLATES = {
-    "aircraft": {
+# Named, reusable title/body pairs. Targets reference one by id (linked
+# reference — editing a template here updates every target using it) instead
+# of each carrying its own copy. The two defaults are protected: always
+# present, never deletable (see _clean_templates in app.py).
+DEFAULT_TEMPLATES_LIST = [
+    {
+        "id": "default_aircraft", "name": "Default Aircraft", "kind": "aircraft",
         "title": "{emoji} {callsign} overhead",
         "body":  "{model} ({registration})\n{airframe} • {country}\n{speed} • {vertical_speed}",
     },
-    "satellite": dict(LEGACY_TEMPLATES["satellite"]),
-}
-
-def _default_template_for(key):
-    return DEFAULT_TEMPLATES["satellite"] if key in _SATELLITE_KEYS else DEFAULT_TEMPLATES.get(key, {})
+    {
+        "id": "default_satellite", "name": "Default Satellite", "kind": "satellite",
+        "title": "🛰️ {sat_name} flyover coming up",
+        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
+    },
+]
+_CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite"}
 
 DEFAULTS = {
     "home_lat":           1.3521,
@@ -93,9 +74,10 @@ DEFAULTS = {
     "opensky_client_secret": "",
     "n2yo_api_key":       "",
     "notifications": {
-        "aircraft":  {"filters": "", "targets": []},
-        **{key: {"targets": []} for key, _ in SATELLITE_CATEGORIES},
+        "aircraft":   {"filters": "", "targets": []},
+        "satellites": {"filters": "", "targets": []},
     },
+    "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
     "use_location_time":  False,
     "time_format":        "12h",
 }
@@ -110,13 +92,12 @@ def _parse_discord_webhook(url):
 
 def _migrate_legacy_notifications(raw_cfg):
     """One-time, idempotent conversion of the old Pushover/Discord fields into
-    the new Apprise-based notifications structure, using LEGACY_TEMPLATES so
-    the migrated wording matches exactly what was sent before. Only aircraft
-    and iss get the migrated targets — Hubble/Tiangong/Starlink never alerted
-    before, so they start empty rather than gaining new active notifications
-    on upgrade. The old category-level alerts_enabled/iss_alerts_enabled
-    applied uniformly to every target, so it's carried over as each migrated
-    target's own `enabled` flag."""
+    the new Apprise-based notifications structure. Migrated targets just point
+    at the new default templates (no attempt to reproduce old message wording —
+    the original Discord embed's inline field grid has no Apprise equivalent
+    anyway). The old category-level alerts_enabled/iss_alerts_enabled applied
+    uniformly to every target, so it's carried over as each migrated target's
+    own `enabled` flag."""
     if "notifications" in raw_cfg:
         return raw_cfg, False
     urls = []
@@ -126,28 +107,39 @@ def _migrate_legacy_notifications(raw_cfg):
     discord_url = _parse_discord_webhook(raw_cfg.get("discord_webhook"))
     if discord_url:
         urls.append({"id": uuid.uuid4().hex[:8], "url": discord_url})
-    aircraft_enabled = raw_cfg.get("alerts_enabled", True)
-    iss_enabled       = raw_cfg.get("iss_alerts_enabled", True)
+    aircraft_enabled   = raw_cfg.get("alerts_enabled", True)
+    satellites_enabled = raw_cfg.get("iss_alerts_enabled", True)
     raw_cfg["notifications"] = {
         "aircraft": {
             "filters": "",
             "targets": [{**u, "enabled": aircraft_enabled,
-                         "template": dict(LEGACY_TEMPLATES["aircraft"])} for u in urls],
+                         "template_id": "default_aircraft", "template": {"title": "", "body": ""},
+                         "filters": ""} for u in urls],
         },
-        "iss": {
-            "targets": [{**u, "enabled": iss_enabled,
-                         "template": dict(LEGACY_TEMPLATES["satellite"])} for u in urls],
+        "satellites": {
+            "filters": "",
+            "targets": [{**u, "enabled": satellites_enabled,
+                         "template_id": "default_satellite", "template": {"title": "", "body": ""},
+                         "filters": ""} for u in urls],
         },
-        "hubble":   {"targets": []},
-        "tiangong": {"targets": []},
-        "starlink": {"targets": []},
     }
+    if "templates" not in raw_cfg:
+        raw_cfg["templates"] = [dict(t) for t in DEFAULT_TEMPLATES_LIST]
     for k in ("pushover_token", "pushover_user", "discord_webhook",
               "alerts_enabled", "iss_alerts_enabled"):
         raw_cfg.pop(k, None)
     if urls:
         log.info(f"Migrated legacy Pushover/Discord config to {len(urls)} Apprise target(s)")
     return raw_cfg, True
+
+def _seed_templates(raw_cfg):
+    """Separate from _migrate_legacy_notifications: an install can already have
+    a `notifications` key (e.g. from testing a pre-templates build) without yet
+    having `templates`, so this must not be gated by that migration's own guard."""
+    if "templates" not in raw_cfg:
+        raw_cfg["templates"] = [dict(t) for t in DEFAULT_TEMPLATES_LIST]
+        return True
+    return False
 
 def load_config():
     global cfg, _cfg_mtime, _weather_last, _moon_last, _astronomy_last, _sat_last_check, _starlink_last
@@ -162,10 +154,11 @@ def load_config():
         with open(CFG_PATH) as f:
             loaded = json.load(f)
         loaded, migrated = _migrate_legacy_notifications(loaded)
-        if migrated:
+        seeded = _seed_templates(loaded)
+        if migrated or seeded:
             save_config({**DEFAULTS, **loaded})
         cfg = {**DEFAULTS, **loaded}
-        _cfg_mtime = CFG_PATH.stat().st_mtime if migrated else mtime
+        _cfg_mtime = CFG_PATH.stat().st_mtime if (migrated or seeded) else mtime
         log.info("Config reloaded")
         if (cfg.get("home_lat"), cfg.get("home_lon")) != (prev_lat, prev_lon):
             _weather_last = _moon_last = _astronomy_last = _sat_last_check = _starlink_last = 0.0
@@ -356,12 +349,17 @@ def update_source_status(source, success, detail='', status_override=None):
         log.debug(f"source_status update error: {e}")
 
 # ── Notifications ─────────────────────────────────────────────────────────────
-_FILTER_FIELDS = {"callsign", "country", "model", "airframe"}
+_FILTER_FIELDS = {
+    "aircraft":   {"callsign", "country", "model", "airframe"},
+    "satellites": {"sat_name"},
+}
 _TOKEN_RE = re.compile(r"\{(\w+)\}")
 
-def _compile_filters(rule_text):
-    """Parse the aircraft filter DSL: one 'field=pattern' (include) or
-    '-field=pattern' (exclude) rule per line. See CLAUDE.md for full semantics."""
+def _compile_filters(rule_text, category):
+    """Parse the filter DSL: one 'field=pattern' (include) or '-field=pattern'
+    (exclude) rule per line, fields depending on category. See CLAUDE.md for
+    full semantics."""
+    fields = _FILTER_FIELDS.get(category, set())
     compiled = {}
     for line in (rule_text or "").splitlines():
         line = line.strip()
@@ -372,7 +370,7 @@ def _compile_filters(rule_text):
             line = line[1:]
         field, _, pattern = line.partition("=")
         field, pattern = field.strip().lower(), pattern.strip()
-        if field not in _FILTER_FIELDS or not pattern:
+        if field not in fields or not pattern:
             continue
         try:
             rx = re.compile(pattern, re.IGNORECASE)
@@ -399,16 +397,22 @@ def _render_template(tmpl, values):
 
 def notify_category(key, values, photo_url=None, notify_type=None):
     notif = cfg.get("notifications", {}).get(key, {})
-    if key == "aircraft" and not _passes_filters(_compile_filters(notif.get("filters", "")), values):
+    if not _passes_filters(_compile_filters(notif.get("filters", ""), key), values):
         return
-    defaults = _default_template_for(key)
+    templates_by_id = {t["id"]: t for t in cfg.get("templates", [])}
+    default_tmpl = templates_by_id.get(_CATEGORY_DEFAULT_TEMPLATE_ID.get(key), {})
     for target in notif.get("targets", []):
         url = target.get("url")
         if not target.get("enabled", True) or not url:
             continue
-        tmpl = target.get("template", {})
-        title = _render_template(tmpl.get("title") or defaults.get("title", ""), values)
-        body  = _render_template(tmpl.get("body")  or defaults.get("body", ""),  values)
+        if not _passes_filters(_compile_filters(target.get("filters", ""), key), values):
+            continue
+        # Field-level fallback, not whole-object: an inline template with a
+        # blank title but a real body (or vice versa) shouldn't lose the
+        # other field to an empty string when it could fall back to default.
+        tmpl = templates_by_id.get(target.get("template_id")) or target.get("template") or {}
+        title = _render_template(tmpl.get("title") or default_tmpl.get("title", ""), values)
+        body  = _render_template(tmpl.get("body")  or default_tmpl.get("body", ""),  values)
         a = apprise.Apprise()
         a.add(url)
         try:
@@ -897,7 +901,9 @@ def check_satellites():
 
 def dispatch_satellite_alerts():
     # No category-level enable/disable anymore — each target has its own
-    # `enabled` flag, checked inside notify_category().
+    # `enabled` flag, checked inside notify_category(). All satellite types
+    # notify through the shared "satellites" category; sat_name is passed as a
+    # value so filters/templates can still differentiate between them.
     now  = int(time.time())
     warn = cfg["iss_warn_mins"] * 60
     conn = sqlite3.connect(DB_PATH)
@@ -905,21 +911,20 @@ def dispatch_satellite_alerts():
     wr = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
     utc_off = json.loads(wr[0]).get("utc_offset_seconds", 0) if wr else 0
     local_tz = timezone(timedelta(seconds=utc_off))
-    for category, sat_name in SATELLITE_CATEGORIES:
-        rows = c.execute(
-            "SELECT pass_time, duration FROM iss_alerts "
-            "WHERE alerted=0 AND sat_name=? AND pass_time BETWEEN ? AND ?",
-            (sat_name, now, now + warn)).fetchall()
-        for pass_time, duration in rows:
-            mins = (pass_time - now) // 60
-            dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
-            notify_category(category, {
-                'sat_name': sat_name, 'time': dt, 'minutes': str(mins), 'duration': str(duration),
-            }, notify_type=apprise.NotifyType.WARNING)
-            # Scope by sat_name too: pass_time alone can collide across satellite
-            # types sharing the same second-resolution timestamp.
-            c.execute("UPDATE iss_alerts SET alerted=1 WHERE pass_time=? AND sat_name=?",
-                      (pass_time, sat_name))
+    rows = c.execute(
+        "SELECT pass_time, duration, sat_name FROM iss_alerts "
+        "WHERE alerted=0 AND pass_time BETWEEN ? AND ?",
+        (now, now + warn)).fetchall()
+    for pass_time, duration, sat_name in rows:
+        mins = (pass_time - now) // 60
+        dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
+        notify_category("satellites", {
+            'sat_name': sat_name, 'time': dt, 'minutes': str(mins), 'duration': str(duration),
+        }, notify_type=apprise.NotifyType.WARNING)
+        # Scope by sat_name too: pass_time alone can collide across satellite
+        # types sharing the same second-resolution timestamp.
+        c.execute("UPDATE iss_alerts SET alerted=1 WHERE pass_time=? AND sat_name=?",
+                  (pass_time, sat_name))
     conn.commit(); conn.close()
 
 # ── Weather ───────────────────────────────────────────────────────────────────

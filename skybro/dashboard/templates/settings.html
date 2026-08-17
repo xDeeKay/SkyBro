@@ -73,6 +73,19 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
 .token-legend{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
+select.target-template{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
+  font-family:inherit;margin-top:8px
+}
+select.target-template:focus{border-color:var(--accent)}
+.target-card details{margin-top:8px}
+.target-card summary{font-size:11px;color:var(--muted);cursor:pointer;user-select:none;padding:4px 0}
+.target-card summary:hover{color:var(--text)}
+.target-card details textarea{margin-top:6px}
+.template-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.template-card input,.template-card textarea{margin-top:8px}
+.template-kind-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 6px}
 /* Tabs */
 .tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto}
 .tab{padding:10px 16px;text-align:center;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
@@ -216,9 +229,8 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 
     <div class="subtabs" id="notif-subtabs">
       <div class="subtab active" data-subtab="aircraft">✈️ Aircraft</div>
-      {% for cat, label, emoji in [('iss','ISS','🛰️'), ('hubble','Hubble','🔭'), ('tiangong','Tiangong','🛰️'), ('starlink','Starlink','✨')] %}
-      <div class="subtab" data-subtab="{{ cat }}">{{ emoji }} {{ label }}</div>
-      {% endfor %}
+      <div class="subtab" data-subtab="satellites">🛰️ Satellites</div>
+      <div class="subtab" data-subtab="templates">📝 Templates</div>
     </div>
 
     <div class="subtab-pane active" id="subpane-aircraft">
@@ -232,34 +244,36 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
         </div>
       </div>
 
-      <div class="hint" style="margin:0 2px 12px">
-        Placeholders:
-        <div class="token-legend">
-          {% for tok in ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe'] %}
-          <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
-          {% endfor %}
-        </div>
-      </div>
-
       <div class="target-list" id="targets_aircraft"></div>
       <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
     </div>
 
-    {% for cat, label, emoji in [('iss','ISS','🛰️'), ('hubble','Hubble','🔭'), ('tiangong','Tiangong','🛰️'), ('starlink','Starlink','✨')] %}
-    <div class="subtab-pane" id="subpane-{{ cat }}">
-      <div class="hint" style="margin:0 2px 12px">
-        Placeholders:
-        <div class="token-legend">
-          {% for tok in ['sat_name','time','minutes','duration'] %}
-          <span class="token-chip">{{ '{' }}{{ tok }}{{ '}' }}</span>
-          {% endfor %}
+    <div class="subtab-pane" id="subpane-satellites">
+      <div class="card">
+        <div class="card-title">Filters (optional)</div>
+        <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.</div>
+        <textarea class="mono-textarea" id="filters_satellites" rows="3" placeholder="-sat_name=Starlink">{{ cfg.notifications.satellites.filters }}</textarea>
+        <div class="hint">
+          One rule per line. <code>field=pattern</code> only notifies matches for that field; <code>-field=pattern</code> excludes matches.
+          Fields: <code>sat_name</code> (ISS/Hubble/Tiangong/Starlink). Patterns are case-insensitive regex.
         </div>
       </div>
 
-      <div class="target-list" id="targets_{{ cat }}"></div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('{{ cat }}')">+ Add target</button>
+      <div class="target-list" id="targets_satellites"></div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
     </div>
-    {% endfor %}
+
+    <div class="subtab-pane" id="subpane-templates">
+      <div class="card-desc" style="margin:0 2px 14px">
+        Reusable message templates. A target picks one from the dropdown instead of writing its own message —
+        edit a template once and every target using it updates. Pick "Custom" on a target to write a one-off message instead.
+      </div>
+      <div class="target-list" id="template-list"></div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add aircraft template</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add satellite template</button>
+      </div>
+    </div>
   </div>
 
   <!-- OpenSky OAuth2 (optional) -->
@@ -382,9 +396,15 @@ function showSubtab(id) {
 document.querySelectorAll('#notif-subtabs .subtab').forEach(t => t.addEventListener('click', () => showSubtab(t.dataset.subtab)));
 
 // ── Notifications ────────────────────────────────────────────────────────────
-const NOTIF_CATEGORIES = ['aircraft', 'iss', 'hubble', 'tiangong', 'starlink'];
+const NOTIF_CATEGORIES = ['aircraft', 'satellites'];
+const CATEGORY_KIND = {aircraft: 'aircraft', satellites: 'satellite'};
+const CATEGORY_DEFAULT_TEMPLATE_ID = {aircraft: 'default_aircraft', satellites: 'default_satellite'};
+const TOKENS_BY_KIND = {
+  aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude_ft','distance_km'],
+  satellite: ['sat_name','time','minutes','duration'],
+};
 const NOTIF_DATA = {{ cfg.notifications | tojson }};
-const DEFAULT_TEMPLATES = {{ default_templates | tojson }};
+let TEMPLATES = {{ cfg.templates | tojson }};
 const SCHEME_NAMES = {pover:'Pushover', discord:'Discord', tgram:'Telegram', slack:'Slack', mailto:'Email', mailtos:'Email'};
 
 function schemeLabel(url) {
@@ -397,6 +417,7 @@ function schemeLabel(url) {
 function buildTargetCard(category, target) {
   target = target || {};
   const tmpl = target.template || {};
+  const kind = CATEGORY_KIND[category];
   const card = document.createElement('div');
   card.className = 'target-card';
   card.dataset.id = target.id || '';
@@ -433,6 +454,10 @@ function buildTargetCard(category, target) {
   urlInput.value = target.url || '';
   urlInput.addEventListener('input', () => { hdrLabel.textContent = schemeLabel(urlInput.value); });
 
+  const templateSelect = document.createElement('select');
+  templateSelect.className = 'target-template';
+  templateSelect.dataset.kind = kind;
+
   const titleInput = document.createElement('input');
   titleInput.type = 'text';
   titleInput.className = 'target-title';
@@ -444,6 +469,25 @@ function buildTargetCard(category, target) {
   bodyInput.rows = 3;
   bodyInput.placeholder = 'Body template';
   bodyInput.value = tmpl.body || '';
+
+  function refreshCustomVisibility() {
+    const custom = templateSelect.value === '';
+    titleInput.style.display = custom ? '' : 'none';
+    bodyInput.style.display  = custom ? '' : 'none';
+  }
+  templateSelect.addEventListener('change', refreshCustomVisibility);
+  populateTemplateSelect(templateSelect, kind, target.template_id);
+  refreshCustomVisibility();
+
+  const filtersDetails = document.createElement('details');
+  const filtersSummary = document.createElement('summary');
+  filtersSummary.textContent = 'Per-target filters (optional)';
+  const filtersInput = document.createElement('textarea');
+  filtersInput.className = 'mono-textarea target-filters';
+  filtersInput.rows = 2;
+  filtersInput.placeholder = kind === 'aircraft' ? '-callsign=VIPR.*' : '-sat_name=Starlink';
+  filtersInput.value = target.filters || '';
+  filtersDetails.append(filtersSummary, filtersInput);
 
   const testRow = document.createElement('div');
   testRow.style.cssText = 'margin-top:10px;display:flex;align-items:center;gap:10px';
@@ -457,14 +501,37 @@ function buildTargetCard(category, target) {
   testBtn.onclick = () => testTarget(category, card, resultSpan);
   testRow.append(testBtn, resultSpan);
 
-  card.append(hdr, urlInput, titleInput, bodyInput, testRow);
+  card.append(hdr, urlInput, templateSelect, titleInput, bodyInput, filtersDetails, testRow);
   return card;
 }
 
+function populateTemplateSelect(select, kind, selectedId) {
+  const prevValue = select.value;
+  select.innerHTML = '';
+  const customOpt = document.createElement('option');
+  customOpt.value = '';
+  customOpt.textContent = 'Custom (write your own message)';
+  select.appendChild(customOpt);
+  TEMPLATES.filter(t => t.kind === kind).forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.name;
+    select.appendChild(opt);
+  });
+  const want = selectedId !== undefined ? (selectedId || '') : prevValue;
+  select.value = [...select.options].some(o => o.value === want) ? want : '';
+}
+
+function refreshTemplateSelects() {
+  document.querySelectorAll('select.target-template').forEach(sel => {
+    populateTemplateSelect(sel, sel.dataset.kind);
+    sel.dispatchEvent(new Event('change'));
+  });
+}
+
 function addTarget(category) {
-  const d = DEFAULT_TEMPLATES[category] || {};
   document.getElementById(`targets_${category}`).appendChild(
-    buildTargetCard(category, {enabled: true, template: {title: d.title || '', body: d.body || ''}})
+    buildTargetCard(category, {enabled: true, template_id: CATEGORY_DEFAULT_TEMPLATE_ID[category]})
   );
 }
 
@@ -477,15 +544,20 @@ NOTIF_CATEGORIES.forEach(renderTargets);
 
 function collectTargets(category) {
   return Array.from(document.querySelectorAll(`#targets_${category} .target-card`))
-    .map(card => ({
-      id: card.dataset.id || undefined,
-      url: card.querySelector('.target-url').value.trim(),
-      enabled: card.querySelector('.target-enabled').checked,
-      template: {
-        title: card.querySelector('.target-title').value,
-        body:  card.querySelector('.target-body').value,
-      },
-    }))
+    .map(card => {
+      const templateId = card.querySelector('.target-template').value || null;
+      return {
+        id: card.dataset.id || undefined,
+        url: card.querySelector('.target-url').value.trim(),
+        enabled: card.querySelector('.target-enabled').checked,
+        template_id: templateId,
+        template: {
+          title: card.querySelector('.target-title').value,
+          body:  card.querySelector('.target-body').value,
+        },
+        filters: card.querySelector('.target-filters').value,
+      };
+    })
     .filter(t => t.url);
 }
 
@@ -493,6 +565,7 @@ async function testTarget(category, card, resultEl) {
   resultEl.textContent = 'Sending…';
   const payload = {
     url: card.querySelector('.target-url').value.trim(),
+    template_id: card.querySelector('.target-template').value || null,
     template: {
       title: card.querySelector('.target-title').value,
       body:  card.querySelector('.target-body').value,
@@ -510,16 +583,103 @@ async function testTarget(category, card, resultEl) {
 }
 
 function collectNotifications() {
-  const result = {
-    aircraft: {
-      filters: document.getElementById('filters_aircraft').value,
-      targets: collectTargets('aircraft'),
-    },
-  };
-  NOTIF_CATEGORIES.filter(c => c !== 'aircraft').forEach(cat => {
-    result[cat] = { targets: collectTargets(cat) };
+  const result = {};
+  NOTIF_CATEGORIES.forEach(cat => {
+    result[cat] = {
+      filters: document.getElementById(`filters_${cat}`).value,
+      targets: collectTargets(cat),
+    };
   });
   return result;
+}
+
+// ── Templates ────────────────────────────────────────────────────────────────
+const PROTECTED_TEMPLATE_IDS = new Set(['default_aircraft', 'default_satellite']);
+
+function buildTemplateCard(tmpl) {
+  const card = document.createElement('div');
+  card.className = 'template-card';
+  card.dataset.id = tmpl.id;
+  card.dataset.kind = tmpl.kind;
+
+  const hdr = document.createElement('div');
+  hdr.className = 'notif-hdr';
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.className = 'template-name';
+  nameInput.value = tmpl.name || '';
+  nameInput.style.cssText = 'flex:1;margin-right:10px';
+  nameInput.addEventListener('input', refreshTemplateSelects);
+  const kindBadge = document.createElement('span');
+  kindBadge.className = 'template-kind-badge';
+  kindBadge.textContent = tmpl.kind;
+  const hdrActions = document.createElement('div');
+  hdrActions.style.cssText = 'display:flex;align-items:center;gap:10px';
+  hdrActions.appendChild(kindBadge);
+  if (!PROTECTED_TEMPLATE_IDS.has(tmpl.id)) {
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn-remove';
+    removeBtn.title = 'Delete template';
+    removeBtn.textContent = '✕';
+    removeBtn.onclick = () => {
+      const inUse = document.querySelectorAll(`select.target-template`);
+      const used = [...inUse].some(s => s.value === tmpl.id);
+      if (used && !confirm('This template is used by at least one target, which will fall back to the category default. Delete anyway?')) return;
+      TEMPLATES = TEMPLATES.filter(t => t.id !== tmpl.id);
+      card.remove();
+      refreshTemplateSelects();
+    };
+    hdrActions.appendChild(removeBtn);
+  }
+  hdr.append(nameInput, hdrActions);
+
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.className = 'template-title';
+  titleInput.placeholder = 'Title template';
+  titleInput.value = tmpl.title || '';
+
+  const bodyInput = document.createElement('textarea');
+  bodyInput.className = 'mono-textarea template-body';
+  bodyInput.rows = 3;
+  bodyInput.placeholder = 'Body template';
+  bodyInput.value = tmpl.body || '';
+
+  const legend = document.createElement('div');
+  legend.className = 'hint';
+  legend.innerHTML = 'Placeholders: <div class="token-legend">' +
+    TOKENS_BY_KIND[tmpl.kind].map(tok => `<span class="token-chip">{${tok}}</span>`).join('') + '</div>';
+
+  card.append(hdr, titleInput, bodyInput, legend);
+  return card;
+}
+
+function renderTemplates() {
+  const list = document.getElementById('template-list');
+  list.innerHTML = '';
+  TEMPLATES.forEach(t => list.appendChild(buildTemplateCard(t)));
+}
+renderTemplates();
+
+function addTemplate(kind) {
+  const id = (crypto.randomUUID ? crypto.randomUUID() : `t${Date.now()}${Math.random()}`).replace(/-/g, '').slice(0, 12);
+  const seed = TEMPLATES.find(t => t.id === `default_${kind}`) || {title: '', body: ''};
+  const tmpl = {id, name: kind === 'aircraft' ? 'New Aircraft Template' : 'New Satellite Template',
+                kind, title: seed.title, body: seed.body};
+  TEMPLATES.push(tmpl);
+  document.getElementById('template-list').appendChild(buildTemplateCard(tmpl));
+  refreshTemplateSelects();
+}
+
+function collectTemplates() {
+  return Array.from(document.querySelectorAll('#template-list .template-card')).map(card => ({
+    id: card.dataset.id,
+    kind: card.dataset.kind,
+    name: card.querySelector('.template-name').value,
+    title: card.querySelector('.template-title').value,
+    body: card.querySelector('.template-body').value,
+  }));
 }
 
 async function save() {
@@ -528,6 +688,7 @@ async function save() {
    'iss_check_hours','iss_warn_mins','opensky_client_id','opensky_client_secret','n2yo_api_key',
    'use_location_time','units_speed','units_temp'].forEach(k => payload[k] = getVal(k));
   payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
+  payload.templates = collectTemplates();
   payload.notifications = collectNotifications();
 
   for (const [key, [lo, hi, label]] of Object.entries(NUMERIC_BOUNDS)) {
