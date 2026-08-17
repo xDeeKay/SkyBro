@@ -52,7 +52,7 @@ DEFAULT_TEMPLATES_LIST = [
     {
         "id": "default_aircraft", "name": "Default Aircraft", "kind": "aircraft",
         "title": "{emoji} {callsign} overhead",
-        "body":  "{model} ({registration})\n{airframe} • {country}\n{speed} • {vertical_speed}",
+        "body":  "{model} ({registration})\n{direction} at {distance_km} km • {altitude}\n{speed} • {vertical_speed}",
     },
     {
         "id": "default_satellite", "name": "Default Satellite", "kind": "satellite",
@@ -731,7 +731,7 @@ def process_states(states):
             'registration': alert['reg'] or "N/A", 'country': alert['country'],
             'direction': alert['direction'], 'speed': spd_str,
             'vertical_speed': alert['vr_str'], 'airframe': airframe,
-            'altitude_ft': alt_str, 'distance_km': alert['dist_km'],
+            'altitude': alt_str, 'distance_km': alert['dist_km'],
         }, photo_url=photo_url)
 
     live_icaos = {s[0] for s in states if s[6] and s[5]}

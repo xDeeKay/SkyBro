@@ -188,10 +188,10 @@ select.target-template:focus{border-color:var(--accent)}
         <label class="toggle"><input type="checkbox" id="time_format_24h" {% if cfg.time_format == '24h' %}checked{% endif %}><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Choose the units for altitude, speed, and vertical rate across the dashboard and alerts</div></div>
+        <div><div class="toggle-label">Altitude &amp; speed</div><div class="toggle-sub">Choose the units for altitude, speed, and vertical rate (fpm/m·min) across the dashboard and alerts</div></div>
         <select id="units_speed" class="inline-select">
-          <option value="aviation" {% if cfg.units_speed == 'aviation' %}selected{% endif %}>Aviation (ft · kts)</option>
-          <option value="metric" {% if cfg.units_speed == 'metric' %}selected{% endif %}>Metric (m · km/h)</option>
+          <option value="aviation" {% if cfg.units_speed == 'aviation' %}selected{% endif %}>Aviation (ft · kts · fpm)</option>
+          <option value="metric" {% if cfg.units_speed == 'metric' %}selected{% endif %}>Metric (m · km/h · m/min)</option>
         </select>
       </div>
       <div class="toggle-row">
@@ -267,12 +267,6 @@ select.target-template:focus{border-color:var(--accent)}
     </div>
 
     <div class="subtab-pane" id="subpane-templates">
-      <div class="card-desc" style="margin:0 2px 14px">
-        Reusable message templates. A target picks one from the dropdown instead of writing its own message —
-        edit a template once and every target using it updates. "Default Aircraft"/"Default Satellite" are fixed
-        fallback templates and can't be edited or removed; add your own template if you want different wording.
-      </div>
-
       <div class="section-label" style="margin-top:0">✈️ Aircraft templates</div>
       <div class="target-list" id="template-list-aircraft"></div>
       <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add aircraft template</button>
@@ -407,7 +401,7 @@ const NOTIF_CATEGORIES = ['aircraft', 'satellites'];
 const CATEGORY_KIND = {aircraft: 'aircraft', satellites: 'satellite'};
 const CATEGORY_DEFAULT_TEMPLATE_ID = {aircraft: 'default_aircraft', satellites: 'default_satellite'};
 const TOKENS_BY_KIND = {
-  aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude_ft','distance_km'],
+  aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude','distance_km'],
   satellite: ['sat_name','time','minutes','duration'],
 };
 const NOTIF_DATA = {{ cfg.notifications | tojson }};

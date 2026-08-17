@@ -25,7 +25,7 @@ DEFAULT_TEMPLATES_LIST = [
     {
         "id": "default_aircraft", "name": "Default Aircraft", "kind": "aircraft",
         "title": "{emoji} {callsign} overhead",
-        "body":  "{model} ({registration})\n{airframe} • {country}\n{speed} • {vertical_speed}",
+        "body":  "{model} ({registration})\n{direction} at {distance_km} km • {altitude}\n{speed} • {vertical_speed}",
     },
     {
         "id": "default_satellite", "name": "Default Satellite", "kind": "satellite",
@@ -531,15 +531,23 @@ def api_config_post():
     saved = write_config(data)
     return jsonify({"ok": True})
 
-SAMPLE_PLACEHOLDERS = {
-    "aircraft": {
+def _sample_placeholders(category, cfg):
+    """Fake but realistic values for the "Send test alert" button, unit-aware
+    per the Display tab's units_speed setting (same conversions as
+    process_states in tracker.py) so a test alert previews the units a real
+    alert would actually use."""
+    if category != "aircraft":
+        return {"sat_name": "ISS", "time": "20:15", "minutes": "12", "duration": "420"}
+    metric = cfg.get("units_speed", "aviation") == "metric"
+    speed          = f"{round(450 * 1.852)} km/h" if metric else "450 kts"
+    vertical_speed = f"↑ {round(800 * 0.3048)} m/min" if metric else "↑ 800 fpm"
+    altitude       = f"{round(5200 * 0.3048):,} m" if metric else "5,200 ft"
+    return {
         "emoji": "✈️", "callsign": "QFA123", "model": "BOEING 737-8AS",
         "registration": "VH-ABC", "country": "Australia", "direction": "NW",
-        "speed": "450 kts", "vertical_speed": "↑ 800 fpm", "airframe": "jet",
-        "altitude_ft": "5,200 ft", "distance_km": "8.4",
-    },
-    "satellites": {"sat_name": "ISS", "time": "20:15", "minutes": "12", "duration": "420"},
-}
+        "speed": speed, "vertical_speed": vertical_speed, "airframe": "jet",
+        "altitude": altitude, "distance_km": "8.4",
+    }
 
 @app.route("/api/test-alert/<category>", methods=["POST"])
 def api_test_alert(category):
@@ -552,8 +560,9 @@ def api_test_alert(category):
     url = (data.get("url") or "").strip()
     if not url or url == "••••••••":
         return jsonify({"error": "Enter a target URL first"})
-    values = SAMPLE_PLACEHOLDERS[category]
-    templates_by_id = {t["id"]: t for t in read_config().get("templates", [])}
+    cfg = read_config()
+    values = _sample_placeholders(category, cfg)
+    templates_by_id = {t["id"]: t for t in cfg.get("templates", [])}
     defaults = templates_by_id.get(_CATEGORY_DEFAULT_TEMPLATE_ID[category], {})
     tmpl = templates_by_id.get(data.get("template_id")) or defaults
     title = "✅ " + _render_template(tmpl.get("title", ""), values)
