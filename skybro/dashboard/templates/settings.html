@@ -136,9 +136,9 @@ select.target-template:focus{border-color:var(--accent)}
 .tab:hover:not(.active){color:var(--text)}
 .tab-pane{display:none}
 .tab-pane.active{display:block}
-.subtabs{display:flex;gap:6px;margin-bottom:18px}
-.subtab{padding:7px 14px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;background:var(--surface);border:1px solid var(--border);transition:all .15s;user-select:none}
-.subtab.active{color:#fff;background:var(--accent);border-color:var(--accent)}
+.subtabs{display:flex;justify-content:center;border-bottom:1px solid var(--border);margin-bottom:18px}
+.subtab{min-width:max-content;padding:8px 10px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;line-height:1;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
+.subtab.active{color:var(--text);border-bottom-color:var(--accent)}
 .subtab:hover:not(.active){color:var(--text)}
 .subtab-pane{display:none}
 .subtab-pane.active{display:block}
@@ -510,17 +510,54 @@ const FIELD_TAB = {
 };
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-function showTab(tabId) {
+// URL stays in sync with the active tab/subtab (/settings/notifications/templates,
+// etc.) so a tab is bookmarkable/shareable; back/forward is handled via popstate.
+const INITIAL_TAB = {{ initial_tab | tojson }};
+const INITIAL_SUBTAB = {{ initial_subtab | tojson }};
+let _currentSubtab = INITIAL_SUBTAB;
+
+function pathForTab(tabId, subtabId) {
+  if (tabId === 'notifications') return `/settings/notifications/${subtabId || 'aircraft'}`;
+  if (tabId === 'location') return '/settings';
+  return `/settings/${tabId}`;
+}
+
+// The History API can throw (privacy modes, some extensions, rate limits) -
+// tab switching itself doesn't depend on the URL sync succeeding, so a
+// failure here must never take the rest of the page's script down with it.
+function _syncUrl(replace, state, path) {
+  try { history[replace ? 'replaceState' : 'pushState'](state, '', path); }
+  catch (e) { /* URL bookmarking is a nice-to-have, not required for the tab to work */ }
+}
+
+function showTab(tabId, push=true) {
   document.querySelectorAll('#settings-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tabId}`));
+  if (push) {
+    _syncUrl(false, {tab: tabId, subtab: tabId === 'notifications' ? _currentSubtab : null},
+      pathForTab(tabId, _currentSubtab));
+  }
 }
 document.querySelectorAll('#settings-tabs .tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
 
-function showSubtab(id) {
+function showSubtab(id, push=true) {
   document.querySelectorAll('#notif-subtabs .subtab').forEach(t => t.classList.toggle('active', t.dataset.subtab === id));
   document.querySelectorAll('.subtab-pane').forEach(p => p.classList.toggle('active', p.id === `subpane-${id}`));
+  _currentSubtab = id;
+  if (push) _syncUrl(false, {tab: 'notifications', subtab: id}, pathForTab('notifications', id));
 }
 document.querySelectorAll('#notif-subtabs .subtab').forEach(t => t.addEventListener('click', () => showSubtab(t.dataset.subtab)));
+
+window.addEventListener('popstate', e => {
+  const st = e.state || {tab: 'location', subtab: null};
+  showTab(st.tab || 'location', false);
+  if ((st.tab || 'location') === 'notifications') showSubtab(st.subtab || 'aircraft', false);
+});
+
+showTab(INITIAL_TAB, false);
+if (INITIAL_TAB === 'notifications') showSubtab(INITIAL_SUBTAB, false);
+_syncUrl(true, {tab: INITIAL_TAB, subtab: INITIAL_TAB === 'notifications' ? INITIAL_SUBTAB : null},
+  pathForTab(INITIAL_TAB, INITIAL_SUBTAB));
 
 // ── Notifications ────────────────────────────────────────────────────────────
 const NOTIF_CATEGORIES = ['aircraft', 'satellites'];
