@@ -166,6 +166,18 @@ select.target-template:focus{border-color:var(--accent)}
 .search-opt-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .modal-map{height:340px;flex-shrink:0}
 .modal-ftr{padding:12px 16px;display:flex;gap:10px;border-top:1px solid var(--border);flex-shrink:0}
+/* Help modal (filter syntax / template placeholders) */
+.help-link{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;margin-left:6px;text-decoration:underline;text-underline-offset:2px}
+.help-link:hover{opacity:.8}
+.modal-body{padding:16px 18px;overflow-y:auto;font-size:13px;line-height:1.6}
+.modal-body p{margin:0 0 12px}
+.help-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:16px 0 8px}
+.help-section-title:first-of-type{margin-top:0}
+.help-row{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);align-items:baseline;flex-wrap:wrap}
+.help-row:last-child{border-bottom:none}
+.help-row code{flex:0 0 auto;background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;white-space:nowrap}
+.help-row span{color:var(--muted);flex:1;min-width:160px}
+.help-row .help-example{color:var(--text);font-weight:600}
 </style>
 </head>
 <body>
@@ -289,12 +301,10 @@ select.target-template:focus{border-color:var(--accent)}
     <div class="subtab-pane active" id="subpane-aircraft">
       <div class="card">
         <div class="card-title">Global filters</div>
-        <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
-        <textarea class="mono-textarea" id="filters_aircraft" rows="3" placeholder="-callsign=VIPR.*&#10;country=Australia">{{ cfg.notifications.aircraft.filters }}</textarea>
-        <div class="hint">
-          One rule per line. <code>field=pattern</code> only notifies matches for that field; <code>-field=pattern</code> excludes matches.
-          Fields: <code>callsign</code>, <code>country</code>, <code>model</code>, <code>airframe</code> (heli/widebody/military/light/jet). Patterns are case-insensitive regex.
+        <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.
+          <button type="button" class="help-link" onclick="openFilterHelp('aircraft')">Filter syntax &amp; fields</button>
         </div>
+        <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
       </div>
 
       <div class="target-list" id="targets_aircraft"></div>
@@ -304,12 +314,10 @@ select.target-template:focus{border-color:var(--accent)}
     <div class="subtab-pane" id="subpane-satellites">
       <div class="card">
         <div class="card-title">Global filters</div>
-        <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.</div>
-        <textarea class="mono-textarea" id="filters_satellites" rows="3" placeholder="-sat_name=Starlink">{{ cfg.notifications.satellites.filters }}</textarea>
-        <div class="hint">
-          One rule per line. <code>field=pattern</code> only notifies matches for that field; <code>-field=pattern</code> excludes matches.
-          Fields: <code>sat_name</code> (ISS/Hubble/Tiangong/Starlink). Patterns are case-insensitive regex.
+        <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.
+          <button type="button" class="help-link" onclick="openFilterHelp('satellites')">Filter syntax &amp; fields</button>
         </div>
+        <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
       </div>
 
       <div class="target-list" id="targets_satellites"></div>
@@ -317,11 +325,17 @@ select.target-template:focus{border-color:var(--accent)}
     </div>
 
     <div class="subtab-pane" id="subpane-templates">
-      <div class="section-label" style="margin-top:0">✈️ Aircraft templates</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="section-label" style="margin-top:0">✈️ Aircraft templates</div>
+        <button type="button" class="help-link" style="margin-left:0" onclick="openTokenHelp('aircraft')">What do these placeholders grab?</button>
+      </div>
       <div class="target-list" id="template-list-aircraft"></div>
       <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add aircraft template</button>
 
-      <div class="section-label">🛰️ Satellite templates</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="section-label">🛰️ Satellite templates</div>
+        <button type="button" class="help-link" style="margin-left:0" onclick="openTokenHelp('satellite')">What do these placeholders grab?</button>
+      </div>
       <div class="target-list" id="template-list-satellite"></div>
       <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add satellite template</button>
     </div>
@@ -398,6 +412,20 @@ select.target-template:focus{border-color:var(--accent)}
     <div class="modal-ftr">
       <button class="btn btn-primary" onclick="confirmMapPicker()">Use this location</button>
       <button class="btn btn-secondary" onclick="closeMapPicker()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help modal (filter syntax / template placeholders) -->
+<div class="modal-backdrop" id="help-modal">
+  <div class="modal" style="width:min(560px,94vw)">
+    <div class="modal-hdr">
+      <div class="modal-hdr-title" id="help-modal-title"></div>
+      <button class="modal-close" onclick="closeHelpModal()">✕</button>
+    </div>
+    <div class="modal-body" id="help-modal-body"></div>
+    <div class="modal-ftr" style="justify-content:flex-end">
+      <button class="btn btn-primary" onclick="closeHelpModal()">Got it</button>
     </div>
   </div>
 </div>
@@ -567,6 +595,104 @@ const TOKENS_BY_KIND = {
   aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude','distance_km','icao24','lat','lon','heading','squawk'],
   satellite: ['sat_name','time','minutes','duration','start_az','max_el','end_az'],
 };
+
+// ── Help modal (filter syntax / template placeholders) ────────────────────────
+const FILTER_HELP = {
+  aircraft: {
+    title: 'Aircraft filter syntax',
+    intro: 'One rule per line. <code>field=pattern</code> only notifies matches for that field; <code>-field=pattern</code> excludes matches. Patterns are case-insensitive regex. A target\'s own filters (if set) are checked in addition to these category-wide ones, both must pass.',
+    fields: [
+      ['callsign', 'Flight callsign as broadcast'],
+      ['country', "Aircraft's country of registration"],
+      ['model', 'Aircraft model/type'],
+      ['airframe', 'One of heli, widebody, military, light, jet'],
+    ],
+    examples: [
+      ['country=Australia', 'Only alert for Australian-registered aircraft'],
+      ['-callsign=VIPR.*', 'Exclude anything with a callsign starting VIPR'],
+      ['airframe=heli', 'Only helicopters'],
+      ['model=A320|B738', 'Only Airbus A320s or Boeing 737-800s'],
+    ],
+  },
+  satellites: {
+    title: 'Satellite filter syntax',
+    intro: 'Same syntax as aircraft filters, but the only field available is <code>sat_name</code>, which covers all four tracked pass types.',
+    fields: [
+      ['sat_name', 'Which satellite/pass this is'],
+    ],
+    examples: [
+      ['sat_name=ISS', 'Only ISS passes'],
+      ['-sat_name=Starlink', 'Exclude Starlink trains'],
+      ['sat_name=ISS|Hubble', 'Only ISS or Hubble passes'],
+    ],
+  },
+};
+
+const TOKEN_HELP = {
+  aircraft: {
+    title: 'Aircraft template placeholders',
+    intro: 'Drop any of these into a template\'s title or body, wrapped in curly braces (e.g. <code>{callsign}</code>). Each is filled in from the aircraft that triggered the alert.',
+    fields: [
+      ['emoji', 'Helicopter vs fixed-wing icon', '✈️'],
+      ['callsign', 'Flight callsign as broadcast', 'QFA123'],
+      ['model', 'Aircraft model/type', 'BOEING 737-8AS'],
+      ['registration', "Tail number, or \"N/A\" if unknown", 'VH-ABC'],
+      ['country', 'Country of registration', 'Australia'],
+      ['direction', 'Compass direction of travel', 'NW'],
+      ['speed', 'Ground speed, in your configured units', '450 kts'],
+      ['vertical_speed', 'Climb/descent rate, in your configured units', '↑ 800 fpm'],
+      ['airframe', 'heli, widebody, military, light, or jet', 'jet'],
+      ['altitude', 'Altitude at alert time, in your configured units', '5,200 ft'],
+      ['distance_km', 'Distance from home at alert time, in km', '8.4'],
+      ['icao24', '24-bit ICAO hex address, unique per aircraft', '7c1234'],
+      ['lat', 'Latitude at alert time', '-31.9523'],
+      ['lon', 'Longitude at alert time', '115.8613'],
+      ['heading', 'True heading in degrees', '270'],
+      ['squawk', 'Transponder code, watch for 7500/7600/7700 (hijack/radio failure/emergency)', '7000'],
+    ],
+  },
+  satellite: {
+    title: 'Satellite template placeholders',
+    intro: 'Drop any of these into a template\'s title or body, wrapped in curly braces (e.g. <code>{sat_name}</code>). Each is filled in from the pass that triggered the alert.',
+    fields: [
+      ['sat_name', 'Which satellite/pass this is', 'ISS'],
+      ['time', 'Local pass start time', '20:15'],
+      ['minutes', 'Minutes until the pass starts', '12'],
+      ['duration', 'Pass duration, in seconds', '420'],
+      ['start_az', 'Compass direction the pass starts at', 'NW'],
+      ['max_el', 'Peak elevation above the horizon', '45°'],
+      ['end_az', 'Compass direction the pass ends at', 'NE'],
+    ],
+  },
+};
+
+function helpRows(rows) {
+  return rows.map(r => `<div class="help-row"><code>${r[0]}</code><span>${r[1]}${r[2] !== undefined ? ` &mdash; e.g. <span class="help-example">${r[2]}</span>` : ''}</span></div>`).join('');
+}
+
+function openHelpModal(title, bodyHtml) {
+  document.getElementById('help-modal-title').textContent = title;
+  document.getElementById('help-modal-body').innerHTML = bodyHtml;
+  document.getElementById('help-modal').classList.add('open');
+}
+
+function closeHelpModal() {
+  document.getElementById('help-modal').classList.remove('open');
+}
+
+function openFilterHelp(category) {
+  const info = FILTER_HELP[category];
+  openHelpModal(info.title, `<p>${info.intro}</p>` +
+    `<div class="help-section-title">Fields</div>${helpRows(info.fields)}` +
+    `<div class="help-section-title">Examples</div>${helpRows(info.examples)}`);
+}
+
+function openTokenHelp(kind) {
+  const info = TOKEN_HELP[kind];
+  openHelpModal(info.title, `<p>${info.intro}</p>` +
+    `<div class="help-section-title">Placeholders</div>${helpRows(info.fields)}`);
+}
+
 const NOTIF_DATA = {{ cfg.notifications | tojson }};
 let TEMPLATES = {{ cfg.templates | tojson }};
 
@@ -856,7 +982,6 @@ function buildTargetCard(category, target) {
   const filtersInput = document.createElement('textarea');
   filtersInput.className = 'mono-textarea target-filters';
   filtersInput.rows = 2;
-  filtersInput.placeholder = kind === 'aircraft' ? '-callsign=VIPR.*' : '-sat_name=Starlink';
   filtersInput.value = target.filters || '';
   filtersGroup.append(filtersLabel, filtersInput);
 
@@ -864,7 +989,7 @@ function buildTargetCard(category, target) {
   testRow.style.cssText = 'margin-top:10px;display:flex;align-items:center;gap:10px';
   const testBtn = document.createElement('button');
   testBtn.type = 'button';
-  testBtn.className = 'btn btn-secondary btn-sm';
+  testBtn.className = 'btn btn-primary btn-sm';
   testBtn.textContent = 'Send test alert';
   const resultSpan = document.createElement('span');
   resultSpan.className = 'test-result';
