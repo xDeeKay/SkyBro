@@ -45,7 +45,7 @@ SATELLITES = [
 
 # ── Default config ────────────────────────────────────────────────────────────
 # Named, reusable title/body pairs. Targets reference one by id (linked
-# reference — editing a template here updates every target using it) instead
+# reference: editing a template here updates every target using it) instead
 # of each carrying its own copy. The two defaults are protected: always
 # present, never deletable (see _clean_templates in app.py).
 DEFAULT_TEMPLATES_LIST = [
@@ -93,7 +93,7 @@ def _parse_discord_webhook(url):
 def _migrate_legacy_notifications(raw_cfg):
     """One-time, idempotent conversion of the old Pushover/Discord fields into
     the new Apprise-based notifications structure. Migrated targets just point
-    at the new default templates (no attempt to reproduce old message wording —
+    at the new default templates (no attempt to reproduce old message wording,
     the original Discord embed's inline field grid has no Apprise equivalent
     anyway). The old category-level alerts_enabled/iss_alerts_enabled applied
     uniformly to every target, so it's carried over as each migrated target's
@@ -389,7 +389,7 @@ def _passes_filters(compiled, values):
     return True
 
 def _render_template(tmpl, values):
-    """Safe {token} substitution — never str.format, so a user-edited template
+    """Safe {token} substitution, never str.format, so a user-edited template
     can't reach object attributes/indices. Unknown tokens are left as-is."""
     return _TOKEN_RE.sub(lambda m: str(values.get(m.group(1), m.group(0))), tmpl or "")
 
@@ -622,7 +622,7 @@ def process_states(states):
         conn_r.close()
     needs_photo = [icao for icao in visible if icao not in photo_cache_map]
 
-    # ── Phase 2: write transaction — no HTTP, no secondary connections ────────
+    # ── Phase 2: write transaction - no HTTP, no secondary connections ────────
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM live_aircraft")
@@ -886,7 +886,7 @@ def check_satellites():
                      sat_name)
                 )
             total += len(passes)
-            log.info(f"Satellites: {sat_name} — {len(passes)} passes fetched")
+            log.info(f"Satellites: {sat_name} - {len(passes)} passes fetched")
         except Exception as e:
             msg = str(e).replace(api_key, "***") if api_key else str(e)
             log.warning(f"Satellites fetch error ({sat_name}): {msg}")
@@ -895,7 +895,7 @@ def check_satellites():
     log.info(f"Satellites: {total} total passes across {len(SATELLITES)} objects")
 
 def dispatch_satellite_alerts():
-    # No category-level enable/disable anymore — each target has its own
+    # No category-level enable/disable anymore. Each target has its own
     # `enabled` flag, checked inside notify_category(). All satellite types
     # notify through the shared "satellites" category; sat_name is passed as a
     # value so filters/templates can still differentiate between them.

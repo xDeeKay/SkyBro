@@ -153,13 +153,13 @@ select.target-template:focus,select.target-service:focus{border-color:var(--acce
     <div class="logo-loc" id="home-loc"></div>
   </div>
   <div class="hdr-stats">
-    <div class="stat"><div class="stat-val" id="s-live">—</div><div class="stat-lbl">Live</div></div>
-    <div class="stat"><div class="stat-val" id="s-today">—</div><div class="stat-lbl">Today</div></div>
-    <div class="stat"><div class="stat-val" id="s-total">—</div><div class="stat-lbl">All time</div></div>
-    <div class="stat"><div class="stat-val" id="s-countries">—</div><div class="stat-lbl">Countries</div></div>
+    <div class="stat"><div class="stat-val" id="s-live">-</div><div class="stat-lbl">Live</div></div>
+    <div class="stat"><div class="stat-val" id="s-today">-</div><div class="stat-lbl">Today</div></div>
+    <div class="stat"><div class="stat-val" id="s-total">-</div><div class="stat-lbl">All time</div></div>
+    <div class="stat"><div class="stat-val" id="s-countries">-</div><div class="stat-lbl">Countries</div></div>
   </div>
   <div class="hdr-right">
-    <div class="hdr-clock"><span id="hdr-time">—</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx" title="Weather loading…">⏳</span></div>
+    <div class="hdr-clock"><span id="hdr-time">-</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx" title="Weather loading…">⏳</span></div>
     <span class="hdr-clock-sep hdr-ctx">|</span>
     <a class="settings-btn" href="/">← Dashboard</a>
   </div>
@@ -964,7 +964,7 @@ function renderDropdown() {
   _activeIdx = -1;
   dd.innerHTML = _searchResults.map((f, i) => {
     const p    = f.properties;
-    const name = p.name || p.street || p.city || '—';
+    const name = p.name || p.street || p.city || '-';
     const sub  = [p.street && p.name ? p.street : null, p.city, p.state, p.country].filter(Boolean).join(', ');
     return `<div class="search-opt" data-idx="${i}" onmousedown="selectResult(${i})">
       <div class="search-opt-name">${name}</div>

@@ -9,9 +9,9 @@ description: >-
   background 24/7 and alerts you the moment something interesting is overhead.
 
 
-  ✈️ Aircraft — Tracks live planes in your vicinity using OpenSky Network's
-  ADS-B data. Get an alert (with photo) via Apprise — Pushover, Discord,
-  Telegram, email, and 150+ other services — when a plane enters your
+  ✈️ Aircraft - Tracks live planes in your vicinity using OpenSky Network's
+  ADS-B data. Get an alert (with photo) via Apprise (Pushover, Discord,
+  Telegram, email, and 150+ other services) when a plane enters your
   configured radius and altitude window, with optional filters to mute
   specific callsigns, countries, models, or airframe types. The live map
   shows per-airframe silhouettes for jets, widebodies, helicopters, light
@@ -19,18 +19,18 @@ description: >-
   its full flight path.
 
 
-  🛰️ Satellites — Monitors upcoming passes for the ISS, Hubble Space
+  🛰️ Satellites - Monitors upcoming passes for the ISS, Hubble Space
   Telescope, and Tiangong CSS. Fires a push alert before each ISS pass so you
   never miss one.
 
 
-  🔭 Astronomy — Full night-sky planner powered by ephem. Shows tonight's dark
+  🔭 Astronomy - Full night-sky planner powered by ephem. Shows tonight's dark
   window, Bortle sky quality, and observation highlights. Browse all 110
   Messier objects with equipment and horizon filters, track all 7 planets with
   rise/set times, and follow 11 annual meteor showers.
 
 
-  ☁️ Weather — Pulls hyperlocal forecasts from Open-Meteo (no API key needed)
+  ☁️ Weather - Pulls hyperlocal forecasts from Open-Meteo (no API key needed)
   including current conditions, 24-hour hourly breakdown, and 7-day forecast.
   Includes a sky visibility score for tonight.
 

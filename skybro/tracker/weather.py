@@ -1,5 +1,5 @@
 """
-SkyBro — Weather & Moon module
+SkyBro - Weather & Moon module
 Fetches weather from Open-Meteo (no API key needed).
 Computes moon phase locally.
 """

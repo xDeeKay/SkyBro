@@ -248,13 +248,13 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="logo-loc" id="home-loc"></div>
   </div>
   <div class="hdr-stats">
-    <div class="stat"><div class="stat-val" id="s-live">—</div><div class="stat-lbl">Live</div></div>
-    <div class="stat"><div class="stat-val" id="s-today">—</div><div class="stat-lbl">Today</div></div>
-    <div class="stat"><div class="stat-val" id="s-total">—</div><div class="stat-lbl">All time</div></div>
-    <div class="stat"><div class="stat-val" id="s-countries">—</div><div class="stat-lbl">Countries</div></div>
+    <div class="stat"><div class="stat-val" id="s-live">-</div><div class="stat-lbl">Live</div></div>
+    <div class="stat"><div class="stat-val" id="s-today">-</div><div class="stat-lbl">Today</div></div>
+    <div class="stat"><div class="stat-val" id="s-total">-</div><div class="stat-lbl">All time</div></div>
+    <div class="stat"><div class="stat-val" id="s-countries">-</div><div class="stat-lbl">Countries</div></div>
   </div>
   <div class="hdr-right">
-    <div class="hdr-clock"><span id="hdr-time">—</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx" title="Weather loading…">⏳</span></div>
+    <div class="hdr-clock"><span id="hdr-time">-</span><span class="hdr-clock-sep hdr-ctx">|</span><span id="s-weather" class="hdr-ctx" title="Weather loading…">⏳</span></div>
     <span class="hdr-clock-sep hdr-ctx">|</span>
     <a class="settings-btn" href="/settings" title="Settings">⚙️</a>
   </div>
@@ -276,10 +276,10 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
     <div class="tab-pane" id="pane-astronomy"></div>
     <button class="back-top" id="back-top" title="Back to top">^</button>
     <div class="src-bar" id="src-bar">
-      <div class="src-item" id="si-opensky"><div class="src-info"><div class="src-name">Aircraft</div><div class="src-detail" id="st-opensky">—</div></div></div>
-      <div class="src-item" id="si-iss"><div class="src-info"><div class="src-name">Satellites</div><div class="src-detail" id="st-iss">—</div></div></div>
-      <div class="src-item" id="si-weather"><div class="src-info"><div class="src-name">Weather</div><div class="src-detail" id="st-weather">—</div></div></div>
-      <div class="src-item" id="si-astronomy"><div class="src-info"><div class="src-name">Astronomy</div><div class="src-detail" id="st-astronomy">—</div></div></div>
+      <div class="src-item" id="si-opensky"><div class="src-info"><div class="src-name">Aircraft</div><div class="src-detail" id="st-opensky">-</div></div></div>
+      <div class="src-item" id="si-iss"><div class="src-info"><div class="src-name">Satellites</div><div class="src-detail" id="st-iss">-</div></div></div>
+      <div class="src-item" id="si-weather"><div class="src-info"><div class="src-name">Weather</div><div class="src-detail" id="st-weather">-</div></div></div>
+      <div class="src-item" id="si-astronomy"><div class="src-info"><div class="src-name">Astronomy</div><div class="src-detail" id="st-astronomy">-</div></div></div>
     </div>
   </div>
   <button class="sidebar-tab" id="sidebar-tab" title="Toggle sidebar">›</button>
@@ -774,16 +774,16 @@ function _drawSatellites() {
       const dur = p.duration >= 60 ? Math.floor(p.duration/60)+'m '+(p.duration%60)+'s' : p.duration+'s';
       return `<div class="iss-card" style="border-color:${col}55">
         <div class="iss-head">
-          <span class="iss-title" style="color:${col}">${_satSubTab} — ${fmtDate(dt)}</span>
+          <span class="iss-title" style="color:${col}">${_satSubTab} - ${fmtDate(dt)}</span>
           ${soon ? `<span class="iss-soon" style="background:${col};color:#000">In ${cd}</span>` : ''}
         </div>
         <div class="iss-grid">
           <div class="pstat"><div class="pstat-val">${fmtTime(dt)}</div><div class="pstat-lbl">Time</div></div>
           <div class="pstat"><div class="pstat-val">${cd}</div><div class="pstat-lbl">From now</div></div>
           <div class="pstat"><div class="pstat-val">${dur}</div><div class="pstat-lbl">Duration</div></div>
-          <div class="pstat"><div class="pstat-val">${p.start_az||'—'}</div><div class="pstat-lbl">Appears</div></div>
-          <div class="pstat"><div class="pstat-val">${p.max_el!=null?p.max_el+'°':'—'}</div><div class="pstat-lbl">Max height</div></div>
-          <div class="pstat"><div class="pstat-val">${p.end_az||'—'}</div><div class="pstat-lbl">Disappears</div></div>
+          <div class="pstat"><div class="pstat-val">${p.start_az||'-'}</div><div class="pstat-lbl">Appears</div></div>
+          <div class="pstat"><div class="pstat-val">${p.max_el!=null?p.max_el+'°':'-'}</div><div class="pstat-lbl">Max height</div></div>
+          <div class="pstat"><div class="pstat-val">${p.end_az||'-'}</div><div class="pstat-lbl">Disappears</div></div>
         </div>
       </div>`;
     }).join('');
@@ -851,13 +851,13 @@ async function _drawStats() {
   catch(e) { el.innerHTML = '<div class="empty">Failed to load stats</div>'; return; }
   if (!s.total) { el.innerHTML = '<div class="empty">No alert history yet</div>'; return; }
 
-  const recSub = r => r ? `${r.callsign||'—'} · ${r.model||'Unknown'}` : '—';
+  const recSub = r => r ? `${r.callsign||'-'} · ${r.model||'Unknown'}` : '-';
 
   const maxHour = Math.max(...s.hours.map(h => h.n), 1);
   const hourBars = Array.from({length:24}, (_,i) => {
     const h = s.hours.find(x => x.hr === i);
     const pct = h ? Math.max(Math.round(h.n/maxHour*100), 4) : 4;
-    return `<div class="hour-bar" style="height:${pct}%" data-tip="${i}:00 — ${h?h.n:0} alert${h&&h.n===1?'':'s'}"></div>`;
+    return `<div class="hour-bar" style="height:${pct}%" data-tip="${i}:00 - ${h?h.n:0} alert${h&&h.n===1?'':'s'}"></div>`;
   }).join('');
 
   const barRows = (rows, max) => rows.map(r => `
@@ -880,9 +880,9 @@ async function _drawStats() {
     </div>
     <div class="stats-section-hdr">Records</div>
     <div class="stats-records">
-      <div class="stats-rec"><div class="stats-rec-val">${s.closest ? s.closest.min_dist_km+' km' : '—'}</div><div class="stats-rec-lbl">Closest approach</div><div class="stats-rec-sub">${recSub(s.closest)}</div></div>
-      <div class="stats-rec"><div class="stats-rec-val">${s.lowest ? fmtAlt(s.lowest.min_alt_ft) : '—'}</div><div class="stats-rec-lbl">Lowest altitude</div><div class="stats-rec-sub">${recSub(s.lowest)}</div></div>
-      <div class="stats-rec"><div class="stats-rec-val">${s.most_visited ? s.most_visited.visits+' visits' : '—'}</div><div class="stats-rec-lbl">Most frequent</div><div class="stats-rec-sub">${recSub(s.most_visited)}</div></div>
+      <div class="stats-rec"><div class="stats-rec-val">${s.closest ? s.closest.min_dist_km+' km' : '-'}</div><div class="stats-rec-lbl">Closest approach</div><div class="stats-rec-sub">${recSub(s.closest)}</div></div>
+      <div class="stats-rec"><div class="stats-rec-val">${s.lowest ? fmtAlt(s.lowest.min_alt_ft) : '-'}</div><div class="stats-rec-lbl">Lowest altitude</div><div class="stats-rec-sub">${recSub(s.lowest)}</div></div>
+      <div class="stats-rec"><div class="stats-rec-val">${s.most_visited ? s.most_visited.visits+' visits' : '-'}</div><div class="stats-rec-lbl">Most frequent</div><div class="stats-rec-sub">${recSub(s.most_visited)}</div></div>
     </div>
     <div class="stats-section-hdr">Alerts by hour</div>
     <div class="hour-chart-wrap">
@@ -1139,7 +1139,7 @@ const _CONST = {And:'Andromeda',Aqr:'Aquarius',Aur:'Auriga',Cap:'Capricornus',Ca
   Psc:'Pisces',Pup:'Puppis',Sco:'Scorpius',Sct:'Scutum',Sge:'Sagitta',Sgr:'Sagittarius',
   Ser:'Serpens',Tau:'Taurus',Tri:'Triangulum',UMa:'Ursa Major',Vir:'Virgo',Vul:'Vulpecula'};
 
-function fmtTs(ts) { return ts ? fmtTime(new Date(ts * 1000)) : '—'; }
+function fmtTs(ts) { return ts ? fmtTime(new Date(ts * 1000)) : '-'; }
 
 function renderAstronomy(astro) { _aData = astro; _drawAstro(); }
 
@@ -1234,7 +1234,7 @@ function _astroTonight(a) {
   const [ifLabel, ifCol] = illum < 25 ? ['Low','var(--green)'] : illum < 60 ? ['Moderate','var(--amber)'] : ['High','var(--red)'];
   const bortleCol = a.bortle ? (a.bortle.class <= 4 ? 'var(--green)' : a.bortle.class <= 6 ? 'var(--amber)' : 'var(--red)') : 'var(--muted)';
   const moonLine = mi.is_up ? `↑ ${mi.alt_deg}° · ${illum}% lit` : (mi.rise_ts ? `Rises ${fmtTs(mi.rise_ts)}` : 'Below horizon');
-  const darkStr = tw.astronomical_dusk && tw.astronomical_dawn ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}` : '—';
+  const darkStr = tw.astronomical_dusk && tw.astronomical_dawn ? `${fmtTs(tw.astronomical_dusk)} – ${fmtTs(tw.astronomical_dawn)}` : '-';
   const bar = _skyBar(tw);
 
   // "Visible tonight" = above horizon at some point during astronomical darkness [dusk → dawn].
@@ -1281,13 +1281,13 @@ function _astroTonight(a) {
   }).join('');
 
   const dsoCards = tonightDSO.map(d => {
-    const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : (d.transit_ts ? `Transit ${fmtTs(d.transit_ts)}` : '—');
+    const upStr = d.is_up ? `↑ ${d.alt_deg}° ${d.az_compass}` : (d.transit_ts ? `Transit ${fmtTs(d.transit_ts)}` : '-');
     const moonW = d.moon_warning ? ' · 🌙 moon' : '';
     const img = d.wiki_thumb ? `<img class="ac-thumb" data-lazysrc="${d.wiki_thumb}" alt="${d.label}" decoding="async" style="cursor:pointer;background:var(--border)" data-full="${d.wiki_url||''}" onclick="openLightbox(this.dataset.lazysrc||this.src,this.dataset.full,'View on Wikipedia')" onerror="this.style.display='none'">` : '';
     return `<div class="astro-card">
       <div class="ac-with-img">${img}
         <div class="ac-thumb-body">
-          <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
+          <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' - '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
           <div class="ac-meta">${d.type} · ${_CONST[d.constellation]||d.constellation}</div>
           <div class="ac-time">${upStr}${moonW}</div>
         </div>
@@ -1319,7 +1319,7 @@ function _astroTonight(a) {
       </div>
       <div class="at-metric">
         <div class="at-metric-icon">💡</div>
-        <div class="at-metric-val" style="color:${bortleCol}">${a.bortle ? 'Class '+a.bortle.class : '—'}</div>
+        <div class="at-metric-val" style="color:${bortleCol}">${a.bortle ? 'Class '+a.bortle.class : '-'}</div>
         <div class="at-metric-sub">${a.bortle ? a.bortle.description : 'Light pollution'}</div>
       </div>
       <div class="at-metric">
@@ -1329,7 +1329,7 @@ function _astroTonight(a) {
       </div>
       <div class="at-metric">
         <div class="at-metric-icon">🌅</div>
-        <div class="at-metric-val">${tw.sunset?fmtTs(tw.sunset):'—'} – ${tw.sunrise?fmtTs(tw.sunrise):'—'}</div>
+        <div class="at-metric-val">${tw.sunset?fmtTs(tw.sunset):'-'} – ${tw.sunrise?fmtTs(tw.sunrise):'-'}</div>
         <div class="at-metric-sub">Sunset / Sunrise</div>
       </div>
     </div>
@@ -1428,7 +1428,7 @@ function _astroDSO(a) {
       <div class="ac-with-img">
         ${img}
         <div class="ac-thumb-body">
-          <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' — '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
+          <div class="ac-head"><span class="ac-name">M${d.id}${d.name&&d.name!=='M'+d.id?' - '+d.name:''}</span><span class="ac-right">${_EICON[d.equipment]||''} ${d.magnitude}</span></div>
           <div class="ac-meta">${d.type} · ${_CONST[d.constellation]||d.constellation}</div>
           <div class="ac-time">${upStr}${d.transit_ts?' · Transit '+fmtTs(d.transit_ts):''}${moonW}</div>
         </div>
@@ -1445,14 +1445,14 @@ function _astroMoon(mi) {
     <div class="moon-hero">
       <div class="moon-big-emoji">${mi.phase_emoji||'🌙'}</div>
       <div class="moon-big-pct">${illum}%</div>
-      <div class="moon-big-name">${mi.phase_name||'—'}</div>
+      <div class="moon-big-name">${mi.phase_name||'-'}</div>
       <div class="moon-big-sub">${mi.age_days||0} days old</div>
       <div class="moon-big-pos" style="color:${posCol}">${posStr}</div>
     </div>
     <div class="moon-grid">
-      <div class="moon-stat"><div class="moon-stat-lbl">Moonrise</div><div class="moon-stat-val">${mi.rise_ts?fmtTs(mi.rise_ts):'—'}</div></div>
-      <div class="moon-stat"><div class="moon-stat-lbl">Moonset</div><div class="moon-stat-val">${mi.set_ts?fmtTs(mi.set_ts):'—'}</div></div>
-      <div class="moon-stat"><div class="moon-stat-lbl">Position</div><div class="moon-stat-val">${mi.alt_deg||'—'}° ${mi.az_compass||''}</div></div>
+      <div class="moon-stat"><div class="moon-stat-lbl">Moonrise</div><div class="moon-stat-val">${mi.rise_ts?fmtTs(mi.rise_ts):'-'}</div></div>
+      <div class="moon-stat"><div class="moon-stat-lbl">Moonset</div><div class="moon-stat-val">${mi.set_ts?fmtTs(mi.set_ts):'-'}</div></div>
+      <div class="moon-stat"><div class="moon-stat-lbl">Position</div><div class="moon-stat-val">${mi.alt_deg||'-'}° ${mi.az_compass||''}</div></div>
       <div class="moon-stat"><div class="moon-stat-lbl">Illumination</div><div class="moon-stat-val">${illum}%</div></div>
       ${mi.next_full_moon?`<div class="moon-stat"><div class="moon-stat-lbl">🌕 Full moon</div><div class="moon-stat-val">${fmtDate(new Date(mi.next_full_moon*1000))}</div></div>`:''}
       ${mi.next_new_moon?`<div class="moon-stat"><div class="moon-stat-lbl">🌑 New moon</div><div class="moon-stat-val">${fmtDate(new Date(mi.next_new_moon*1000))}</div></div>`:''}

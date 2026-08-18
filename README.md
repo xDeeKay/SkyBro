@@ -8,7 +8,7 @@ A real-time sky tracker for your Umbrel home server. Runs 24/7 in the background
 - Raspberry Pi 4 or 5 (arm64)
 - Free [OpenSky Network](https://opensky-network.org) account with OAuth2 client credentials
 - Free [n2yo.com](https://www.n2yo.com) API key for satellite pass predictions
-- One or more [Apprise](https://github.com/caronc/apprise) notification targets for alerts (optional) — supports Pushover, Discord, Telegram, Slack, email, and 150+ other services
+- One or more [Apprise](https://github.com/caronc/apprise) notification targets for alerts (optional): supports Pushover, Discord, Telegram, Slack, email, and 150+ other services
 
 ## Install
 
@@ -37,7 +37,7 @@ Alerts are sent via [Apprise](https://github.com/caronc/apprise) (150+ notificat
 - ✈️ **Aircraft**: a plane enters your configured radius **and** is below your altitude threshold. Includes an aircraft photo pulled from Planespotters.net (attached where the target service supports it).
 - 🛰️ **Satellites**: a pass for ISS, Hubble, Tiangong, or a Starlink train is approaching within your configured lead time.
 
-Both categories support include/exclude filters (aircraft: callsign, country, model, airframe type; satellites: which satellite), at two levels: a category-wide rule that gates every target, plus an optional per-target rule for further tuning a single Apprise URL beyond the category-wide setting. Every target picks its message from **templates**: reusable title/body pairs you create once and reuse across targets — edit a template and every target using it updates together. A "Default Aircraft" and "Default Satellite" template always exist and can't be edited or deleted; add your own template if you want different wording for a specific target. Every target has its own enable switch and a test-alert button you can use before saving. Existing Pushover/Discord config from older versions is converted to Apprise targets automatically on upgrade. All settings are managed through the in-app Settings page, organized into tabs, with Aircraft/Satellites/Templates sub-tabs under Notifications. Changes apply within 15 seconds without restarting.
+Both categories support include/exclude filters (aircraft: callsign, country, model, airframe type; satellites: which satellite), at two levels: a category-wide rule that gates every target, plus an optional per-target rule for further tuning a single Apprise URL beyond the category-wide setting. Every target picks its message from **templates**: reusable title/body pairs you create once and reuse across targets. Edit a template and every target using it updates together. A "Default Aircraft" and "Default Satellite" template always exist and can't be edited or deleted; add your own template if you want different wording for a specific target. Every target has its own enable switch and a test-alert button you can use before saving. Existing Pushover/Discord config from older versions is converted to Apprise targets automatically on upgrade. All settings are managed through the in-app Settings page, organized into tabs, with Aircraft/Satellites/Templates sub-tabs under Notifications. Changes apply within 15 seconds without restarting.
 
 ## Dashboard tabs
 

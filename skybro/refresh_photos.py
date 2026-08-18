@@ -1,4 +1,4 @@
-"""One-time photo refresh — run inside the tracker container.
+"""One-time photo refresh, run inside the tracker container.
 Re-fetches Planespotters photos for every distinct aircraft in history,
 with validation to prevent wrong-aircraft matches, then falls back to
 Wikipedia type photos. Purely numeric registrations (e.g. military regs
@@ -91,11 +91,11 @@ for icao24, reg, model in rows:
     source = "planespotters" if "planespotters" not in photo_url and thumb_url else \
              "wikipedia" if "wikipedia" in photo_url else \
              "planespotters" if thumb_url else "none"
-    status = f"✓ [{source}]" if thumb_url else "— no photo"
+    status = f"✓ [{source}]" if thumb_url else "- no photo"
     print(f"  {icao24}  {(reg or '?'):>10}  {status}")
 
     time.sleep(0.3)
 
 conn.commit()
 conn.close()
-print(f"\nDone — {found}/{len(rows)} photos found")
+print(f"\nDone: {found}/{len(rows)} photos found")

@@ -1,5 +1,5 @@
 """
-SkyBro — Astronomy module
+SkyBro - Astronomy module
 Calculates planet positions, DSO visibility, twilight times, and meteor showers
 using the ephem library. All heavy lifting is local, no API keys needed except
 for the optional Bortle/SQM lookup from clearoutside.com (primary) and
@@ -265,7 +265,7 @@ def _dso_info(lat, lon, ts, row, moon_body):
 
     info = {
         "id":           m_num,
-        "label":        f"M{m_num}" + (f" — {name}" if name else ""),
+        "label":        f"M{m_num}" + (f" - {name}" if name else ""),
         "name":         name or f"M{m_num}",
         "type":         obj_type,
         "constellation": const,
@@ -382,7 +382,7 @@ def _bortle(lat, lon):
                 break
         return cls
 
-    # Primary: Clear Outside — astronomy forecast site, shows Bortle class
+    # Primary: Clear Outside - astronomy forecast site, shows Bortle class
     try:
         r = requests.get(
             f"https://clearoutside.com/forecast/{lat:.4f}/{lon:.4f}",
@@ -425,7 +425,7 @@ def process_astronomy(lat, lon, conn):
 
     twilight = _twilight_times(lat, lon, ts)
 
-    # Moon — computed once, reused for DSO separation checks
+    # Moon - computed once, reused for DSO separation checks
     moon_obs  = _make_obs(lat, lon, ts)
     moon_body = ephem.Moon()
     moon_body.compute(moon_obs)
@@ -474,7 +474,7 @@ def process_astronomy(lat, lon, conn):
     bortle  = _bortle(lat, lon)
     meteors = _meteor_showers()
 
-    # Wikipedia thumbnails — batched, one call per 50 items
+    # Wikipedia thumbnails - batched, one call per 50 items
     try:
         p_titles = [_PLANET_WIKI.get(n, n) for n, _ in PLANETS]
         p_thumbs = _fetch_wiki_thumbs(p_titles)

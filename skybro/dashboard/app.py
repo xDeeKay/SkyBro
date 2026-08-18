@@ -1,5 +1,5 @@
 """
-SkyBro Dashboard — Flask app
+SkyBro Dashboard - Flask app
 Serves the live map UI, API endpoints, and the settings page.
 Settings are persisted to /data/config.json (hot-reloaded by tracker).
 """
@@ -18,7 +18,7 @@ DB_PATH  = DATA_DIR / "skybro.db"
 CFG_PATH = DATA_DIR / "config.json"
 
 # Named, reusable title/body pairs. Targets reference one by id (linked
-# reference — editing a template here updates every target using it) instead
+# reference: editing a template here updates every target using it) instead
 # of each carrying its own copy. The two defaults are protected: always
 # present, never deletable (see _clean_templates).
 DEFAULT_TEMPLATES_LIST = [
@@ -114,7 +114,7 @@ def _parse_discord_webhook(url):
 def _migrate_legacy_notifications(raw_cfg):
     """One-time, idempotent conversion of the old Pushover/Discord fields into
     the new Apprise-based notifications structure. Migrated targets just point
-    at the new default templates (no attempt to reproduce old message wording —
+    at the new default templates (no attempt to reproduce old message wording,
     the original Discord embed's inline field grid has no Apprise equivalent
     anyway). The old category-level alerts_enabled/iss_alerts_enabled applied
     uniformly to every target, so it's carried over as each migrated target's
@@ -186,7 +186,7 @@ def read_config():
         merged = {**DEFAULTS, **loaded}
         if migrated or seeded:
             # Write directly, not via write_config() (which itself calls
-            # read_config() to merge — that would recurse).
+            # read_config() to merge, that would recurse).
             DATA_DIR.mkdir(parents=True, exist_ok=True)
             with open(CFG_PATH, "w") as f:
                 json.dump(merged, f, indent=2)
@@ -488,7 +488,7 @@ _PROTECTED_TEMPLATE_IDS = {t["id"] for t in DEFAULT_TEMPLATES_LIST}
 def _clean_templates(submitted, current):
     """Caps count/lengths, keeps `kind` immutable for an existing id (aircraft
     vs satellite token sets differ), and always guarantees the two protected
-    default templates survive with their canonical content — the UI disables
+    default templates survive with their canonical content. The UI disables
     their fields, but this is the defense-in-depth enforcement: a submitted
     row for a protected id is ignored in favor of the hardcoded default,
     regardless of what it contains."""
@@ -597,7 +597,7 @@ def _sample_placeholders(category, cfg):
 @app.route("/api/test-alert/<category>", methods=["POST"])
 def api_test_alert(category):
     """Send a test notification for one target using whatever url/template is
-    currently in its settings-page card — not necessarily saved yet, so a
+    currently in its settings-page card, not necessarily saved yet, so a
     target can be test-fired before it's ever written to config.json."""
     if category not in NOTIF_CATEGORIES:
         abort(404)
