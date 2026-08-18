@@ -173,11 +173,14 @@ select.target-template:focus{border-color:var(--accent)}
 .modal-body p{margin:0 0 12px}
 .help-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:16px 0 8px}
 .help-section-title:first-of-type{margin-top:0}
-.help-row{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);align-items:baseline;flex-wrap:wrap}
-.help-row:last-child{border-bottom:none}
-.help-row code{flex:0 0 auto;background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;white-space:nowrap}
-.help-row span{color:var(--muted);flex:1;min-width:160px}
-.help-row .help-example{color:var(--text);font-weight:600}
+.help-table-wrap{overflow-x:auto}
+.help-table{width:100%;border-collapse:collapse}
+.help-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:0 10px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap}
+.help-table td{padding:8px 10px 8px 0;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
+.help-table tr:last-child td{border-bottom:none}
+.help-table code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;white-space:nowrap}
+.help-table .help-desc{color:var(--muted)}
+.help-table .help-example{color:var(--text);font-weight:600;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -657,8 +660,18 @@ const TOKEN_HELP = {
   },
 };
 
-function helpRows(rows) {
-  return rows.map(r => `<div class="help-row"><code>${r[0]}</code><span>${r[1]}${r[2] !== undefined ? ` (e.g. <span class="help-example">${r[2]}</span>)` : ''}</span></div>`).join('');
+function twoColTable(h1, h2, rows) {
+  const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
+  return `<div class="help-table-wrap"><table class="help-table"><tr><th>${h1}</th><th>${h2}</th></tr>` +
+    sorted.map(([a, b]) => `<tr><td><code>${a}</code></td><td class="help-desc">${b}</td></tr>`).join('') +
+    '</table></div>';
+}
+
+function placeholderTable(rows) {
+  const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
+  return `<div class="help-table-wrap"><table class="help-table"><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
+    sorted.map(([t, d, e]) => `<tr><td><code>${t}</code></td><td class="help-desc">${d}</td><td class="help-example">${e}</td></tr>`).join('') +
+    '</table></div>';
 }
 
 function openHelpModal(title, bodyHtml) {
@@ -674,14 +687,13 @@ function closeHelpModal() {
 function openFilterHelp(category) {
   const info = FILTER_HELP[category];
   openHelpModal(info.title, `<p>${info.intro}</p>` +
-    `<div class="help-section-title">Fields</div>${helpRows(info.fields)}` +
-    `<div class="help-section-title">Examples</div>${helpRows(info.examples)}`);
+    `<div class="help-section-title">Fields</div>${twoColTable('Field', 'Meaning', info.fields)}` +
+    `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples)}`);
 }
 
 function openTokenHelp(kind) {
   const info = TOKEN_HELP[kind];
-  openHelpModal(info.title, `<p>${info.intro}</p>` +
-    `<div class="help-section-title">Placeholders</div>${helpRows(info.fields)}`);
+  openHelpModal(info.title, `<p>${info.intro}</p>` + placeholderTable(info.fields));
 }
 
 const NOTIF_DATA = {{ cfg.notifications | tojson }};
