@@ -844,6 +844,9 @@ function buildTargetCard(category, target) {
   templateSelect.className = 'target-template';
   templateSelect.dataset.kind = kind;
   populateTemplateSelect(templateSelect, kind, target.template_id);
+  templateSelect.addEventListener('change', () => {
+    if (templateSelect.value === '__new__') createTemplateFromTarget(kind, templateSelect);
+  });
   templateGroup.append(templateLabel, templateSelect);
 
   const filtersGroup = document.createElement('div');
@@ -882,9 +885,31 @@ function populateTemplateSelect(select, kind, selectedId) {
     opt.textContent = t.name;
     select.appendChild(opt);
   });
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = kind === 'aircraft' ? '+ Add aircraft template' : '+ Add satellite template';
+  select.appendChild(newOpt);
   const want = selectedId !== undefined ? selectedId : prevValue;
-  const options = [...select.options];
+  const options = [...select.options].filter(o => o.value !== '__new__');
   select.value = options.some(o => o.value === want) ? want : (options[0] ? options[0].value : '');
+}
+
+// Lets a target's template dropdown spawn a brand-new template without leaving
+// the target mid-edit unsaved elsewhere: the new template is only added to the
+// in-memory TEMPLATES array/DOM (same as addTemplate), never posted to the server,
+// and this target is pre-wired to it so returning to Notifications shows it picked.
+function createTemplateFromTarget(kind, select) {
+  const tmpl = addTemplate(kind);
+  select.value = tmpl.id;
+  showTab('notifications');
+  showSubtab('templates');
+  const card = document.querySelector(`#subpane-templates .template-card[data-id="${tmpl.id}"]`);
+  if (card) {
+    card.scrollIntoView({behavior: 'smooth', block: 'center'});
+    const nameInput = card.querySelector('.template-name');
+    nameInput.focus();
+    nameInput.select();
+  }
 }
 
 function refreshTemplateSelects() {
@@ -1043,6 +1068,7 @@ function addTemplate(kind) {
   TEMPLATES.push(tmpl);
   document.getElementById(`template-list-${kind}`).appendChild(buildTemplateCard(tmpl));
   refreshTemplateSelects();
+  return tmpl;
 }
 
 function collectTemplates() {
