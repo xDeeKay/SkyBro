@@ -287,15 +287,15 @@ select.target-template:focus{border-color:var(--accent)}
 
   <!-- Notifications -->
   <div class="tab-pane" id="pane-notifications">
-    <div class="card-desc" style="margin:-8px 0 16px">
-      Sent via <a href="https://github.com/caronc/apprise#popular-notification-services" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
-      (150+ services). Each target below has its own enable switch, message template, and test button.
-    </div>
-
     <div class="subtabs" id="notif-subtabs">
       <div class="subtab active" data-subtab="aircraft">✈️ Aircraft</div>
       <div class="subtab" data-subtab="satellites">🛰️ Satellites</div>
       <div class="subtab" data-subtab="templates">📝 Templates</div>
+    </div>
+
+    <div class="card-desc" style="margin:0 0 16px">
+      Sent via <a href="https://github.com/caronc/apprise#popular-notification-services" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
+      (150+ services). Each target below has its own enable switch, message template, and test button.
     </div>
 
     <div class="subtab-pane active" id="subpane-aircraft">
@@ -1160,8 +1160,7 @@ function buildTemplateCard(tmpl) {
 
   const legend = document.createElement('div');
   legend.className = 'hint token-legend';
-  legend.innerHTML = 'Placeholders:' +
-    `<button type="button" class="help-link" onclick="openTokenHelp('${tmpl.kind}')">What do these grab?</button>` +
+  legend.innerHTML = `<button type="button" class="help-link" onclick="openTokenHelp('${tmpl.kind}')">Placeholders:</button>` +
     [...TOKENS_BY_KIND[tmpl.kind]].sort().map(tok => `<span class="token-chip">{${tok}}</span>`).join('');
 
   card.append(hdr, titleInput, bodyInput, legend);
