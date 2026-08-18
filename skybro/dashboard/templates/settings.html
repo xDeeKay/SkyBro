@@ -527,8 +527,8 @@ const NOTIF_CATEGORIES = ['aircraft', 'satellites'];
 const CATEGORY_KIND = {aircraft: 'aircraft', satellites: 'satellite'};
 const CATEGORY_DEFAULT_TEMPLATE_ID = {aircraft: 'default_aircraft', satellites: 'default_satellite'};
 const TOKENS_BY_KIND = {
-  aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude','distance_km'],
-  satellite: ['sat_name','time','minutes','duration'],
+  aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude','distance_km','icao24','lat','lon','heading','squawk'],
+  satellite: ['sat_name','time','minutes','duration','start_az','max_el','end_az'],
 };
 const NOTIF_DATA = {{ cfg.notifications | tojson }};
 let TEMPLATES = {{ cfg.templates | tojson }};

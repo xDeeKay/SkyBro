@@ -583,7 +583,8 @@ def _sample_placeholders(category, cfg):
     process_states in tracker.py) so a test alert previews the units a real
     alert would actually use."""
     if category != "aircraft":
-        return {"sat_name": "ISS", "time": "20:15", "minutes": "12", "duration": "420"}
+        return {"sat_name": "ISS", "time": "20:15", "minutes": "12", "duration": "420",
+                "start_az": "NW", "max_el": "45°", "end_az": "NE"}
     metric = cfg.get("units_speed", "aviation") == "metric"
     speed          = f"{round(450 * 1.852)} km/h" if metric else "450 kts"
     vertical_speed = f"↑ {round(800 * 0.3048)} m/min" if metric else "↑ 800 fpm"
@@ -593,6 +594,8 @@ def _sample_placeholders(category, cfg):
         "registration": "VH-ABC", "country": "Australia", "direction": "NW",
         "speed": speed, "vertical_speed": vertical_speed, "airframe": "jet",
         "altitude": altitude, "distance_km": "8.4",
+        "icao24": "7c1234", "lat": "-31.9523", "lon": "115.8613",
+        "heading": "270", "squawk": "7000",
     }
 
 @app.route("/api/test-alert/<category>", methods=["POST"])

@@ -732,6 +732,8 @@ def process_states(states):
             'direction': alert['direction'], 'speed': spd_str,
             'vertical_speed': alert['vr_str'], 'airframe': airframe,
             'altitude': alt_str, 'distance_km': alert['dist_km'],
+            'icao24': icao24, 'lat': round(alert['lat'], 4), 'lon': round(alert['lon'], 4),
+            'heading': alert['heading'], 'squawk': alert['squawk'] or "N/A",
         }, photo_url=photo_url)
 
     live_icaos = {s[0] for s in states if s[6] and s[5]}
@@ -907,14 +909,16 @@ def dispatch_satellite_alerts():
     utc_off = json.loads(wr[0]).get("utc_offset_seconds", 0) if wr else 0
     local_tz = timezone(timedelta(seconds=utc_off))
     rows = c.execute(
-        "SELECT pass_time, duration, sat_name FROM iss_alerts "
+        "SELECT pass_time, duration, sat_name, start_az, max_el, end_az FROM iss_alerts "
         "WHERE alerted=0 AND pass_time BETWEEN ? AND ?",
         (now, now + warn)).fetchall()
-    for pass_time, duration, sat_name in rows:
+    for pass_time, duration, sat_name, start_az, max_el, end_az in rows:
         mins = (pass_time - now) // 60
         dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
         notify_category("satellites", {
             'sat_name': sat_name, 'time': dt, 'minutes': str(mins), 'duration': str(duration),
+            'start_az': start_az or "N/A", 'end_az': end_az or "N/A",
+            'max_el': f"{round(max_el)}°" if max_el is not None else "N/A",
         }, notify_type=apprise.NotifyType.WARNING)
         # Scope by sat_name too: pass_time alone can collide across satellite
         # types sharing the same second-resolution timestamp.
