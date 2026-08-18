@@ -121,10 +121,6 @@ select.target-template:focus{border-color:var(--accent)}
 .combo-option.highlighted{background:var(--surface)}
 .combo-option.selected{color:var(--accent);font-weight:600}
 .combo-empty{padding:10px;font-size:12px;color:var(--muted)}
-.target-card details{margin-top:8px}
-.target-card summary{font-size:11px;color:var(--muted);cursor:pointer;user-select:none;padding:4px 0}
-.target-card summary:hover{color:var(--text)}
-.target-card details textarea{margin-top:6px}
 .template-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
 .template-card input,.template-card textarea{margin-top:8px}
 .template-kind-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 6px}
@@ -290,7 +286,7 @@ select.target-template:focus{border-color:var(--accent)}
 
     <div class="subtab-pane active" id="subpane-aircraft">
       <div class="card">
-        <div class="card-title">Filters (optional)</div>
+        <div class="card-title">Global filters</div>
         <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
         <textarea class="mono-textarea" id="filters_aircraft" rows="3" placeholder="-callsign=VIPR.*&#10;country=Australia">{{ cfg.notifications.aircraft.filters }}</textarea>
         <div class="hint">
@@ -305,7 +301,7 @@ select.target-template:focus{border-color:var(--accent)}
 
     <div class="subtab-pane" id="subpane-satellites">
       <div class="card">
-        <div class="card-title">Filters (optional)</div>
+        <div class="card-title">Global filters</div>
         <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.</div>
         <textarea class="mono-textarea" id="filters_satellites" rows="3" placeholder="-sat_name=Starlink">{{ cfg.notifications.satellites.filters }}</textarea>
         <div class="hint">
@@ -811,15 +807,16 @@ function buildTargetCard(category, target) {
   populateTemplateSelect(templateSelect, kind, target.template_id);
   templateGroup.append(templateLabel, templateSelect);
 
-  const filtersDetails = document.createElement('details');
-  const filtersSummary = document.createElement('summary');
-  filtersSummary.textContent = 'Per-target filters (optional)';
+  const filtersGroup = document.createElement('div');
+  filtersGroup.className = 'field-group';
+  const filtersLabel = document.createElement('label');
+  filtersLabel.textContent = 'Target filters';
   const filtersInput = document.createElement('textarea');
   filtersInput.className = 'mono-textarea target-filters';
   filtersInput.rows = 2;
   filtersInput.placeholder = kind === 'aircraft' ? '-callsign=VIPR.*' : '-sat_name=Starlink';
   filtersInput.value = target.filters || '';
-  filtersDetails.append(filtersSummary, filtersInput);
+  filtersGroup.append(filtersLabel, filtersInput);
 
   const testRow = document.createElement('div');
   testRow.style.cssText = 'margin-top:10px;display:flex;align-items:center;gap:10px';
@@ -833,7 +830,7 @@ function buildTargetCard(category, target) {
   testBtn.onclick = () => testTarget(category, card, resultSpan);
   testRow.append(testBtn, resultSpan);
 
-  card.append(hdr, serviceGroup, urlGroup, templateGroup, filtersDetails, testRow);
+  card.append(hdr, serviceGroup, urlGroup, templateGroup, filtersGroup, testRow);
   return card;
 }
 
