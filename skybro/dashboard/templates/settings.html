@@ -95,8 +95,11 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 .token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
 select.target-template{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
-  font-family:inherit;margin-top:8px
+  padding:8px 28px 8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
+  font-family:inherit;margin-top:8px;
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%237b7f9e' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;background-size:10px 6px
 }
 select.target-template:focus{border-color:var(--accent)}
 .combo-wrap{position:relative;margin-top:8px}
@@ -130,12 +133,13 @@ select.target-template:focus{border-color:var(--accent)}
 .template-card.protected input,.template-card.protected textarea{cursor:not-allowed;background:var(--surface)}
 .template-protected-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 /* Tabs */
-.tabs{display:flex;justify-content:center;border-bottom:1px solid var(--border);margin-bottom:24px;overflow-x:auto}
+.tabs{display:flex;justify-content:center;border-bottom:1px solid var(--border);overflow-x:auto}
 .tab{min-width:max-content;padding:8px 10px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;line-height:1;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
 .tab.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab:hover:not(.active){color:var(--text)}
-.tab-pane{display:none}
+.tab-pane{display:none;margin-top:24px}
 .tab-pane.active{display:block}
+#pane-notifications{margin-top:0}
 .subtabs{display:flex;justify-content:center;border-bottom:1px solid var(--border);margin-bottom:18px}
 .subtab{min-width:max-content;padding:8px 10px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;line-height:1;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
 .subtab.active{color:var(--text);border-bottom-color:var(--accent)}
@@ -345,7 +349,7 @@ select.target-template:focus{border-color:var(--accent)}
       <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials.</div>
       <div class="form-row">
         <div><label>Client ID</label><input type="text" id="opensky_client_id" value="{{ cfg.opensky_client_id }}"></div>
-        <div><label>Client Secret</label><input type="password" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}"></div>
+        <div><label>Client Secret</label><input type="password" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other"></div>
       </div>
     </div>
   </div>
@@ -751,6 +755,11 @@ function buildServiceCombobox(select) {
   search.className = 'combo-search';
   search.placeholder = 'Search services…';
   search.autocomplete = 'off';
+  search.setAttribute('data-lpignore', 'true');
+  search.setAttribute('data-1p-ignore', 'true');
+  search.setAttribute('data-bwignore', 'true');
+  search.setAttribute('data-protonpass-ignore', 'true');
+  search.setAttribute('data-form-type', 'other');
   const list = document.createElement('div');
   list.className = 'combo-list';
   list.setAttribute('role', 'listbox');
@@ -919,6 +928,12 @@ function buildTargetCard(category, target) {
   urlInput.className = 'target-url';
   urlInput.placeholder = 'Apprise URL, e.g. discord://webhook_id/webhook_token';
   urlInput.value = target.url || '';
+  urlInput.autocomplete = 'off';
+  urlInput.setAttribute('data-lpignore', 'true');
+  urlInput.setAttribute('data-1p-ignore', 'true');
+  urlInput.setAttribute('data-bwignore', 'true');
+  urlInput.setAttribute('data-protonpass-ignore', 'true');
+  urlInput.setAttribute('data-form-type', 'other');
   urlInput.addEventListener('input', () => { hdrLabel.textContent = schemeLabel(urlInput.value); });
 
   const urlGroup = document.createElement('div');
