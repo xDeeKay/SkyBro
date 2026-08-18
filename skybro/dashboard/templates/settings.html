@@ -91,12 +91,36 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
 .token-legend{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
-select.target-template,select.target-service{
+select.target-template{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
   padding:8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
   font-family:inherit;margin-top:8px
 }
-select.target-template:focus,select.target-service:focus{border-color:var(--accent)}
+select.target-template:focus{border-color:var(--accent)}
+.combo-wrap{position:relative;margin-top:8px}
+.combo-trigger{
+  width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;color:var(--text);font-size:13px;cursor:pointer;transition:border-color .15s;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;box-sizing:border-box
+}
+.combo-trigger-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.combo-trigger .chev{color:var(--muted);font-size:10px;flex-shrink:0}
+.combo-trigger:focus,.combo-trigger.open{outline:none;border-color:var(--accent)}
+.combo-panel{
+  display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:50;
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden
+}
+.combo-panel.open{display:block}
+.combo-search{
+  width:100%;box-sizing:border-box;padding:8px 10px;background:var(--surface);border:none;
+  border-bottom:1px solid var(--border);color:var(--text);font-size:13px;outline:none;font-family:inherit
+}
+.combo-list{max-height:240px;overflow-y:auto}
+.combo-option{padding:7px 10px;font-size:13px;color:var(--text);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.combo-option.highlighted{background:var(--surface)}
+.combo-option.selected{color:var(--accent);font-weight:600}
+.combo-empty{padding:10px;font-size:12px;color:var(--muted)}
 .target-card details{margin-top:8px}
 .target-card summary{font-size:11px;color:var(--muted);cursor:pointer;user-select:none;padding:4px 0}
 .target-card summary:hover{color:var(--text)}
@@ -530,6 +554,138 @@ function schemeLabel(url) {
   return known ? known.name : (scheme.charAt(0).toUpperCase() + scheme.slice(1));
 }
 
+// Custom searchable dropdown standing in for the service <select>'s native
+// popup: Chromium pads the native popup with blank space to keep the
+// selected option aligned near the closed control, growing with how far
+// down the (alphabetical, ~150-entry) list that option sits. Building our
+// own popup sidesteps that entirely and adds search, useful at this length.
+// `select` stays in the DOM (hidden) as the real value/event source, so
+// every other reference to `.target-service` (.value, 'change' listener,
+// querySelector) keeps working unchanged.
+const allComboClosers = [];
+
+function buildServiceCombobox(select) {
+  const wrap = document.createElement('div');
+  wrap.className = 'combo-wrap';
+
+  const trigger = document.createElement('div');
+  trigger.className = 'combo-trigger';
+  trigger.tabIndex = 0;
+  trigger.setAttribute('role', 'combobox');
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  const triggerLabel = document.createElement('span');
+  triggerLabel.className = 'combo-trigger-label';
+  const chev = document.createElement('span');
+  chev.className = 'chev';
+  chev.textContent = '▾';
+  trigger.append(triggerLabel, chev);
+
+  const panel = document.createElement('div');
+  panel.className = 'combo-panel';
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.className = 'combo-search';
+  search.placeholder = 'Search services…';
+  search.autocomplete = 'off';
+  const list = document.createElement('div');
+  list.className = 'combo-list';
+  list.setAttribute('role', 'listbox');
+  panel.append(search, list);
+  wrap.append(trigger, panel);
+
+  const options = [...select.options].map(o => ({value: o.value, label: o.textContent}));
+  let visibleOptions = options;
+  let highlightIndex = -1;
+
+  function syncLabel() {
+    const opt = options.find(o => o.value === select.value);
+    triggerLabel.textContent = opt ? opt.label : 'Custom URL (paste your own)';
+  }
+
+  function updateHighlight() {
+    [...list.children].forEach((el, i) => el.classList.toggle('highlighted', i === highlightIndex));
+    const active = list.children[highlightIndex];
+    if (active) active.scrollIntoView({block: 'nearest'});
+  }
+
+  function chooseOption(o) {
+    select.value = o.value;
+    select.dispatchEvent(new Event('change'));
+    syncLabel();
+    closePanel();
+  }
+
+  function renderList() {
+    const q = search.value.trim().toLowerCase();
+    visibleOptions = q ? options.filter(o => o.label.toLowerCase().includes(q)) : options;
+    list.innerHTML = '';
+    if (!visibleOptions.length) {
+      const empty = document.createElement('div');
+      empty.className = 'combo-empty';
+      empty.textContent = 'No matching services';
+      list.appendChild(empty);
+      highlightIndex = -1;
+      return;
+    }
+    visibleOptions.forEach(o => {
+      const row = document.createElement('div');
+      row.className = 'combo-option' + (o.value === select.value ? ' selected' : '');
+      row.setAttribute('role', 'option');
+      row.textContent = o.label;
+      row.addEventListener('mousedown', e => { e.preventDefault(); chooseOption(o); });
+      list.appendChild(row);
+    });
+    highlightIndex = visibleOptions.findIndex(o => o.value === select.value);
+    updateHighlight();
+  }
+
+  function openPanel() {
+    allComboClosers.forEach(fn => fn());
+    panel.classList.add('open');
+    trigger.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+    search.value = '';
+    renderList();
+    search.focus();
+  }
+  function closePanel() {
+    panel.classList.remove('open');
+    trigger.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+  allComboClosers.push(closePanel);
+
+  trigger.addEventListener('click', () => panel.classList.contains('open') ? closePanel() : openPanel());
+  trigger.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!panel.classList.contains('open')) openPanel(); else search.focus();
+    }
+  });
+  search.addEventListener('input', renderList);
+  search.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlightIndex = Math.min(highlightIndex + 1, visibleOptions.length - 1);
+      updateHighlight();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlightIndex = Math.max(highlightIndex - 1, 0);
+      updateHighlight();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (visibleOptions[highlightIndex]) chooseOption(visibleOptions[highlightIndex]);
+    } else if (e.key === 'Escape') {
+      closePanel();
+      trigger.focus();
+    }
+  });
+  document.addEventListener('click', e => { if (!wrap.contains(e.target)) closePanel(); });
+
+  syncLabel();
+  return wrap;
+}
+
 function buildServiceFields(container, schema, urlInput, hdrLabel) {
   container.innerHTML = '';
   if (!schema) return;
@@ -613,6 +769,7 @@ function buildTargetCard(category, target) {
   serviceLabel.textContent = 'Notification service';
   const serviceSelect = document.createElement('select');
   serviceSelect.className = 'target-service';
+  serviceSelect.style.display = 'none';
   const customOpt = document.createElement('option');
   customOpt.value = '';
   customOpt.textContent = 'Custom URL (paste your own)';
@@ -641,7 +798,8 @@ function buildTargetCard(category, target) {
     serviceHint.style.display = schema ? '' : 'none';
     buildServiceFields(fieldsContainer, schema, urlInput, hdrLabel);
   });
-  serviceGroup.append(serviceLabel, serviceSelect, serviceHint, fieldsContainer);
+  const serviceCombo = buildServiceCombobox(serviceSelect);
+  serviceGroup.append(serviceLabel, serviceCombo, serviceSelect, serviceHint, fieldsContainer);
 
   const templateGroup = document.createElement('div');
   templateGroup.className = 'field-group';
