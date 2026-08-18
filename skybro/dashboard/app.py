@@ -94,6 +94,7 @@ def _build_apprise_schemas():
                 "key": key,
                 "label": str(meta.get("name") or key.replace("_", " ").title()),
                 "private": bool(meta.get("private")),
+                "required": bool(meta.get("required")),
             })
         out.append({
             "scheme": scheme_opts[0],

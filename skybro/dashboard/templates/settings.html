@@ -548,10 +548,13 @@ function buildServiceFields(container, schema, urlInput, hdrLabel) {
     const wrap = document.createElement('div');
     wrap.className = 'field-group';
     const lbl = document.createElement('label');
-    lbl.textContent = f.label;
+    lbl.textContent = f.required ? `${f.label} *` : f.label;
     const inp = document.createElement('input');
     inp.type = f.private ? 'password' : 'text';
     inp.autocomplete = 'off';
+    inp.dataset.key = f.key;
+    inp.dataset.required = f.required ? '1' : '';
+    inp.dataset.fieldLabel = f.label;
     inp.addEventListener('input', () => { values[f.key] = inp.value; updateBuiltUrl(); });
     wrap.append(lbl, inp);
     container.appendChild(wrap);
@@ -722,6 +725,15 @@ function collectTargets(category) {
 }
 
 async function testTarget(category, card, resultEl) {
+  const select = card.querySelector('.target-service');
+  if (APPRISE_SCHEMA_BY_SCHEME[select.value]) {
+    const missing = [...card.querySelectorAll('input[data-required="1"]')].find(inp => !inp.value.trim());
+    if (missing) {
+      showToast(`⚠ ${missing.dataset.fieldLabel} is required for this notification service`, 'error');
+      missing.focus();
+      return;
+    }
+  }
   resultEl.textContent = 'Sending…';
   const payload = {
     url: card.querySelector('.target-url').value.trim(),
@@ -849,7 +861,29 @@ function collectTemplates() {
   }));
 }
 
+function findIncompleteServiceTarget() {
+  for (const cat of NOTIF_CATEGORIES) {
+    for (const card of document.querySelectorAll(`#targets_${cat} .target-card`)) {
+      const select = card.querySelector('.target-service');
+      if (!APPRISE_SCHEMA_BY_SCHEME[select.value]) continue; // Custom URL, nothing to check
+      const empty = [...card.querySelectorAll('input[data-required="1"]')].find(inp => !inp.value.trim());
+      if (empty) return {cat, card, input: empty};
+    }
+  }
+  return null;
+}
+
 async function save() {
+  const incomplete = findIncompleteServiceTarget();
+  if (incomplete) {
+    showToast(`❌ ${incomplete.input.dataset.fieldLabel} is required for this notification service`, 'error');
+    showTab('notifications');
+    showSubtab(incomplete.cat);
+    incomplete.card.scrollIntoView({behavior: 'smooth', block: 'center'});
+    incomplete.input.focus();
+    return;
+  }
+
   const payload = {};
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
    'iss_check_hours','iss_warn_mins','opensky_client_id','opensky_client_secret','n2yo_api_key',
