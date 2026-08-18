@@ -91,7 +91,7 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
   line-height:1;padding:0
 }
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
-.token-legend{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.token-legend{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-top:6px}
 .token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
 select.target-template{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
@@ -325,17 +325,11 @@ select.target-template:focus{border-color:var(--accent)}
     </div>
 
     <div class="subtab-pane" id="subpane-templates">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <div class="section-label" style="margin-top:0">✈️ Aircraft templates</div>
-        <button type="button" class="help-link" style="margin-left:0" onclick="openTokenHelp('aircraft')">What do these placeholders grab?</button>
-      </div>
+      <div class="section-label" style="margin-top:0">✈️ Aircraft templates</div>
       <div class="target-list" id="template-list-aircraft"></div>
       <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add aircraft template</button>
 
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <div class="section-label">🛰️ Satellite templates</div>
-        <button type="button" class="help-link" style="margin-left:0" onclick="openTokenHelp('satellite')">What do these placeholders grab?</button>
-      </div>
+      <div class="section-label">🛰️ Satellite templates</div>
       <div class="target-list" id="template-list-satellite"></div>
       <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add satellite template</button>
     </div>
@@ -417,16 +411,13 @@ select.target-template:focus{border-color:var(--accent)}
 </div>
 
 <!-- Help modal (filter syntax / template placeholders) -->
-<div class="modal-backdrop" id="help-modal">
-  <div class="modal" style="width:min(560px,94vw)">
+<div class="modal-backdrop" id="help-modal" onclick="closeHelpModal()">
+  <div class="modal" style="width:min(560px,94vw)" onclick="event.stopPropagation()">
     <div class="modal-hdr">
       <div class="modal-hdr-title" id="help-modal-title"></div>
       <button class="modal-close" onclick="closeHelpModal()">✕</button>
     </div>
     <div class="modal-body" id="help-modal-body"></div>
-    <div class="modal-ftr" style="justify-content:flex-end">
-      <button class="btn btn-primary" onclick="closeHelpModal()">Got it</button>
-    </div>
   </div>
 </div>
 
@@ -667,7 +658,7 @@ const TOKEN_HELP = {
 };
 
 function helpRows(rows) {
-  return rows.map(r => `<div class="help-row"><code>${r[0]}</code><span>${r[1]}${r[2] !== undefined ? ` &mdash; e.g. <span class="help-example">${r[2]}</span>` : ''}</span></div>`).join('');
+  return rows.map(r => `<div class="help-row"><code>${r[0]}</code><span>${r[1]}${r[2] !== undefined ? ` (e.g. <span class="help-example">${r[2]}</span>)` : ''}</span></div>`).join('');
 }
 
 function openHelpModal(title, bodyHtml) {
@@ -1168,9 +1159,10 @@ function buildTemplateCard(tmpl) {
   bodyInput.disabled = protectedTmpl;
 
   const legend = document.createElement('div');
-  legend.className = 'hint';
-  legend.innerHTML = 'Placeholders: <div class="token-legend">' +
-    TOKENS_BY_KIND[tmpl.kind].map(tok => `<span class="token-chip">{${tok}}</span>`).join('') + '</div>';
+  legend.className = 'hint token-legend';
+  legend.innerHTML = 'Placeholders:' +
+    `<button type="button" class="help-link" onclick="openTokenHelp('${tmpl.kind}')">What do these grab?</button>` +
+    [...TOKENS_BY_KIND[tmpl.kind]].sort().map(tok => `<span class="token-chip">{${tok}}</span>`).join('');
 
   card.append(hdr, titleInput, bodyInput, legend);
   return card;
