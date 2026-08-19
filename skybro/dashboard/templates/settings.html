@@ -72,7 +72,7 @@ select.inline-select:focus{border-color:var(--accent)}
 .notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 textarea.mono-textarea{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:8px 10px;color:var(--text);font-size:12px;outline:none;resize:vertical;
+  padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.5;transition:border-color .15s
 }
 textarea.mono-textarea:focus{border-color:var(--accent)}
@@ -839,6 +839,7 @@ function buildServiceCombobox(select) {
     trigger.setAttribute('aria-expanded', 'true');
     search.value = '';
     renderList();
+    if (highlightIndex > 0) list.children[highlightIndex].scrollIntoView({block: 'start'});
     search.focus();
   }
   function closePanel() {
