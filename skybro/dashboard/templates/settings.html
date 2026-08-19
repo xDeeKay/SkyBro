@@ -132,6 +132,20 @@ select.target-template:focus{border-color:var(--accent)}
 .template-card.protected{opacity:.6}
 .template-card.protected input,.template-card.protected textarea{cursor:not-allowed;background:var(--surface)}
 .template-protected-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.masked-wrap{position:relative}
+.masked-wrap input.masked-input{padding-right:34px}
+.masked-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;pointer-events:none;
+  padding:8px 34px 8px 10px;border-radius:6px;background:var(--surface2);
+  color:var(--text);font-size:13px;overflow:hidden;white-space:nowrap;letter-spacing:2px;font-family:inherit
+}
+.masked-toggle{
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;
+  width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;transition:.15s
+}
+.masked-toggle:hover{color:var(--text);background:var(--surface)}
+.masked-toggle.active{color:var(--accent)}
 /* Tabs */
 .tabs{display:flex;justify-content:center;border-bottom:1px solid var(--border);overflow-x:auto}
 .tab{min-width:max-content;padding:8px 10px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:500;line-height:1;border-bottom:2px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
@@ -349,7 +363,7 @@ select.target-template:focus{border-color:var(--accent)}
       <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials.</div>
       <div class="form-row">
         <div><label>Client ID</label><input type="text" id="opensky_client_id" value="{{ cfg.opensky_client_id }}"></div>
-        <div><label>Client Secret</label><input type="password" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other"></div>
+        <div><label>Client Secret</label><input type="text" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other"></div>
       </div>
     </div>
   </div>
@@ -506,6 +520,7 @@ _tickClock();
 fetchLocationName();
 refreshHeader();
 setInterval(refreshHeader, 15000);
+attachMaskedReveal(document.getElementById('opensky_client_secret'));
 
 function getVal(id) {
   const el = document.getElementById(id);
@@ -859,6 +874,39 @@ function buildServiceCombobox(select) {
   return wrap;
 }
 
+function attachMaskedReveal(input) {
+  const parent = input.parentNode;
+  const next = input.nextSibling;
+  const wrap = document.createElement('div');
+  wrap.className = 'masked-wrap';
+  input.classList.add('masked-input');
+  wrap.appendChild(input);
+  if (parent) parent.insertBefore(wrap, next);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'masked-overlay';
+  overlay.addEventListener('click', () => input.focus());
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'masked-toggle';
+  toggle.textContent = '👁';
+  toggle.title = 'Show/hide value';
+  wrap.append(overlay, toggle);
+
+  let revealed = false;
+  function render() {
+    overlay.textContent = input.value ? '•'.repeat(Math.min(input.value.length, 48)) : '';
+    overlay.style.display = (!revealed && document.activeElement !== input) ? 'flex' : 'none';
+  }
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  input.addEventListener('blur', render);
+  toggle.addEventListener('click', () => { revealed = !revealed; toggle.classList.toggle('active', revealed); render(); });
+
+  render();
+  return wrap;
+}
+
 function buildServiceFields(container, schema, urlInput, hdrLabel) {
   container.innerHTML = '';
   if (!schema) return;
@@ -879,13 +927,22 @@ function buildServiceFields(container, schema, urlInput, hdrLabel) {
     const lbl = document.createElement('label');
     lbl.textContent = f.required ? `${f.label} *` : f.label;
     const inp = document.createElement('input');
-    inp.type = f.private ? 'password' : 'text';
+    inp.type = 'text';
     inp.autocomplete = 'off';
     inp.dataset.key = f.key;
     inp.dataset.required = f.required ? '1' : '';
     inp.dataset.fieldLabel = f.label;
     inp.addEventListener('input', () => { values[f.key] = inp.value; updateBuiltUrl(); });
-    wrap.append(lbl, inp);
+    if (f.private) {
+      inp.setAttribute('data-lpignore', 'true');
+      inp.setAttribute('data-1p-ignore', 'true');
+      inp.setAttribute('data-bwignore', 'true');
+      inp.setAttribute('data-protonpass-ignore', 'true');
+      inp.setAttribute('data-form-type', 'other');
+      wrap.append(lbl, attachMaskedReveal(inp));
+    } else {
+      wrap.append(lbl, inp);
+    }
     container.appendChild(wrap);
   });
   updateBuiltUrl();
@@ -924,7 +981,7 @@ function buildTargetCard(category, target) {
   hdr.append(hdrLabel, hdrActions);
 
   const urlInput = document.createElement('input');
-  urlInput.type = 'password';
+  urlInput.type = 'text';
   urlInput.className = 'target-url';
   urlInput.placeholder = 'Apprise URL, e.g. discord://webhook_id/webhook_token';
   urlInput.value = target.url || '';
@@ -940,7 +997,7 @@ function buildTargetCard(category, target) {
   urlGroup.className = 'field-group';
   const urlLabel = document.createElement('label');
   urlLabel.textContent = 'Apprise URL';
-  urlGroup.append(urlLabel, urlInput);
+  urlGroup.append(urlLabel, attachMaskedReveal(urlInput));
 
   const serviceGroup = document.createElement('div');
   serviceGroup.className = 'field-group';
