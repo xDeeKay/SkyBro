@@ -109,7 +109,11 @@ select.target-template:focus{border-color:var(--accent)}
   display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;box-sizing:border-box
 }
 .combo-trigger-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.combo-trigger .chev{color:var(--muted);font-size:10px;flex-shrink:0}
+.combo-trigger .chev{
+  width:10px;height:6px;flex-shrink:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%237b7f9e' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-size:10px 6px
+}
 .combo-trigger:focus,.combo-trigger.open{outline:none;border-color:var(--accent)}
 .combo-panel{
   display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:50;
@@ -762,7 +766,6 @@ function buildServiceCombobox(select) {
   triggerLabel.className = 'combo-trigger-label';
   const chev = document.createElement('span');
   chev.className = 'chev';
-  chev.textContent = '▾';
   trigger.append(triggerLabel, chev);
 
   const panel = document.createElement('div');
