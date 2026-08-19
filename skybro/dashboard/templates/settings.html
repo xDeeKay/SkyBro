@@ -137,9 +137,13 @@ select.target-template:focus{border-color:var(--accent)}
 .template-card.protected input,.template-card.protected textarea{cursor:not-allowed;background:var(--surface)}
 .template-protected-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .masked-wrap{position:relative}
-.masked-wrap input.masked-input{padding-right:34px}
+.masked-wrap input.masked-input{
+  position:relative;z-index:1;padding-right:34px;background:transparent;border-color:transparent;
+  caret-color:var(--text)
+}
+.masked-wrap input.masked-input:focus{border-color:transparent}
 .masked-overlay{
-  position:absolute;inset:0;display:flex;align-items:center;pointer-events:none;
+  position:absolute;inset:0;z-index:0;display:flex;align-items:center;pointer-events:none;
   padding:8px 34px 8px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
   color:var(--text);font-size:13px;overflow:hidden;white-space:nowrap;letter-spacing:2px;font-family:inherit;
   transition:border-color .15s
@@ -901,11 +905,12 @@ function attachMaskedReveal(input) {
 
   let revealed = false;
   function render() {
-    overlay.textContent = input.value ? '•'.repeat(Math.min(input.value.length, 48)) : '';
-    overlay.style.display = revealed ? 'none' : 'flex';
+    overlay.textContent = revealed ? '' : (input.value ? '•'.repeat(Math.min(input.value.length, 48)) : '');
+    input.style.color = revealed ? 'var(--text)' : 'transparent';
   }
   input.addEventListener('input', render);
-  toggle.addEventListener('click', () => { revealed = !revealed; toggle.classList.toggle('active', revealed); render(); });
+  input.addEventListener('focus', () => input.select());
+  toggle.addEventListener('click', () => { revealed = !revealed; toggle.classList.toggle('active', revealed); render(); input.focus(); });
 
   render();
   return wrap;
