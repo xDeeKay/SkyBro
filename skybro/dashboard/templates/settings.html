@@ -142,6 +142,8 @@ select.target-template:focus{border-color:var(--accent)}
   caret-color:var(--text)
 }
 .masked-wrap input.masked-input:focus{border-color:transparent}
+.masked-wrap:not(.revealed) input.masked-input::selection{color:transparent;background:rgba(79,124,255,.35)}
+.masked-wrap:not(.revealed) input.masked-input::-moz-selection{color:transparent;background:rgba(79,124,255,.35)}
 .masked-overlay{
   position:absolute;inset:0;z-index:0;display:flex;align-items:center;pointer-events:none;
   padding:8px 34px 8px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
@@ -150,7 +152,7 @@ select.target-template:focus{border-color:var(--accent)}
 }
 .masked-wrap:focus-within .masked-overlay{border-color:var(--accent)}
 .masked-toggle{
-  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2;
   background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;
   width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;transition:.15s
 }
@@ -905,8 +907,9 @@ function attachMaskedReveal(input) {
 
   let revealed = false;
   function render() {
-    overlay.textContent = revealed ? '' : (input.value ? '•'.repeat(Math.min(input.value.length, 48)) : '');
+    overlay.textContent = revealed ? '' : '•'.repeat(input.value.length);
     input.style.color = revealed ? 'var(--text)' : 'transparent';
+    wrap.classList.toggle('revealed', revealed);
   }
   input.addEventListener('input', render);
   input.addEventListener('focus', () => input.select());
