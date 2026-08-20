@@ -696,16 +696,23 @@ const FILTER_HELP = {
       ['speed', 'Ground speed in knots (range only)'],
       ['vertical_speed', 'Climb/descent rate in feet/min, negative when descending (range only)'],
     ],
-    examples: [
-      ['country=Australia', 'Only alert for Australian-registered aircraft'],
-      ['-callsign=VIPR', 'Exclude anything with a callsign containing VIPR'],
-      ['airframe=heli', 'Only helicopters'],
-      ['model=A320|B738', 'Only Airbus A320s or Boeing 737-800s'],
-      ['-registration=VH-ABC', 'Exclude one specific tail number'],
-      ['-squawk=7500|7600|7700', 'Exclude hijack/radio-failure/emergency codes'],
+    ranges: [
       ['altitude&lt;5000', 'Only below 5,000 ft'],
       ['distance_km&lt;10', 'Only within 10 km (combine with an altitude rule for a tighter window)'],
       ['lat&lt;-30', 'Only south of -30° latitude'],
+    ],
+    regex: [
+      ['VIPR', 'Literal text: matches anything containing VIPR'],
+      ['VIPR.0', '. (any character): matches VIPR10, VIPRA0, VIPR-0, anything with one character between VIPR and 0'],
+      ['VIPR2*0', '* (zero or more of the preceding): matches VIPR0, VIPR20, VIPR220, VIPR2220...'],
+      ['VIPR2+0', '+ (one or more of the preceding): matches VIPR20, VIPR220, VIPR2220... but not VIPR0'],
+      ['VIPR2?0', '? (optional, zero or one): matches VIPR0 or VIPR20'],
+      ['A320|B738', '| (OR): matches A320 or B738'],
+      ['(VIPR|COBRA)\\d+', '() (grouping): matches VIPR or COBRA followed by one or more digits, e.g. VIPR20, COBRA07'],
+      ['QF[0-9]+', '[...] (character class): matches QF followed by one or more digits, e.g. QF123'],
+      ['QF\\d{3,4}', '{n,m} (repeat count): matches QF followed by 3 to 4 digits'],
+      ['7\\d{3}', '\\d, \\w, \\s (shorthand classes): \\d is a digit, so this matches a 4-digit code starting with 7, e.g. squawk 7500'],
+      ['^VIPR20$', '^ and $ (anchors): matches only the exact value VIPR20, not VIPR200 or VIPR21'],
     ],
   },
   satellites: {
@@ -714,7 +721,7 @@ const FILTER_HELP = {
     fields: [
       ['sat_name', 'Which satellite/pass this is'],
     ],
-    examples: [
+    regex: [
       ['sat_name=ISS', 'Only ISS passes'],
       ['-sat_name=Starlink', 'Exclude Starlink trains'],
       ['sat_name=ISS|Hubble', 'Only ISS or Hubble passes'],
@@ -786,9 +793,13 @@ function closeHelpModal() {
 
 function openFilterHelp(category) {
   const info = FILTER_HELP[category];
-  openHelpModal(info.title, `<p>${info.intro}</p>` +
-    `<div class="help-section-title">Fields</div>${twoColTable('Field', 'Meaning', info.fields)}` +
-    `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples)}`);
+  let html = `<p>${info.intro}</p>` +
+    `<div class="help-section-title">Fields</div>${twoColTable('Field', 'Meaning', info.fields)}`;
+  if (info.ranges) {
+    html += `<div class="help-section-title">Range syntax</div>${twoColTable('Rule', 'Effect', info.ranges)}`;
+  }
+  html += `<div class="help-section-title">Regex syntax</div>${twoColTable('Pattern', 'Matches', info.regex)}`;
+  openHelpModal(info.title, html);
 }
 
 function openTokenHelp(kind) {
