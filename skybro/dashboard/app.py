@@ -220,19 +220,24 @@ def index():
                            first_run=first_run)
 
 SETTINGS_TABS = {"location", "display", "polling", "notifications", "opensky", "n2yo", "danger"}
-NOTIF_SUBTABS = {"aircraft", "satellites", "templates"}
+NOTIF_SUBTABS = {"aircraft", "satellites"}
+NOTIF_INNER_TABS = {"targets", "templates"}
 
 @app.route("/settings")
 @app.route("/settings/<tab>")
 @app.route("/settings/<tab>/<subtab>")
-def settings(tab=None, subtab=None):
+@app.route("/settings/<tab>/<subtab>/<inner>")
+def settings(tab=None, subtab=None, inner=None):
     if tab is not None and tab not in SETTINGS_TABS:
         abort(404)
     if subtab is not None and (tab != "notifications" or subtab not in NOTIF_SUBTABS):
         abort(404)
+    if inner is not None and (tab != "notifications" or inner not in NOTIF_INNER_TABS):
+        abort(404)
     return render_template("settings.html", cfg=read_config(), apprise_schemas=APPRISE_SCHEMAS,
                            initial_tab=tab or "location",
-                           initial_subtab=subtab or "aircraft")
+                           initial_subtab=subtab or "aircraft",
+                           initial_inner=inner or "targets")
 
 # ── REST API ──────────────────────────────────────────────────────────────────
 @app.route("/api/live")

@@ -68,7 +68,6 @@ input:checked+.slider:before{transform:translateX(18px)}
 .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
 select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
 select.inline-select:focus{border-color:var(--accent)}
-.section-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin:28px 2px 10px}
 .notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 textarea.mono-textarea{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
@@ -174,6 +173,9 @@ select.target-template:focus{border-color:var(--accent)}
 .subtab:hover:not(.active){color:var(--text)}
 .subtab-pane{display:none}
 .subtab-pane.active{display:block}
+.inner-subtabs{margin-bottom:16px}
+.inner-pane{display:none}
+.inner-pane.active{display:block}
 /* Map modal */
 .modal-backdrop{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
 .modal-backdrop.open{display:flex}
@@ -325,7 +327,6 @@ select.target-template:focus{border-color:var(--accent)}
     <div class="subtabs" id="notif-subtabs">
       <div class="subtab active" data-subtab="aircraft">✈️ Aircraft</div>
       <div class="subtab" data-subtab="satellites">🛰️ Satellites</div>
-      <div class="subtab" data-subtab="templates">📝 Templates</div>
     </div>
 
     <div class="card-desc" style="margin:0 0 16px">
@@ -334,39 +335,53 @@ select.target-template:focus{border-color:var(--accent)}
     </div>
 
     <div class="subtab-pane active" id="subpane-aircraft">
-      <div class="card">
-        <div class="card-title">Global filters</div>
-        <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.
-          <button type="button" class="help-link" onclick="openFilterHelp('aircraft')">Filter syntax &amp; fields</button>
-        </div>
-        <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
+      <div class="subtabs inner-subtabs">
+        <div class="subtab active" data-inner="targets">Targets</div>
+        <div class="subtab" data-inner="templates">Templates</div>
       </div>
 
-      <div class="target-list" id="targets_aircraft"></div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
+      <div class="inner-pane active" id="inner-aircraft-targets">
+        <div class="card">
+          <div class="card-title">Global filters</div>
+          <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.
+            <button type="button" class="help-link" onclick="openFilterHelp('aircraft')">Filter syntax &amp; fields</button>
+          </div>
+          <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
+        </div>
+
+        <div class="target-list" id="targets_aircraft"></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
+      </div>
+
+      <div class="inner-pane" id="inner-aircraft-templates">
+        <div class="target-list" id="template-list-aircraft"></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add template</button>
+      </div>
     </div>
 
     <div class="subtab-pane" id="subpane-satellites">
-      <div class="card">
-        <div class="card-title">Global filters</div>
-        <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.
-          <button type="button" class="help-link" onclick="openFilterHelp('satellites')">Filter syntax &amp; fields</button>
-        </div>
-        <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
+      <div class="subtabs inner-subtabs">
+        <div class="subtab active" data-inner="targets">Targets</div>
+        <div class="subtab" data-inner="templates">Templates</div>
       </div>
 
-      <div class="target-list" id="targets_satellites"></div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
-    </div>
+      <div class="inner-pane active" id="inner-satellites-targets">
+        <div class="card">
+          <div class="card-title">Global filters</div>
+          <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.
+            <button type="button" class="help-link" onclick="openFilterHelp('satellites')">Filter syntax &amp; fields</button>
+          </div>
+          <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
+        </div>
 
-    <div class="subtab-pane" id="subpane-templates">
-      <div class="section-label" style="margin-top:0">✈️ Aircraft templates</div>
-      <div class="target-list" id="template-list-aircraft"></div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add aircraft template</button>
+        <div class="target-list" id="targets_satellites"></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
+      </div>
 
-      <div class="section-label">🛰️ Satellite templates</div>
-      <div class="target-list" id="template-list-satellite"></div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add satellite template</button>
+      <div class="inner-pane" id="inner-satellites-templates">
+        <div class="target-list" id="template-list-satellite"></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add template</button>
+      </div>
     </div>
   </div>
 
@@ -565,14 +580,17 @@ const FIELD_TAB = {
 };
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
-// URL stays in sync with the active tab/subtab (/settings/notifications/templates,
-// etc.) so a tab is bookmarkable/shareable; back/forward is handled via popstate.
+// URL stays in sync with the active tab/subtab/inner (/settings/notifications/
+// aircraft/templates, etc.) so a tab is bookmarkable/shareable; back/forward
+// is handled via popstate.
 const INITIAL_TAB = {{ initial_tab | tojson }};
 const INITIAL_SUBTAB = {{ initial_subtab | tojson }};
+const INITIAL_INNER = {{ initial_inner | tojson }};
 let _currentSubtab = INITIAL_SUBTAB;
+let _currentInner = INITIAL_INNER;
 
-function pathForTab(tabId, subtabId) {
-  if (tabId === 'notifications') return `/settings/notifications/${subtabId || 'aircraft'}`;
+function pathForTab(tabId, subtabId, innerId) {
+  if (tabId === 'notifications') return `/settings/notifications/${subtabId || 'aircraft'}/${innerId || 'targets'}`;
   if (tabId === 'location') return '/settings';
   return `/settings/${tabId}`;
 }
@@ -589,8 +607,8 @@ function showTab(tabId, push=true) {
   document.querySelectorAll('#settings-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tabId}`));
   if (push) {
-    _syncUrl(false, {tab: tabId, subtab: tabId === 'notifications' ? _currentSubtab : null},
-      pathForTab(tabId, _currentSubtab));
+    _syncUrl(false, {tab: tabId, subtab: tabId === 'notifications' ? _currentSubtab : null, inner: tabId === 'notifications' ? _currentInner : null},
+      pathForTab(tabId, _currentSubtab, _currentInner));
   }
 }
 document.querySelectorAll('#settings-tabs .tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
@@ -599,20 +617,36 @@ function showSubtab(id, push=true) {
   document.querySelectorAll('#notif-subtabs .subtab').forEach(t => t.classList.toggle('active', t.dataset.subtab === id));
   document.querySelectorAll('.subtab-pane').forEach(p => p.classList.toggle('active', p.id === `subpane-${id}`));
   _currentSubtab = id;
-  if (push) _syncUrl(false, {tab: 'notifications', subtab: id}, pathForTab('notifications', id));
+  showInner(_currentInner, false, id);
+  if (push) _syncUrl(false, {tab: 'notifications', subtab: id, inner: _currentInner}, pathForTab('notifications', id, _currentInner));
 }
 document.querySelectorAll('#notif-subtabs .subtab').forEach(t => t.addEventListener('click', () => showSubtab(t.dataset.subtab)));
 
+function showInner(id, push=true, category=_currentSubtab) {
+  const scope = document.getElementById(`subpane-${category}`);
+  if (!scope) return;
+  scope.querySelectorAll('.inner-subtabs .subtab').forEach(t => t.classList.toggle('active', t.dataset.inner === id));
+  scope.querySelectorAll('.inner-pane').forEach(p => p.classList.toggle('active', p.id === `inner-${category}-${id}`));
+  _currentInner = id;
+  if (push) _syncUrl(false, {tab: 'notifications', subtab: category, inner: id}, pathForTab('notifications', category, id));
+}
+document.querySelectorAll('.inner-subtabs .subtab').forEach(t => t.addEventListener('click', function() {
+  showInner(this.dataset.inner, true, this.closest('.subtab-pane').id.replace('subpane-', ''));
+}));
+
 window.addEventListener('popstate', e => {
-  const st = e.state || {tab: 'location', subtab: null};
+  const st = e.state || {tab: 'location', subtab: null, inner: null};
   showTab(st.tab || 'location', false);
-  if ((st.tab || 'location') === 'notifications') showSubtab(st.subtab || 'aircraft', false);
+  if ((st.tab || 'location') === 'notifications') {
+    _currentInner = st.inner || 'targets';
+    showSubtab(st.subtab || 'aircraft', false);
+  }
 });
 
 showTab(INITIAL_TAB, false);
 if (INITIAL_TAB === 'notifications') showSubtab(INITIAL_SUBTAB, false);
-_syncUrl(true, {tab: INITIAL_TAB, subtab: INITIAL_TAB === 'notifications' ? INITIAL_SUBTAB : null},
-  pathForTab(INITIAL_TAB, INITIAL_SUBTAB));
+_syncUrl(true, {tab: INITIAL_TAB, subtab: INITIAL_TAB === 'notifications' ? INITIAL_SUBTAB : null, inner: INITIAL_TAB === 'notifications' ? INITIAL_INNER : null},
+  pathForTab(INITIAL_TAB, INITIAL_SUBTAB, INITIAL_INNER));
 
 // ── Notifications ────────────────────────────────────────────────────────────
 const NOTIF_CATEGORIES = ['aircraft', 'satellites'];
@@ -1129,9 +1163,11 @@ function populateTemplateSelect(select, kind, selectedId) {
 function createTemplateFromTarget(kind, select) {
   const tmpl = addTemplate(kind);
   select.value = tmpl.id;
+  const category = kind === 'aircraft' ? 'aircraft' : 'satellites';
   showTab('notifications');
-  showSubtab('templates');
-  const card = document.querySelector(`#subpane-templates .template-card[data-id="${tmpl.id}"]`);
+  showSubtab(category);
+  showInner('templates', true, category);
+  const card = document.querySelector(`#subpane-${category} .template-card[data-id="${tmpl.id}"]`);
   if (card) {
     card.scrollIntoView({behavior: 'smooth', block: 'center'});
     const nameInput = card.querySelector('.template-name');
@@ -1321,7 +1357,7 @@ function addTemplate(kind) {
 }
 
 function collectTemplates() {
-  return Array.from(document.querySelectorAll('#subpane-templates .template-card')).map(card => ({
+  return Array.from(document.querySelectorAll('.template-card')).map(card => ({
     id: card.dataset.id,
     kind: card.dataset.kind,
     name: card.querySelector('.template-name').value,
@@ -1348,6 +1384,7 @@ async function save() {
     showToast(`❌ ${incomplete.input.dataset.fieldLabel} is required for this notification service`, 'error');
     showTab('notifications');
     showSubtab(incomplete.cat);
+    showInner('targets', true, incomplete.cat);
     incomplete.card.scrollIntoView({behavior: 'smooth', block: 'center'});
     incomplete.input.focus();
     return;
