@@ -743,6 +743,14 @@ const APPRISE_SCHEMA_BY_SCHEME = Object.fromEntries(APPRISE_SCHEMAS.map(s => [s.
 // opaque credential strings which are safe, and safer, to encode.
 const APPRISE_STRUCTURAL_FIELDS = new Set(['host', 'port', 'path', 'schema']);
 
+// Single source of truth for "does this URL's scheme match a known Apprise
+// service", shared by the card title and the service dropdown so they can
+// never drift apart as the user edits the URL by hand.
+function matchedScheme(url) {
+  const m = /^([a-z0-9]+):\/\//i.exec((url || '').trim());
+  return m && APPRISE_SCHEMA_BY_SCHEME[m[1].toLowerCase()] ? m[1].toLowerCase() : null;
+}
+
 function schemeLabel(url) {
   const m = /^([a-z0-9]+):\/\//i.exec((url || '').trim());
   if (!m) return 'New target';
@@ -1004,7 +1012,13 @@ function buildTargetCard(category, target) {
   urlInput.setAttribute('data-bwignore', 'true');
   urlInput.setAttribute('data-protonpass-ignore', 'true');
   urlInput.setAttribute('data-form-type', 'other');
-  urlInput.addEventListener('input', () => { hdrLabel.textContent = schemeLabel(urlInput.value); });
+  urlInput.addEventListener('input', () => {
+    hdrLabel.textContent = schemeLabel(urlInput.value);
+    // Reflect the scheme in the dropdown too (or fall back to Custom URL),
+    // without dispatching 'change': that would swap in builder-mode fields
+    // and blank out the URL box the user is actively typing into.
+    serviceSelect.value = matchedScheme(urlInput.value) || '';
+  });
 
   const urlGroup = document.createElement('div');
   urlGroup.className = 'field-group';
@@ -1032,10 +1046,7 @@ function buildTargetCard(category, target) {
   // Reflect which service a saved target already is (by its URL's scheme),
   // without switching into builder mode for it: that would blank out the
   // URL box in favor of empty fields, destroying a working saved target.
-  const existingScheme = /^([a-z0-9]+):\/\//i.exec((target.url || '').trim());
-  if (existingScheme && APPRISE_SCHEMA_BY_SCHEME[existingScheme[1].toLowerCase()]) {
-    serviceSelect.value = existingScheme[1].toLowerCase();
-  }
+  serviceSelect.value = matchedScheme(target.url) || '';
   const serviceHint = document.createElement('div');
   serviceHint.className = 'hint';
   serviceHint.textContent = 'Builds the simplest working URL for the picked service. Switch back to Custom URL for options like host/port or extra targets.';
