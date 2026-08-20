@@ -893,6 +893,7 @@ function buildServiceCombobox(select) {
   document.addEventListener('click', e => { if (!wrap.contains(e.target)) closePanel(); });
 
   syncLabel();
+  wrap.syncLabel = syncLabel;
   return wrap;
 }
 
@@ -1016,8 +1017,11 @@ function buildTargetCard(category, target) {
     hdrLabel.textContent = schemeLabel(urlInput.value);
     // Reflect the scheme in the dropdown too (or fall back to Custom URL),
     // without dispatching 'change': that would swap in builder-mode fields
-    // and blank out the URL box the user is actively typing into.
+    // and blank out the URL box the user is actively typing into. The combo
+    // trigger's own label is a separate span, not the native select itself,
+    // so it needs an explicit resync on top of the value assignment.
     serviceSelect.value = matchedScheme(urlInput.value) || '';
+    serviceCombo.syncLabel();
   });
 
   const urlGroup = document.createElement('div');
