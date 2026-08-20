@@ -62,9 +62,11 @@ input:checked+.slider:before{transform:translateX(18px)}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
 .btn-sm{padding:6px 12px;font-size:12px}
-.toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:10010}
-.toast.success{background:var(--green);color:#000;opacity:1}
-.toast.error{background:var(--red);color:#fff;opacity:1}
+.toast{position:fixed;bottom:24px;right:24px;padding:10px 14px 10px 18px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:10010;display:flex;align-items:center;gap:10px}
+.toast.success{background:var(--green);color:#000;opacity:1;pointer-events:auto}
+.toast.error{background:var(--red);color:#fff;opacity:1;pointer-events:auto}
+.toast-close{background:none;border:none;color:inherit;opacity:.7;cursor:pointer;font-size:15px;line-height:1;padding:0;flex-shrink:0}
+.toast-close:hover{opacity:1}
 .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
 select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
 select.inline-select:focus{border-color:var(--accent)}
@@ -480,7 +482,7 @@ select.target-template:focus{border-color:var(--accent)}
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"><span id="toast-msg"></span><button type="button" class="toast-close" onclick="closeToast()" aria-label="Dismiss" title="Dismiss">&times;</button></div>
 
 <script>
 // ── Header (live stats/clock/weather, mirrors the dashboard's header) ──────────
@@ -567,11 +569,17 @@ function getVal(id) {
   return el.value;
 }
 
+let _toastTimer = null;
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  document.getElementById('toast-msg').textContent = msg;
   t.className = 'toast '+type;
-  setTimeout(() => t.className = 'toast', 6000);
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(closeToast, 6000);
+}
+function closeToast() {
+  clearTimeout(_toastTimer);
+  document.getElementById('toast').className = 'toast';
 }
 
 const NUMERIC_BOUNDS = {
