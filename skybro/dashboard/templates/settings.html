@@ -698,11 +698,13 @@ const FILTER_HELP = {
     ],
     ranges: [
       ['altitude&lt;5000', 'Only below 5,000 ft'],
-      ['distance_km&lt;10', 'Only within 10 km (combine with an altitude rule for a tighter window)'],
+      ['altitude&gt;1000<br>altitude&lt;5000', 'Combine a &gt; line and a &lt; line on the same field for a min+max window: only between 1,000 and 5,000 ft'],
+      ['speed&gt;=250', 'Inclusive bound (&gt;= and &lt;= include the boundary itself): only at or above 250 kts'],
       ['lat&lt;-30', 'Only south of -30° latitude'],
     ],
     regex: [
       ['VIPR', 'Literal text: matches anything containing VIPR'],
+      ['-VIPR', 'The - prefix excludes instead of requires: excludes anything containing VIPR'],
       ['VIPR.0', '. (any character): matches VIPR10, VIPRA0, VIPR-0, anything with one character between VIPR and 0'],
       ['VIPR2*0', '* (zero or more of the preceding): matches VIPR0, VIPR20, VIPR220, VIPR2220...'],
       ['VIPR2+0', '+ (one or more of the preceding): matches VIPR20, VIPR220, VIPR2220... but not VIPR0'],
