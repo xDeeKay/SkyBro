@@ -215,6 +215,8 @@ select.target-template:focus{border-color:var(--accent)}
 .help-table td{padding:8px 10px 8px 0;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
 .help-table tr:last-child td{border-bottom:none}
 .help-table code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;white-space:nowrap}
+.help-table code.placeholder-token{cursor:pointer;transition:.15s}
+.help-table code.placeholder-token:hover{color:var(--text)}
 .help-table .help-desc{color:var(--muted)}
 .help-table .help-example{color:var(--text);font-weight:600;white-space:nowrap}
 </style>
@@ -744,7 +746,7 @@ function twoColTable(h1, h2, rows) {
 function placeholderTable(rows) {
   const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
   return `<div class="help-table-wrap"><table class="help-table"><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
-    sorted.map(([t, d, e]) => `<tr><td><code>${t}</code></td><td class="help-desc">${d}</td><td class="help-example">${e}</td></tr>`).join('') +
+    sorted.map(([t, d, e]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">{${t}}</code></td><td class="help-desc">${d}</td><td class="help-example">${e}</td></tr>`).join('') +
     '</table></div>';
 }
 
