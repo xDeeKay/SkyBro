@@ -605,7 +605,7 @@ def _sample_placeholders(category, cfg):
         "registration": "VH-ABC", "country": "Australia", "direction": "NW",
         "speed": speed, "vertical_speed": vertical_speed, "airframe": "jet",
         "altitude": altitude, "distance_km": "8.4",
-        "icao24": "7c1234", "lat": "-31.9523", "lon": "115.8613",
+        "icao24": "7c1234", "lat": "-33.8688", "lon": "151.2093",
         "heading": "270", "squawk": "7000",
     }
 
