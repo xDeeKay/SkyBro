@@ -698,11 +698,11 @@ const FILTER_HELP = {
     ],
     examples: [
       ['country=Australia', 'Only alert for Australian-registered aircraft'],
-      ['-callsign=VIPR.*', 'Exclude anything with a callsign starting VIPR'],
+      ['-callsign=VIPR', 'Exclude anything with a callsign containing VIPR'],
       ['airframe=heli', 'Only helicopters'],
       ['model=A320|B738', 'Only Airbus A320s or Boeing 737-800s'],
       ['-registration=VH-ABC', 'Exclude one specific tail number'],
-      ['-squawk=^(7500|7600|7700)$', 'Exclude hijack/radio-failure/emergency codes'],
+      ['-squawk=7500|7600|7700', 'Exclude hijack/radio-failure/emergency codes'],
       ['altitude&lt;5000', 'Only below 5,000 ft'],
       ['distance_km&lt;10', 'Only within 10 km (combine with an altitude rule for a tighter window)'],
       ['lat&lt;-30', 'Only south of -30° latitude'],
