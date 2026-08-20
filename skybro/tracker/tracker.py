@@ -732,7 +732,7 @@ def process_states(states):
             'direction': alert['direction'], 'speed': spd_str,
             'vertical_speed': alert['vr_str'], 'airframe': airframe,
             'altitude': alt_str, 'distance_km': alert['dist_km'],
-            'icao24': icao24, 'lat': round(alert['lat'], 4), 'lon': round(alert['lon'], 4),
+            'icao24': icao24, 'lat': round(alert['lat'], 4), 'long': round(alert['lon'], 4),
             'heading': alert['heading'], 'squawk': alert['squawk'] or "N/A",
         }, photo_url=photo_url)
 

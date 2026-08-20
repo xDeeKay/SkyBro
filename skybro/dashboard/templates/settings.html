@@ -618,7 +618,7 @@ const NOTIF_CATEGORIES = ['aircraft', 'satellites'];
 const CATEGORY_KIND = {aircraft: 'aircraft', satellites: 'satellite'};
 const CATEGORY_DEFAULT_TEMPLATE_ID = {aircraft: 'default_aircraft', satellites: 'default_satellite'};
 const TOKENS_BY_KIND = {
-  aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude','distance_km','icao24','lat','lon','heading','squawk'],
+  aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude','distance_km','icao24','lat','long','heading','squawk'],
   satellite: ['sat_name','time','minutes','duration','start_az','max_el','end_az'],
 };
 
@@ -672,7 +672,7 @@ const TOKEN_HELP = {
       ['distance_km', 'Distance from home at alert time, in km', '8.4'],
       ['icao24', '24-bit ICAO hex address, unique per aircraft', '7c1234'],
       ['lat', 'Latitude at alert time', '-33.8688'],
-      ['lon', 'Longitude at alert time', '151.2093'],
+      ['long', 'Longitude at alert time', '151.2093'],
       ['heading', 'True heading in degrees', '270'],
       ['squawk', 'Transponder code, watch for 7500/7600/7700 (hijack/radio failure/emergency)', '7000'],
     ],
