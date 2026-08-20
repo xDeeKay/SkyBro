@@ -236,7 +236,7 @@ select.target-template:focus{border-color:var(--accent)}
   <div class="tabs" id="settings-tabs">
     <div class="tab active" data-tab="location">📍 Location</div>
     <div class="tab" data-tab="display">🖥️ Display</div>
-    <div class="tab" data-tab="polling">⏱ Polling</div>
+    <div class="tab" data-tab="polling">⏱️ Polling</div>
     <div class="tab" data-tab="notifications">🔔 Notifications</div>
     <div class="tab" data-tab="opensky">🔑 OpenSky</div>
     <div class="tab" data-tab="n2yo">🛰️ n2yo</div>
@@ -303,7 +303,7 @@ select.target-template:focus{border-color:var(--accent)}
   <!-- Polling -->
   <div class="tab-pane" id="pane-polling">
     <div class="card">
-      <div class="card-title">⏱ Polling Intervals</div>
+      <div class="card-title">⏱️ Polling Intervals</div>
       <div class="card-desc">Controls how often each data source is checked. OpenSky rate-limits anonymous users to ~10s minimum.</div>
       <div class="form-row">
         <div><label>Aircraft Poll (seconds)</label><input type="number" id="poll_interval" min="10" max="120" value="{{ cfg.poll_interval }}"></div>
@@ -1160,7 +1160,7 @@ async function testTarget(category, card, resultEl) {
   if (APPRISE_SCHEMA_BY_SCHEME[select.value]) {
     const missing = [...card.querySelectorAll('input[data-required="1"]')].find(inp => !inp.value.trim());
     if (missing) {
-      showToast(`⚠ ${missing.dataset.fieldLabel} is required for this notification service`, 'error');
+      showToast(`⚠️ ${missing.dataset.fieldLabel} is required for this notification service`, 'error');
       missing.focus();
       return;
     }
@@ -1176,7 +1176,7 @@ async function testTarget(category, card, resultEl) {
     });
     const data = await r.json();
     resultEl.textContent = data.error || data.result || 'unknown';
-    if (data.error) showToast('⚠ '+data.error, 'error');
+    if (data.error) showToast('⚠️ '+data.error, 'error');
     else showToast('✅ Test alert sent');
   } catch(e) { resultEl.textContent = 'Error: '+e.message; }
 }
