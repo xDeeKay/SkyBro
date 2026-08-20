@@ -1,7 +1,7 @@
 """
 SkyBro Tracker Service
 Polls OpenSky Network for nearby aircraft and n2yo for ISS passes.
-Sends alerts via Apprise (150+ notification services) per notification category.
+Sends alerts via Apprise (130+ notification services) per notification category.
 Config is read from /data/config.json and hot-reloaded when it changes.
 """
 

@@ -337,7 +337,7 @@ select.target-template:focus{border-color:var(--accent)}
 
       <div class="card-desc" style="margin:0 0 16px">
         Sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
-        (150+ services). Each target below has its own enable switch, message template, and test button.
+        ({{ apprise_schemas|length }}+ services). Each target below has its own enable switch, message template, and test button.
       </div>
 
       <div class="inner-pane active" id="inner-aircraft-targets">
@@ -367,7 +367,7 @@ select.target-template:focus{border-color:var(--accent)}
 
       <div class="card-desc" style="margin:0 0 16px">
         Sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
-        (150+ services). Each target below has its own enable switch, message template, and test button.
+        ({{ apprise_schemas|length }}+ services). Each target below has its own enable switch, message template, and test button.
       </div>
 
       <div class="inner-pane active" id="inner-satellites-targets">

@@ -8,7 +8,7 @@ A real-time sky tracker for your Umbrel home server. Runs 24/7 in the background
 - Raspberry Pi 4 or 5 (arm64)
 - Free [OpenSky Network](https://opensky-network.org) account with OAuth2 client credentials
 - Free [n2yo.com](https://www.n2yo.com) API key for satellite pass predictions
-- One or more [Apprise](https://github.com/caronc/apprise) notification targets for alerts (optional): supports Pushover, Discord, Telegram, Slack, email, and 150+ other services
+- One or more [Apprise](https://github.com/caronc/apprise) notification targets for alerts (optional): supports Pushover, Discord, Telegram, Slack, email, and 130+ other services
 
 ## Install
 
@@ -33,7 +33,7 @@ A real-time sky tracker for your Umbrel home server. Runs 24/7 in the background
 
 ## Alerts
 
-Alerts are sent via [Apprise](https://github.com/caronc/apprise) (150+ notification services) for two independent categories, each with any number of targets:
+Alerts are sent via [Apprise](https://github.com/caronc/apprise) (130+ notification services) for two independent categories, each with any number of targets:
 - ✈️ **Aircraft**: a plane enters your configured radius **and** is below your altitude threshold. Includes an aircraft photo pulled from Planespotters.net (attached where the target service supports it).
 - 🛰️ **Satellites**: a pass for ISS, Hubble, Tiangong, or a Starlink train is approaching within your configured lead time.
 

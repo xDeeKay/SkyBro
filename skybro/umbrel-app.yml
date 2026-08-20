@@ -11,7 +11,7 @@ description: >-
 
   ✈️ Aircraft - Tracks live planes in your vicinity using OpenSky Network's
   ADS-B data. Get an alert (with photo) via Apprise (Pushover, Discord,
-  Telegram, email, and 150+ other services) when a plane enters your
+  Telegram, email, and 130+ other services) when a plane enters your
   configured radius and altitude window, with optional filters to mute
   specific callsigns, countries, models, or airframe types. The live map
   shows per-airframe silhouettes for jets, widebodies, helicopters, light
