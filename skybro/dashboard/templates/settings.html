@@ -147,10 +147,11 @@ select.target-template:focus{border-color:var(--accent)}
 .masked-overlay{
   position:absolute;inset:0;z-index:0;display:flex;align-items:center;pointer-events:none;
   padding:8px 34px 8px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
-  color:var(--text);font-size:13px;overflow:hidden;white-space:nowrap;
+  color:var(--text);font-size:13px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   transition:border-color .15s
 }
+.masked-overlay-text{overflow:hidden;white-space:nowrap;flex:1;min-width:0}
 .masked-wrap:focus-within .masked-overlay{border-color:var(--accent)}
 .masked-toggle{
   position:absolute;right:4px;top:50%;transform:translateY(-50%);z-index:2;
@@ -949,6 +950,9 @@ function attachMaskedReveal(input) {
   const overlay = document.createElement('div');
   overlay.className = 'masked-overlay';
   overlay.addEventListener('click', () => input.focus());
+  const overlayText = document.createElement('span');
+  overlayText.className = 'masked-overlay-text';
+  overlay.appendChild(overlayText);
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'masked-toggle';
@@ -958,7 +962,7 @@ function attachMaskedReveal(input) {
 
   let revealed = false;
   function render() {
-    overlay.textContent = revealed ? '' : '•'.repeat(input.value.length);
+    overlayText.textContent = revealed ? '' : '•'.repeat(input.value.length);
     input.style.color = revealed ? 'var(--text)' : 'transparent';
     wrap.classList.toggle('revealed', revealed);
   }
