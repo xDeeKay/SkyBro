@@ -460,9 +460,11 @@ def _mask_notifications(notifications):
                 target["url"] = "••••••••"
     return masked
 
+_FILTER_LINE_RE = re.compile(r'^(-?\w+=.+|\w+\s*(?:>=|<=|>|<)\s*-?\d+(?:\.\d+)?)$')
+
 def _clean_filter_text(text):
     lines = [l for l in str(text or "")[:FILTERS_CAP].splitlines()
-             if re.match(r'^-?\w+=.+$', l.strip())]
+             if _FILTER_LINE_RE.match(l.strip())]
     return "\n".join(lines)
 
 def _clean_notif_category(key, submitted, current, valid_template_ids):

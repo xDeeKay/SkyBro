@@ -348,20 +348,48 @@ def update_source_status(source, success, detail='', status_override=None):
 
 # ── Notifications ─────────────────────────────────────────────────────────────
 _FILTER_FIELDS = {
-    "aircraft":   {"callsign", "country", "model", "airframe"},
+    "aircraft":   {"callsign", "country", "model", "airframe", "direction", "icao24", "registration", "squawk"},
     "satellites": {"sat_name"},
 }
+# Range-comparison fields (>, <, >=, <=), evaluated against raw numeric values
+# (feet/knots/fpm/km/degrees) rather than the formatted, unit-suffixed strings
+# templates render, and independent of the Display tab's metric/aviation
+# setting. See notify_category's filter_values param.
+_NUMERIC_FILTER_FIELDS = {
+    "aircraft": {"altitude", "distance_km", "heading", "lat", "long", "speed", "vertical_speed"},
+}
+_NUM_FILTER_RE = re.compile(r"^(\w+)\s*(>=|<=|>|<)\s*(-?\d+(?:\.\d+)?)\s*$")
 _TOKEN_RE = re.compile(r"\{(\w+)\}")
 
 def _compile_filters(rule_text, category):
-    """Parse the filter DSL: one 'field=pattern' (include) or '-field=pattern'
-    (exclude) rule per line, fields depending on category. See CLAUDE.md for
-    full semantics."""
+    """Parse the filter DSL, one rule per line, fields depending on category:
+    'field=pattern' (include) / '-field=pattern' (exclude), pattern a regex;
+    or, for numeric fields, 'field>N' / 'field<N' / 'field>=N' / 'field<=N' to
+    bound a range (combine a '>' and a '<' line for a min+max window). See
+    CLAUDE.md for full semantics."""
     fields = _FILTER_FIELDS.get(category, set())
+    numeric_fields = _NUMERIC_FILTER_FIELDS.get(category, set())
     compiled = {}
     for line in (rule_text or "").splitlines():
         line = line.strip()
-        if not line or "=" not in line:
+        if not line:
+            continue
+        m = _NUM_FILTER_RE.match(line)
+        if m:
+            field, op, num = m.group(1).lower(), m.group(2), float(m.group(3))
+            if field not in numeric_fields:
+                continue
+            bucket = compiled.setdefault(field, {"include": [], "exclude": [],
+                                                   "min": None, "min_inclusive": False,
+                                                   "max": None, "max_inclusive": False})
+            if op in (">", ">="):
+                if bucket["min"] is None or num > bucket["min"]:
+                    bucket["min"], bucket["min_inclusive"] = num, op == ">="
+            else:
+                if bucket["max"] is None or num < bucket["max"]:
+                    bucket["max"], bucket["max_inclusive"] = num, op == "<="
+            continue
+        if "=" not in line:
             continue
         exclude = line.startswith("-")
         if exclude:
@@ -375,12 +403,28 @@ def _compile_filters(rule_text, category):
         except re.error:
             log.debug(f"Skipping invalid filter pattern for {field}")
             continue
-        bucket = compiled.setdefault(field, {"include": [], "exclude": []})
+        bucket = compiled.setdefault(field, {"include": [], "exclude": [],
+                                              "min": None, "min_inclusive": False,
+                                              "max": None, "max_inclusive": False})
         bucket["exclude" if exclude else "include"].append(rx)
     return compiled
 
 def _passes_filters(compiled, values):
     for field, rules in compiled.items():
+        if rules["min"] is not None or rules["max"] is not None:
+            try:
+                num = float(values.get(field))
+            except (TypeError, ValueError):
+                return False
+            if rules["min"] is not None:
+                below = num < rules["min"] if rules["min_inclusive"] else num <= rules["min"]
+                if below:
+                    return False
+            if rules["max"] is not None:
+                above = num > rules["max"] if rules["max_inclusive"] else num >= rules["max"]
+                if above:
+                    return False
+            continue
         value = values.get(field) or ""
         if any(rx.search(value) for rx in rules["exclude"]):
             return False
@@ -393,9 +437,10 @@ def _render_template(tmpl, values):
     can't reach object attributes/indices. Unknown tokens are left as-is."""
     return _TOKEN_RE.sub(lambda m: str(values.get(m.group(1), m.group(0))), tmpl or "")
 
-def notify_category(key, values, photo_url=None, notify_type=None):
+def notify_category(key, values, photo_url=None, notify_type=None, filter_values=None):
+    filter_values = filter_values if filter_values is not None else values
     notif = cfg.get("notifications", {}).get(key, {})
-    if not _passes_filters(_compile_filters(notif.get("filters", ""), key), values):
+    if not _passes_filters(_compile_filters(notif.get("filters", ""), key), filter_values):
         return
     templates_by_id = {t["id"]: t for t in cfg.get("templates", [])}
     default_tmpl = templates_by_id.get(_CATEGORY_DEFAULT_TEMPLATE_ID.get(key), {})
@@ -403,7 +448,7 @@ def notify_category(key, values, photo_url=None, notify_type=None):
         url = target.get("url")
         if not target.get("enabled", True) or not url:
             continue
-        if not _passes_filters(_compile_filters(target.get("filters", ""), key), values):
+        if not _passes_filters(_compile_filters(target.get("filters", ""), key), filter_values):
             continue
         tmpl = templates_by_id.get(target.get("template_id")) or default_tmpl
         title = _render_template(tmpl.get("title", ""), values)
@@ -726,7 +771,7 @@ def process_states(states):
         _metric = cfg.get("units_speed", "aviation") == "metric"
         spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
         alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
-        notify_category("aircraft", {
+        values = {
             'emoji': ac_emoji, 'callsign': alert['callsign'], 'model': alert['model'],
             'registration': alert['reg'] or "N/A", 'country': alert['country'],
             'direction': alert['direction'], 'speed': spd_str,
@@ -734,7 +779,13 @@ def process_states(states):
             'altitude': alt_str, 'distance_km': alert['dist_km'],
             'icao24': icao24, 'lat': round(alert['lat'], 4), 'long': round(alert['lon'], 4),
             'heading': alert['heading'], 'squawk': alert['squawk'] or "N/A",
-        }, photo_url=photo_url)
+        }
+        # Filters compare raw numeric values (ft/kts/fpm), not the formatted,
+        # unit-suffixed strings templates render, so metric/aviation display
+        # doesn't change what a saved filter threshold means.
+        filter_values = dict(values, altitude=alert['alt_ft'], speed=alert['speed_kts'],
+                              vertical_speed=round(alert['vrate'] * 196.85))
+        notify_category("aircraft", values, photo_url=photo_url, filter_values=filter_values)
 
     live_icaos = {s[0] for s in states if s[6] and s[5]}
     for icao in list(_alerted):
