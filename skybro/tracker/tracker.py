@@ -914,7 +914,9 @@ def dispatch_satellite_alerts():
         (now, now + warn)).fetchall()
     for pass_time, duration, sat_name, start_az, max_el, end_az in rows:
         mins = (pass_time - now) // 60
-        dt   = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz).strftime("%H:%M")
+        local_dt = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz)
+        dt = local_dt.strftime("%I:%M %p").lstrip("0") if cfg.get("time_format") == "12h" \
+            else local_dt.strftime("%H:%M")
         notify_category("satellites", {
             'sat_name': sat_name, 'time': dt, 'minutes': str(mins), 'duration': str(duration),
             'start_az': start_az or "N/A", 'end_az': end_az or "N/A",

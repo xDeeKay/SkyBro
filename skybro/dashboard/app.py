@@ -596,10 +596,11 @@ def api_config_post():
 def _sample_placeholders(category, cfg):
     """Fake but realistic values for the "Send test alert" button, unit-aware
     per the Display tab's units_speed setting (same conversions as
-    process_states in tracker.py) so a test alert previews the units a real
-    alert would actually use."""
+    process_states in tracker.py) and time-format-aware per time_format, so a
+    test alert previews the units/format a real alert would actually use."""
     if category != "aircraft":
-        return {"sat_name": "ISS", "time": "20:15", "minutes": "12", "duration": "420",
+        sample_time = "8:15 PM" if cfg.get("time_format", "12h") == "12h" else "20:15"
+        return {"sat_name": "ISS", "time": sample_time, "minutes": "12", "duration": "420",
                 "start_az": "NW", "max_el": "45°", "end_az": "NE"}
     metric = cfg.get("units_speed", "aviation") == "metric"
     speed          = f"{round(450 * 1.852)} km/h" if metric else "450 kts"
