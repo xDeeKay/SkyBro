@@ -1424,9 +1424,9 @@ function findIncompleteTemplate() {
     const nameInput = card.querySelector('.template-name');
     if (!nameInput.value.trim()) return {cat, card, input: nameInput, label: 'Template name'};
     const titleInput = card.querySelector('.template-title');
-    if (!titleInput.value.trim()) return {cat, card, input: titleInput, label: 'Title template'};
+    if (!titleInput.value.trim()) return {cat, card, input: titleInput, label: 'Template title'};
     const bodyInput = card.querySelector('.template-body');
-    if (!bodyInput.value.trim()) return {cat, card, input: bodyInput, label: 'Body template'};
+    if (!bodyInput.value.trim()) return {cat, card, input: bodyInput, label: 'Template body'};
   }
   return null;
 }
