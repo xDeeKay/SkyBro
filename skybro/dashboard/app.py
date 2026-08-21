@@ -539,7 +539,7 @@ def _clean_templates(submitted, current):
         seen_ids.add(rid)
         out.append({
             "id": rid,
-            "name": str(row.get("name", "")).strip()[:TEMPLATE_NAME_CAP] or "Untitled",
+            "name": str(row.get("name", "")).strip()[:TEMPLATE_NAME_CAP],
             "kind": kind,
             "title": str(row.get("title", ""))[:TEMPLATE_CAP],
             "body":  str(row.get("body", ""))[:TEMPLATE_CAP],

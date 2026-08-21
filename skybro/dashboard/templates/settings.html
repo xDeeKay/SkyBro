@@ -1308,6 +1308,7 @@ function buildTemplateCard(tmpl) {
   const nameInput = document.createElement('input');
   nameInput.type = 'text';
   nameInput.className = 'template-name';
+  nameInput.placeholder = 'Template name';
   nameInput.value = tmpl.name || '';
   nameInput.style.cssText = 'flex:1;margin-right:10px';
   nameInput.addEventListener('input', refreshTemplateSelects);
@@ -1344,14 +1345,14 @@ function buildTemplateCard(tmpl) {
   const titleInput = document.createElement('input');
   titleInput.type = 'text';
   titleInput.className = 'template-title';
-  titleInput.placeholder = 'Title template';
+  titleInput.placeholder = 'Template title';
   titleInput.value = tmpl.title || '';
   titleInput.disabled = protectedTmpl;
 
   const bodyInput = document.createElement('textarea');
   bodyInput.className = 'mono-textarea template-body';
   bodyInput.rows = 3;
-  bodyInput.placeholder = 'Body template';
+  bodyInput.placeholder = 'Template body';
   bodyInput.value = tmpl.body || '';
   bodyInput.disabled = protectedTmpl;
 
@@ -1415,6 +1416,20 @@ function collectTemplates() {
   }));
 }
 
+function findIncompleteTemplate() {
+  for (const card of document.querySelectorAll('.template-card')) {
+    if (PROTECTED_TEMPLATE_IDS.has(card.dataset.id)) continue;
+    const cat = card.dataset.kind === 'aircraft' ? 'aircraft' : 'satellites';
+    const nameInput = card.querySelector('.template-name');
+    if (!nameInput.value.trim()) return {cat, card, input: nameInput, label: 'Template name'};
+    const titleInput = card.querySelector('.template-title');
+    if (!titleInput.value.trim()) return {cat, card, input: titleInput, label: 'Title template'};
+    const bodyInput = card.querySelector('.template-body');
+    if (!bodyInput.value.trim()) return {cat, card, input: bodyInput, label: 'Body template'};
+  }
+  return null;
+}
+
 function findIncompleteServiceTarget() {
   for (const cat of NOTIF_CATEGORIES) {
     for (const card of document.querySelectorAll(`#targets_${cat} .target-card`)) {
@@ -1436,6 +1451,17 @@ async function save() {
     showInner('targets', true, incomplete.cat);
     incomplete.card.scrollIntoView({behavior: 'smooth', block: 'center'});
     incomplete.input.focus();
+    return;
+  }
+
+  const incompleteTemplate = findIncompleteTemplate();
+  if (incompleteTemplate) {
+    showToast(`❌ ${incompleteTemplate.label} can't be empty`, 'error');
+    showTab('notifications');
+    showSubtab(incompleteTemplate.cat);
+    showInner('templates', true, incompleteTemplate.cat);
+    incompleteTemplate.card.scrollIntoView({behavior: 'smooth', block: 'center'});
+    incompleteTemplate.input.focus();
     return;
   }
 
