@@ -134,7 +134,6 @@ select.target-template:focus{border-color:var(--accent)}
 .combo-empty{padding:10px;font-size:12px;color:var(--muted)}
 .template-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
 .template-card input,.template-card textarea{margin-top:8px}
-.template-kind-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 6px}
 .template-card.protected{opacity:.6}
 .template-card.protected input,.template-card.protected textarea{cursor:not-allowed;background:var(--surface)}
 .template-protected-badge{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
@@ -1326,12 +1325,8 @@ function buildTemplateCard(tmpl) {
   nameInput.value = tmpl.name || '';
   nameInput.style.cssText = 'flex:1;margin-right:10px';
   nameInput.addEventListener('input', refreshTemplateSelects);
-  const kindBadge = document.createElement('span');
-  kindBadge.className = 'template-kind-badge';
-  kindBadge.textContent = tmpl.kind;
   const hdrActions = document.createElement('div');
   hdrActions.style.cssText = 'display:flex;align-items:center;gap:10px';
-  hdrActions.appendChild(kindBadge);
   if (protectedTmpl) {
     nameInput.disabled = true;
     const badge = document.createElement('span');
