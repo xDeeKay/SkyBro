@@ -536,14 +536,13 @@ def _clean_templates(submitted, current):
             rid = secrets.token_hex(4)
         if rid in seen_ids:
             continue
+        name = str(row.get("name", "")).strip()[:TEMPLATE_NAME_CAP]
+        title = str(row.get("title", ""))[:TEMPLATE_CAP]
+        body = str(row.get("body", ""))[:TEMPLATE_CAP]
+        if not name or not title.strip() or not body.strip():
+            continue
         seen_ids.add(rid)
-        out.append({
-            "id": rid,
-            "name": str(row.get("name", "")).strip()[:TEMPLATE_NAME_CAP],
-            "kind": kind,
-            "title": str(row.get("title", ""))[:TEMPLATE_CAP],
-            "body":  str(row.get("body", ""))[:TEMPLATE_CAP],
-        })
+        out.append({"id": rid, "name": name, "kind": kind, "title": title, "body": body})
     for d in DEFAULT_TEMPLATES_LIST:
         if d["id"] not in seen_ids:
             out.append(dict(d))
