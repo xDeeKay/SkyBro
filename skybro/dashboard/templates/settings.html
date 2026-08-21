@@ -1024,6 +1024,7 @@ function buildServiceFields(container, schema, urlInput, hdrLabel) {
       url = url.split('{' + f.key + '}').join(encoded);
     });
     urlInput.value = url;
+    urlInput.dispatchEvent(new Event('input'));
     hdrLabel.textContent = schema.name;
   }
   schema.fields.forEach(f => {
