@@ -144,6 +144,7 @@ select.target-template:focus{border-color:var(--accent)}
   caret-color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
 }
 .masked-wrap input.masked-input:focus{border-color:transparent}
+.masked-wrap input.masked-input::placeholder{color:var(--muted);opacity:1}
 .masked-wrap:not(.revealed) input.masked-input::selection{color:transparent;background:rgba(79,124,255,.35)}
 .masked-wrap:not(.revealed) input.masked-input::-moz-selection{color:transparent;background:rgba(79,124,255,.35)}
 .masked-overlay{
@@ -1089,7 +1090,7 @@ function buildTargetCard(category, target) {
   const urlInput = document.createElement('input');
   urlInput.type = 'text';
   urlInput.className = 'target-url';
-  urlInput.placeholder = 'Apprise URL, e.g. discord://webhook_id/webhook_token';
+  urlInput.placeholder = 'e.g. discord://webhook_id/webhook_token';
   urlInput.value = target.url || '';
   urlInput.autocomplete = 'off';
   urlInput.setAttribute('data-lpignore', 'true');
