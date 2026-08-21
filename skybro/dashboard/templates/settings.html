@@ -1096,6 +1096,7 @@ function buildTargetCard(category, target) {
   urlInput.setAttribute('data-bwignore', 'true');
   urlInput.setAttribute('data-protonpass-ignore', 'true');
   urlInput.setAttribute('data-form-type', 'other');
+  urlInput.dataset.fieldLabel = 'Apprise URL';
   urlInput.addEventListener('input', () => {
     hdrLabel.textContent = schemeLabel(urlInput.value);
     // Reflect the scheme in the dropdown too (or fall back to Custom URL),
@@ -1110,7 +1111,7 @@ function buildTargetCard(category, target) {
   const urlGroup = document.createElement('div');
   urlGroup.className = 'field-group';
   const urlLabel = document.createElement('label');
-  urlLabel.textContent = 'Apprise URL';
+  urlLabel.textContent = 'Apprise URL *';
   urlGroup.append(urlLabel, attachMaskedReveal(urlInput));
 
   const serviceGroup = document.createElement('div');
@@ -1433,8 +1434,10 @@ function findIncompleteTemplate() {
 function findIncompleteServiceTarget() {
   for (const cat of NOTIF_CATEGORIES) {
     for (const card of document.querySelectorAll(`#targets_${cat} .target-card`)) {
+      const urlInput = card.querySelector('.target-url');
+      if (!urlInput.value.trim()) return {cat, card, input: urlInput};
       const select = card.querySelector('.target-service');
-      if (!APPRISE_SCHEMA_BY_SCHEME[select.value]) continue; // Custom URL, nothing to check
+      if (!APPRISE_SCHEMA_BY_SCHEME[select.value]) continue; // Custom URL, nothing else to check
       const empty = [...card.querySelectorAll('input[data-required="1"]')].find(inp => !inp.value.trim());
       if (empty) return {cat, card, input: empty};
     }
