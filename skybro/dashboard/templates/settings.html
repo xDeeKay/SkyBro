@@ -1143,6 +1143,17 @@ function buildTargetCard(category, target) {
   const fieldsContainer = document.createElement('div');
   serviceSelect.addEventListener('change', () => {
     const schema = APPRISE_SCHEMA_BY_SCHEME[serviceSelect.value];
+    if (!schema) {
+      // Switching back to Custom URL: if the builder's required fields
+      // (e.g. Discord's webhook ID/token) were left empty, the built URL
+      // is an invalid placeholder like "discord:///", not a real target.
+      // Clear it rather than leave that behind looking like a saved value.
+      const incomplete = [...fieldsContainer.querySelectorAll('input[data-required="1"]')].some(inp => !inp.value.trim());
+      if (incomplete) {
+        urlInput.value = '';
+        urlInput.dispatchEvent(new Event('input'));
+      }
+    }
     urlGroup.style.display = schema ? 'none' : '';
     serviceHint.style.display = schema ? '' : 'none';
     buildServiceFields(fieldsContainer, schema, urlInput, hdrLabel);
