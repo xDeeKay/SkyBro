@@ -350,7 +350,7 @@ select.target-template:focus{border-color:var(--accent)}
         </div>
 
         <div class="card">
-          <div class="card-title">Global aircraft filters</div>
+          <div class="card-title">Global Aircraft Filters</div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.
             <button type="button" class="help-link" onclick="openFilterHelp('aircraft')">Filter syntax &amp; fields</button>
           </div>
@@ -380,7 +380,7 @@ select.target-template:focus{border-color:var(--accent)}
         </div>
 
         <div class="card">
-          <div class="card-title">Global satellite filters</div>
+          <div class="card-title">Global Satellite Filters</div>
           <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.
             <button type="button" class="help-link" onclick="openFilterHelp('satellites')">Filter syntax &amp; fields</button>
           </div>
@@ -680,7 +680,11 @@ const TOKENS_BY_KIND = {
 const FILTER_HELP = {
   aircraft: {
     title: 'Aircraft filter syntax',
-    intro: 'One rule per line: <code>field=pattern</code> includes matches, <code>-field=pattern</code> excludes them. Patterns are case-insensitive regex, see Regex syntax below. Numeric fields use range bounds instead, see Range syntax below.',
+    intro: [
+      'One rule per line: <code>field=pattern</code> includes matches, <code>-field=pattern</code> excludes them.',
+      'Patterns are case-insensitive, see regex syntax below.',
+      'Numeric fields use range bounds instead, see range syntax below.',
+    ],
     notes: [
       'Range bounds always compare against raw ft/kts/fpm/km/degree values, never the unit-suffixed text your templates render, regardless of your Display tab\'s metric/aviation setting.',
       'A target\'s own filters (if set) are checked in addition to these category-wide ones: both must pass.',
@@ -704,23 +708,21 @@ const FILTER_HELP = {
     ],
     ranges: [
       ['altitude&lt;5000', 'Only below 5,000 ft'],
-      ['altitude&gt;1000<br>altitude&lt;5000', 'Combine a &gt; line and a &lt; line on the same field for a min+max window: only between 1,000 and 5,000 ft'],
       ['speed&gt;=250', 'Inclusive bound (&gt;= and &lt;= include the boundary itself): only at or above 250 kts'],
+      ['altitude&gt;1000<br>altitude&lt;5000', 'Combine a &gt; line and a &lt; line on the same field for a min+max window: only between 1,000 and 5,000 ft'],
       ['lat&lt;-30', 'Only south of -30° latitude'],
     ],
     regex: [
-      ['VIPR', 'Literal text: matches anything containing VIPR'],
-      ['-VIPR', 'The - prefix excludes instead of requires: excludes anything containing VIPR'],
+      ['^VIPR20$', '^ and $ (anchors): matches only the exact value VIPR20, not VIPR200 or VIPR21'],
       ['VIPR.0', '. (any character): matches VIPR10, VIPRA0, VIPR-0, anything with one character between VIPR and 0'],
+      ['QF[0-9]+', '[...] (character class): matches QF followed by one or more digits, e.g. QF123'],
+      ['7\\d{3}', '\\d, \\w, \\s (shorthand classes): \\d is a digit, so this matches a 4-digit code starting with 7, e.g. squawk 7500'],
       ['VIPR2*0', '* (zero or more of the preceding): matches VIPR0, VIPR20, VIPR220, VIPR2220...'],
       ['VIPR2+0', '+ (one or more of the preceding): matches VIPR20, VIPR220, VIPR2220... but not VIPR0'],
       ['VIPR2?0', '? (optional, zero or one): matches VIPR0 or VIPR20'],
+      ['QF\\d{3,4}', '{n,m} (repeat count): matches QF followed by 3 to 4 digits'],
       ['A320|B738', '| (OR): matches A320 or B738'],
       ['(VIPR|COBRA)\\d+', '() (grouping): matches VIPR or COBRA followed by one or more digits, e.g. VIPR20, COBRA07'],
-      ['QF[0-9]+', '[...] (character class): matches QF followed by one or more digits, e.g. QF123'],
-      ['QF\\d{3,4}', '{n,m} (repeat count): matches QF followed by 3 to 4 digits'],
-      ['7\\d{3}', '\\d, \\w, \\s (shorthand classes): \\d is a digit, so this matches a 4-digit code starting with 7, e.g. squawk 7500'],
-      ['^VIPR20$', '^ and $ (anchors): matches only the exact value VIPR20, not VIPR200 or VIPR21'],
     ],
   },
   satellites: {
@@ -775,10 +777,10 @@ const TOKEN_HELP = {
   },
 };
 
-function twoColTable(h1, h2, rows) {
-  const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
+function twoColTable(h1, h2, rows, sort = true) {
+  const ordered = sort ? [...rows].sort((a, b) => a[0].localeCompare(b[0])) : rows;
   return `<div class="help-table-wrap"><table class="help-table"><tr><th>${h1}</th><th>${h2}</th></tr>` +
-    sorted.map(([a, b]) => `<tr><td><code>${a}</code></td><td class="help-desc">${b}</td></tr>`).join('') +
+    ordered.map(([a, b]) => `<tr><td><code>${a}</code></td><td class="help-desc">${b}</td></tr>`).join('') +
     '</table></div>';
 }
 
@@ -801,15 +803,17 @@ function closeHelpModal() {
 
 function openFilterHelp(category) {
   const info = FILTER_HELP[category];
-  let html = `<p>${info.intro}</p>`;
+  let html = Array.isArray(info.intro)
+    ? `<ul class="help-notes">${info.intro.map(n => `<li>${n}</li>`).join('')}</ul>`
+    : `<p>${info.intro}</p>`;
   if (info.notes) {
     html += `<ul class="help-notes">${info.notes.map(n => `<li>${n}</li>`).join('')}</ul>`;
   }
   html += `<div class="help-section-title">Fields</div>${twoColTable('Field', 'Meaning', info.fields)}`;
+  html += `<div class="help-section-title">Regex syntax</div>${twoColTable('Pattern', 'Matches', info.regex, false)}`;
   if (info.ranges) {
-    html += `<div class="help-section-title">Range syntax</div>${twoColTable('Rule', 'Effect', info.ranges)}`;
+    html += `<div class="help-section-title">Range syntax</div>${twoColTable('Rule', 'Effect', info.ranges, false)}`;
   }
-  html += `<div class="help-section-title">Regex syntax</div>${twoColTable('Pattern', 'Matches', info.regex)}`;
   openHelpModal(info.title, html);
 }
 
