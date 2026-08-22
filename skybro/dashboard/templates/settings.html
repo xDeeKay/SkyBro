@@ -221,6 +221,9 @@ select.target-template:focus{border-color:var(--accent)}
 .help-table code.placeholder-token:hover{color:var(--text)}
 .help-table .help-desc{color:var(--muted)}
 .help-table .help-example{color:var(--text);font-weight:600;white-space:nowrap}
+.help-notes{margin:0;padding-left:18px;color:var(--muted)}
+.help-notes li{margin-bottom:6px}
+.help-notes li:last-child{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -341,14 +344,14 @@ select.target-template:focus{border-color:var(--accent)}
         <div class="subtab" data-inner="templates">📝 Templates</div>
       </div>
 
-      <div class="card-desc" style="margin:0 0 16px">
-        Sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
-        ({{ apprise_schemas|length }}+ services). Each target below has its own enable switch, message template, and test button.
-      </div>
-
       <div class="inner-pane active" id="inner-aircraft-targets">
+        <div class="card-desc" style="margin:0 0 16px">
+          Each target below is sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
+          ({{ apprise_schemas|length }} services) and has its own enable switch, message template, and test button.
+        </div>
+
         <div class="card">
-          <div class="card-title">Global filters</div>
+          <div class="card-title">Global aircraft filters</div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.
             <button type="button" class="help-link" onclick="openFilterHelp('aircraft')">Filter syntax &amp; fields</button>
           </div>
@@ -371,14 +374,14 @@ select.target-template:focus{border-color:var(--accent)}
         <div class="subtab" data-inner="templates">📝 Templates</div>
       </div>
 
-      <div class="card-desc" style="margin:0 0 16px">
-        Sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
-        ({{ apprise_schemas|length }}+ services). Each target below has its own enable switch, message template, and test button.
-      </div>
-
       <div class="inner-pane active" id="inner-satellites-targets">
+        <div class="card-desc" style="margin:0 0 16px">
+          Each target below is sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
+          ({{ apprise_schemas|length }} services) and has its own enable switch, message template, and test button.
+        </div>
+
         <div class="card">
-          <div class="card-title">Global filters</div>
+          <div class="card-title">Global satellite filters</div>
           <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.
             <button type="button" class="help-link" onclick="openFilterHelp('satellites')">Filter syntax &amp; fields</button>
           </div>
@@ -678,7 +681,11 @@ const TOKENS_BY_KIND = {
 const FILTER_HELP = {
   aircraft: {
     title: 'Aircraft filter syntax',
-    intro: 'One rule per line. <code>field=pattern</code> only notifies matches for that field; <code>-field=pattern</code> excludes matches. Patterns are case-insensitive regex. For the numeric fields below, use <code>field&gt;N</code>, <code>field&lt;N</code>, <code>field&gt;=N</code>, or <code>field&lt;=N</code> instead to bound a range (combine a <code>&gt;</code> and a <code>&lt;</code> line on the same field for a min+max window); these always compare against raw ft/kts/fpm/km/degree values, regardless of your Display tab\'s unit setting. A target\'s own filters (if set) are checked in addition to these category-wide ones, both must pass.',
+    intro: 'One rule per line: <code>field=pattern</code> includes matches, <code>-field=pattern</code> excludes them. Patterns are case-insensitive regex, see Regex syntax below. Numeric fields use range bounds instead, see Range syntax below.',
+    notes: [
+      'Range bounds always compare against raw ft/kts/fpm/km/degree values, never the unit-suffixed text your templates render, regardless of your Display tab\'s metric/aviation setting.',
+      'A target\'s own filters (if set) are checked in addition to these category-wide ones: both must pass.',
+    ],
     fields: [
       ['callsign', 'Flight callsign as broadcast'],
       ['country', "Aircraft's country of registration"],
@@ -795,8 +802,11 @@ function closeHelpModal() {
 
 function openFilterHelp(category) {
   const info = FILTER_HELP[category];
-  let html = `<p>${info.intro}</p>` +
-    `<div class="help-section-title">Fields</div>${twoColTable('Field', 'Meaning', info.fields)}`;
+  let html = `<p>${info.intro}</p>`;
+  if (info.notes) {
+    html += `<ul class="help-notes">${info.notes.map(n => `<li>${n}</li>`).join('')}</ul>`;
+  }
+  html += `<div class="help-section-title">Fields</div>${twoColTable('Field', 'Meaning', info.fields)}`;
   if (info.ranges) {
     html += `<div class="help-section-title">Range syntax</div>${twoColTable('Rule', 'Effect', info.ranges)}`;
   }
