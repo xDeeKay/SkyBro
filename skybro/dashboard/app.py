@@ -30,7 +30,7 @@ DEFAULT_TEMPLATES_LIST = [
     {
         "id": "default_satellite", "name": "Default Satellite", "kind": "satellite",
         "title": "🛰️ {sat_name} flyover coming up",
-        "body":  "Visible pass in ~{minutes} min (at {time} local)\nDuration: {duration}s. Look up!",
+        "body":  "Visible pass in ~{minutes} min (at {time} local), lasting {duration}s\nRises {start_az} • peaks at {max_el} • sets {end_az}",
     },
 ]
 _CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite"}
