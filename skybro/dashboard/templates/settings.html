@@ -213,11 +213,16 @@ select.target-template:focus{border-color:var(--accent)}
 .modal-body{padding:16px 18px;overflow-y:auto;font-size:13px;line-height:1.6}
 .modal-body p{margin:0 0 12px}
 .help-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text);margin:16px 0 8px}
-.help-table-wrap{overflow-x:auto}
-.help-table{width:100%;border-collapse:collapse}
-.help-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:0 10px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap}
-.help-table td{padding:8px 10px 8px 0;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
+.help-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px}
+.help-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.help-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2)}
+.help-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
 .help-table tr:last-child td{border-bottom:none}
+.help-table th:not(:last-child),.help-table td:not(:last-child){border-right:1px solid var(--border)}
+.help-table th:first-child{border-top-left-radius:7px}
+.help-table th:last-child{border-top-right-radius:7px}
+.help-table tr:last-child td:first-child{border-bottom-left-radius:7px}
+.help-table tr:last-child td:last-child{border-bottom-right-radius:7px}
 .help-table code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;white-space:nowrap;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .help-table code.help-pattern{color:var(--muted)}
 .help-table code.help-pattern strong{font-weight:inherit;color:var(--text)}
@@ -376,10 +381,7 @@ select.target-template:focus{border-color:var(--accent)}
         </div>
 
         <div class="target-list" id="targets_aircraft"></div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
-          <span style="color:var(--muted);font-size:12px">Sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a> ({{ apprise_schemas|length }} services)</span>
-        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
       </div>
 
       <div class="inner-pane" id="inner-aircraft-templates">
@@ -407,10 +409,7 @@ select.target-template:focus{border-color:var(--accent)}
         </div>
 
         <div class="target-list" id="targets_satellites"></div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
-          <span style="color:var(--muted);font-size:12px">Sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a> ({{ apprise_schemas|length }} services)</span>
-        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
       </div>
 
       <div class="inner-pane" id="inner-satellites-templates">
@@ -810,15 +809,15 @@ const TOKEN_HELP = {
   },
 };
 
-function twoColTable(h1, h2, rows, sort = true) {
+function twoColTable(h1, h2, rows, sort = true, firstColWidth = 150) {
   const ordered = sort ? [...rows].sort((a, b) => a[0].localeCompare(b[0])) : rows;
-  return `<div class="help-table-wrap"><table class="help-table"><tr><th>${h1}</th><th>${h2}</th></tr>` +
+  return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:${firstColWidth}px"><col></colgroup><tr><th>${h1}</th><th>${h2}</th></tr>` +
     ordered.map(([a, b]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">${a}</code></td><td class="help-desc">${b}</td></tr>`).join('') +
     '</table></div>';
 }
 
 function threeColTable(h1, h2, h3, rows) {
-  return `<div class="help-table-wrap"><table class="help-table"><tr><th>${h1}</th><th>${h2}</th><th>${h3}</th></tr>` +
+  return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:70px"><col style="width:150px"><col></colgroup><tr><th>${h1}</th><th>${h2}</th><th>${h3}</th></tr>` +
     rows.map(([symbols, meaning, pattern, explanation]) => {
       const symbolHtml = symbols.map(s => `<code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">${s}</code>`).join('<br>');
       return `<tr><td class="help-symbol">${symbolHtml}</td><td>${meaning}</td><td><code class="help-pattern">${pattern}</code><span class="help-explain">${explanation}</span></td></tr>`;
@@ -828,7 +827,7 @@ function threeColTable(h1, h2, h3, rows) {
 
 function placeholderTable(rows) {
   const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
-  return `<div class="help-table-wrap"><table class="help-table"><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
+  return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:160px"><col style="width:180px"><col></colgroup><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
     sorted.map(([t, d, e]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">{${t}}</code></td><td class="help-desc">${d}</td><td class="help-example">${e}</td></tr>`).join('') +
     '</table></div>';
 }
@@ -864,7 +863,7 @@ function openFilterHelp(category) {
       html += `<div class="help-section-title">Range syntax</div>${threeColTable('Symbol', 'Meaning', 'Example', info.ranges)}`;
     }
   } else {
-    html += `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples, false)}`;
+    html += `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples, false, 200)}`;
   }
   openHelpModal(info.title, html);
 }
