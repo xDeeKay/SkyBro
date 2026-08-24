@@ -92,9 +92,6 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
   line-height:1;padding:0
 }
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
-.token-legend{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-top:6px}
-.token-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);cursor:pointer;transition:.15s}
-.token-chip:hover{color:var(--text);border-color:var(--accent)}
 select.target-template{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
   padding:8px 28px 8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
@@ -387,6 +384,14 @@ select.target-template:focus{border-color:var(--accent)}
       </div>
 
       <div class="inner-pane" id="inner-aircraft-templates">
+        <div class="card">
+          <div class="card-title-row">
+            <span class="card-title" style="margin-bottom:0">Aircraft Templates</span>
+            <button type="button" class="help-icon-btn" onclick="openTokenHelp('aircraft')" title="Template placeholders" aria-label="Template placeholders">?</button>
+          </div>
+          <div class="card-desc">Reusable message templates for aircraft alerts. Each target picks one via its message template dropdown.</div>
+        </div>
+
         <div class="target-list" id="template-list-aircraft"></div>
         <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('aircraft')">+ Add template</button>
       </div>
@@ -415,6 +420,14 @@ select.target-template:focus{border-color:var(--accent)}
       </div>
 
       <div class="inner-pane" id="inner-satellites-templates">
+        <div class="card">
+          <div class="card-title-row">
+            <span class="card-title" style="margin-bottom:0">Satellite Templates</span>
+            <button type="button" class="help-icon-btn" onclick="openTokenHelp('satellite')" title="Template placeholders" aria-label="Template placeholders">?</button>
+          </div>
+          <div class="card-desc">Reusable message templates for satellite alerts. Each target picks one via its message template dropdown.</div>
+        </div>
+
         <div class="target-list" id="template-list-satellite"></div>
         <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add template</button>
       </div>
@@ -694,11 +707,6 @@ _syncUrl(true, {tab: INITIAL_TAB, subtab: INITIAL_TAB === 'notifications' ? INIT
 const NOTIF_CATEGORIES = ['aircraft', 'satellites'];
 const CATEGORY_KIND = {aircraft: 'aircraft', satellites: 'satellite'};
 const CATEGORY_DEFAULT_TEMPLATE_ID = {aircraft: 'default_aircraft', satellites: 'default_satellite'};
-const TOKENS_BY_KIND = {
-  aircraft:  ['emoji','callsign','model','registration','country','direction','speed','vertical_speed','airframe','altitude','distance_km','icao24','lat','long','heading','squawk'],
-  satellite: ['sat_name','time','minutes','duration','start_az','max_el','end_az'],
-};
-
 // ── Help modal (filter syntax / template placeholders) ────────────────────────
 const FILTER_HELP = {
   aircraft: {
@@ -1493,12 +1501,7 @@ function buildTemplateCard(tmpl) {
   bodyInput.value = tmpl.body || '';
   bodyInput.disabled = protectedTmpl;
 
-  const legend = document.createElement('div');
-  legend.className = 'hint token-legend';
-  legend.innerHTML = `<button type="button" class="help-link" onclick="openTokenHelp('${tmpl.kind}')">Placeholders:</button>` +
-    [...TOKENS_BY_KIND[tmpl.kind]].sort().map(tok => `<span class="token-chip" onclick="copyToken(this)" title="Click to copy">{${tok}}</span>`).join('');
-
-  card.append(hdr, titleInput, bodyInput, legend);
+  card.append(hdr, titleInput, bodyInput);
   return card;
 }
 
