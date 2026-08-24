@@ -364,11 +364,6 @@ select.target-template:focus{border-color:var(--accent)}
       </div>
 
       <div class="inner-pane active" id="inner-aircraft-targets">
-        <div class="card-desc" style="margin:0 0 16px">
-          Each target below is sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
-          ({{ apprise_schemas|length }} services) and has its own enable switch, message template, and test button.
-        </div>
-
         <div class="card">
           <div class="card-title-row">
             <span class="card-title" style="margin-bottom:0">Global Aircraft Filters</span>
@@ -376,10 +371,15 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
           <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
+          <div class="help-section-title">Test a rule</div>
+          <div id="filter-tester-aircraft"></div>
         </div>
 
         <div class="target-list" id="targets_aircraft"></div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('aircraft')">+ Add target</button>
+          <span style="color:var(--muted);font-size:12px">Sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a> ({{ apprise_schemas|length }} services)</span>
+        </div>
       </div>
 
       <div class="inner-pane" id="inner-aircraft-templates">
@@ -395,11 +395,6 @@ select.target-template:focus{border-color:var(--accent)}
       </div>
 
       <div class="inner-pane active" id="inner-satellites-targets">
-        <div class="card-desc" style="margin:0 0 16px">
-          Each target below is sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a>
-          ({{ apprise_schemas|length }} services) and has its own enable switch, message template, and test button.
-        </div>
-
         <div class="card">
           <div class="card-title-row">
             <span class="card-title" style="margin-bottom:0">Global Satellite Filters</span>
@@ -407,10 +402,15 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
           <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
+          <div class="help-section-title">Test a rule</div>
+          <div id="filter-tester-satellites"></div>
         </div>
 
         <div class="target-list" id="targets_satellites"></div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('satellites')">+ Add target</button>
+          <span style="color:var(--muted);font-size:12px">Sent via <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank" rel="noopener" style="color:var(--accent)">Apprise</a> ({{ apprise_schemas|length }} services)</span>
+        </div>
       </div>
 
       <div class="inner-pane" id="inner-satellites-templates">
@@ -774,7 +774,7 @@ const FILTER_HELP = {
 
 const TOKEN_HELP = {
   aircraft: {
-    title: 'Aircraft template placeholders',
+    title: 'Aircraft Template Placeholders',
     intro: 'Drop any of these into a template\'s title or body. Each is filled in from the aircraft that triggered the alert.',
     fields: [
       ['emoji', 'Helicopter vs fixed-wing icon', '🚁/✈️'],
@@ -796,7 +796,7 @@ const TOKEN_HELP = {
     ],
   },
   satellite: {
-    title: 'Satellite template placeholders',
+    title: 'Satellite Template Placeholders',
     intro: 'Drop any of these into a template\'s title or body. Each is filled in from the pass that triggered the alert.',
     fields: [
       ['sat_name', 'Which satellite/pass this is', 'ISS'],
@@ -866,7 +866,6 @@ function openFilterHelp(category) {
   } else {
     html += `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples, false)}`;
   }
-  html += `<div class="help-section-title">Test a rule</div>` + filterTesterHtml(category);
   openHelpModal(info.title, html);
 }
 
@@ -875,20 +874,24 @@ function filterTesterHtml(category) {
   const valPh = category === 'aircraft' ? 'e.g. 4500' : 'e.g. ISS';
   return `<div class="filter-tester">` +
     `<div class="filter-tester-row">` +
-    `<div class="filter-tester-field"><label class="filter-tester-label" for="filter-test-rule">Rule</label><input type="text" id="filter-test-rule" class="filter-tester-input" placeholder="${rulePh}" oninput="evalFilterTest()"></div>` +
-    `<div class="filter-tester-field"><label class="filter-tester-label" for="filter-test-value">Test value</label><input type="text" id="filter-test-value" class="filter-tester-input" placeholder="${valPh}" oninput="evalFilterTest()"></div>` +
+    `<div class="filter-tester-field"><label class="filter-tester-label" for="filter-test-rule-${category}">Rule</label><input type="text" id="filter-test-rule-${category}" class="filter-tester-input" placeholder="${rulePh}" oninput="evalFilterTest('${category}')"></div>` +
+    `<div class="filter-tester-field"><label class="filter-tester-label" for="filter-test-value-${category}">Test value</label><input type="text" id="filter-test-value-${category}" class="filter-tester-input" placeholder="${valPh}" oninput="evalFilterTest('${category}')"></div>` +
     `</div>` +
-    `<div class="filter-tester-badge neutral" id="filter-test-badge">Enter a rule and a value above</div>` +
+    `<div class="filter-tester-badge neutral" id="filter-test-badge-${category}">Enter a rule and a value above</div>` +
     `</div>`;
 }
+
+NOTIF_CATEGORIES.forEach(cat => {
+  document.getElementById(`filter-tester-${cat}`).innerHTML = filterTesterHtml(cat);
+});
 
 const NUM_FILTER_TEST_RE = /^(\w+)\s*(>=|<=|>|<)\s*(-?\d+(?:\.\d+)?)\s*$/;
 const REGEX_FILTER_TEST_RE = /^(-?)\w+=(.+)$/;
 
-function evalFilterTest() {
-  const badge = document.getElementById('filter-test-badge');
-  const rule = document.getElementById('filter-test-rule').value.trim();
-  const value = document.getElementById('filter-test-value').value;
+function evalFilterTest(category) {
+  const badge = document.getElementById(`filter-test-badge-${category}`);
+  const rule = document.getElementById(`filter-test-rule-${category}`).value.trim();
+  const value = document.getElementById(`filter-test-value-${category}`).value;
   const setBadge = (text, cls) => {
     badge.textContent = text;
     badge.className = `filter-tester-badge ${cls}`;
