@@ -375,7 +375,11 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
           <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
-          <div class="help-section-title">Test a rule</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Test a Rule</div>
+          <div class="card-desc">Check whether a rule matches a sample value before saving it.</div>
           <div id="filter-tester-aircraft"></div>
         </div>
 
@@ -411,7 +415,11 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
           <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
-          <div class="help-section-title">Test a rule</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Test a Rule</div>
+          <div class="card-desc">Check whether a rule matches a sample value before saving it.</div>
           <div id="filter-tester-satellites"></div>
         </div>
 
