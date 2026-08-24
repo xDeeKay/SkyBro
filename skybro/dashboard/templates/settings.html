@@ -844,7 +844,8 @@ function closeHelpModal() {
 
 function openFilterHelp(category) {
   const info = FILTER_HELP[category];
-  let html = Array.isArray(info.intro)
+  let html = `<div class="help-section-title">Overview</div>`;
+  html += Array.isArray(info.intro)
     ? `<ul class="help-notes">${info.intro.map(n => `<li>${n}</li>`).join('')}</ul>`
     : `<p>${info.intro}</p>`;
   if (info.notes) {
