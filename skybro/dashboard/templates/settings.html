@@ -216,13 +216,30 @@ select.target-template:focus{border-color:var(--accent)}
 .help-table td{padding:8px 10px 8px 0;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px}
 .help-table tr:last-child td{border-bottom:none}
 .help-table code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;white-space:nowrap;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.help-table code.help-pattern{color:var(--muted)}
+.help-table code.help-pattern strong{font-weight:inherit;color:var(--text)}
 .help-table code.placeholder-token{cursor:pointer;transition:.15s}
 .help-table code.placeholder-token:hover{color:var(--text)}
 .help-table .help-desc{color:var(--muted)}
 .help-table .help-example{color:var(--text);font-weight:600;white-space:nowrap}
+.help-table .help-symbol code{display:inline-block}
+.help-table .help-symbol code + code{margin-top:4px}
+.help-table .help-explain{display:block;color:var(--muted);font-size:11.5px;margin-top:4px;font-weight:400;white-space:normal}
 .help-notes{margin:0;padding-left:18px;color:var(--muted)}
 .help-notes li{margin-bottom:6px}
 .help-notes li:last-child{margin-bottom:0}
+.help-subsection-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:12px 0 6px}
+.help-subsection-title:first-child{margin-top:0}
+.filter-tester{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.filter-tester-row{display:flex;gap:8px;flex-wrap:wrap}
+.filter-tester-field{flex:1;min-width:140px;display:flex;flex-direction:column;gap:4px}
+.filter-tester-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.filter-tester-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:var(--mono);font-size:12px}
+.filter-tester-input:focus{outline:none;border-color:var(--accent)}
+.filter-tester-badge{margin-top:10px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:6px;text-align:center}
+.filter-tester-badge.neutral{background:transparent;color:var(--muted);font-weight:400}
+.filter-tester-badge.pass{background:rgba(46,204,113,.14);color:var(--green)}
+.filter-tester-badge.fail{background:rgba(231,76,60,.14);color:var(--red)}
 </style>
 </head>
 <body>
@@ -689,40 +706,47 @@ const FILTER_HELP = {
       'Range bounds always compare against raw ft/kts/fpm/km/degree values, never the unit-suffixed text your templates render, regardless of your Display tab\'s metric/aviation setting.',
       'A target\'s own filters (if set) are checked in addition to these category-wide ones: both must pass.',
     ],
-    fields: [
-      ['callsign', 'Flight callsign as broadcast'],
-      ['country', "Aircraft's country of registration"],
-      ['model', 'Aircraft model/type'],
-      ['airframe', 'One of heli, widebody, military, light, jet'],
-      ['direction', 'Compass direction of travel'],
-      ['icao24', '24-bit ICAO hex address, unique per aircraft'],
-      ['registration', 'Tail number'],
-      ['squawk', 'Transponder code'],
-      ['altitude', 'Altitude in feet (range only)'],
-      ['distance_km', 'Distance from home in km (range only)'],
-      ['heading', 'True heading in degrees, 0-360 (range only)'],
-      ['lat', 'Latitude (range only)'],
-      ['long', 'Longitude (range only)'],
-      ['speed', 'Ground speed in knots (range only)'],
-      ['vertical_speed', 'Climb/descent rate in feet/min, negative when descending (range only)'],
-    ],
+    fields: {
+      string: [
+        ['callsign', 'Flight callsign as broadcast'],
+        ['country', "Aircraft's country of registration"],
+        ['model', 'Aircraft model/type'],
+        ['airframe', 'One of heli, widebody, military, light, jet'],
+        ['direction', 'Compass direction of travel'],
+        ['icao24', '24-bit ICAO hex address, unique per aircraft'],
+        ['registration', 'Tail number'],
+        ['squawk', 'Transponder code'],
+      ],
+      numeric: [
+        ['altitude', 'Altitude in feet'],
+        ['distance_km', 'Distance from home in km'],
+        ['heading', 'True heading in degrees, 0-360'],
+        ['lat', 'Latitude'],
+        ['long', 'Longitude'],
+        ['speed', 'Ground speed in knots'],
+        ['vertical_speed', 'Climb/descent rate in feet/min, negative when descending'],
+      ],
+    },
     ranges: [
-      ['altitude&lt;5000', 'Only below 5,000 ft'],
-      ['speed&gt;=250', 'Inclusive bound (&gt;= and &lt;= include the boundary itself): only at or above 250 kts'],
-      ['altitude&gt;1000<br>altitude&lt;5000', 'Combine a &gt; line and a &lt; line on the same field for a min+max window: only between 1,000 and 5,000 ft'],
-      ['lat&lt;-30', 'Only south of -30° latitude'],
+      [['&lt;'], 'Less than', 'altitude<strong>&lt;</strong>5000', 'Only below 5,000 ft'],
+      [['&lt;='], 'Less than or equal to', 'speed<strong>&lt;=</strong>250', 'Only at or below 250 kts, boundary included'],
+      [['&gt;'], 'Greater than', 'altitude<strong>&gt;</strong>1000', 'Only above 1,000 ft'],
+      [['&gt;='], 'Greater than or equal to', 'speed<strong>&gt;=</strong>250', 'Only at or above 250 kts, boundary included'],
+      [['&gt;', '&lt;'], 'Min+max window', 'altitude<strong>&gt;</strong>1000<br>altitude<strong>&lt;</strong>5000', 'Combine a &gt; line and a &lt; line on the same field: only between 1,000 and 5,000 ft'],
+      [['N'], 'Positive values', 'distance_km&lt;<strong>10</strong>', 'No sign needed: only within 10 km'],
+      [['-N'], 'Negative values', 'lat&lt;<strong>-30</strong>', 'Prefix the number with -: only south of -30° latitude'],
     ],
     regex: [
-      ['^VIPR20$', '^ and $ (anchors): matches only the exact value VIPR20, not VIPR200 or VIPR21'],
-      ['VIPR.0', '. (any character): matches VIPR10, VIPRA0, VIPR-0, anything with one character between VIPR and 0'],
-      ['QF[0-9]+', '[...] (character class): matches QF followed by one or more digits, e.g. QF123'],
-      ['7\\d{3}', '\\d, \\w, \\s (shorthand classes): \\d is a digit, so this matches a 4-digit code starting with 7, e.g. squawk 7500'],
-      ['VIPR2*0', '* (zero or more of the preceding): matches VIPR0, VIPR20, VIPR220, VIPR2220...'],
-      ['VIPR2+0', '+ (one or more of the preceding): matches VIPR20, VIPR220, VIPR2220... but not VIPR0'],
-      ['VIPR2?0', '? (optional, zero or one): matches VIPR0 or VIPR20'],
-      ['QF\\d{3,4}', '{n,m} (repeat count): matches QF followed by 3 to 4 digits'],
-      ['A320|B738', '| (OR): matches A320 or B738'],
-      ['(VIPR|COBRA)\\d+', '() (grouping): matches VIPR or COBRA followed by one or more digits, e.g. VIPR20, COBRA07'],
+      [['^', '$'], 'Anchors', '<strong>^</strong>VIPR20<strong>$</strong>', 'Matches only the exact value VIPR20, not VIPR200 or VIPR21'],
+      [['.'], 'Any character', 'VIPR<strong>.</strong>0', 'Matches VIPR10, VIPRA0, VIPR-0: anything with one character between VIPR and 0'],
+      [['[...]'], 'Character class', 'QF<strong>[0-9]</strong>+', 'Matches QF followed by one or more digits, e.g. QF123'],
+      [['\\d', '\\w', '\\s'], 'Shorthand classes', '7<strong>\\d</strong>{3}', '\\d is a digit, so this matches a 4-digit code starting with 7, e.g. squawk 7500'],
+      [['*'], 'Zero or more', 'VIPR2<strong>*</strong>0', 'Matches VIPR0, VIPR20, VIPR220, VIPR2220...'],
+      [['+'], 'One or more', 'VIPR2<strong>+</strong>0', 'Matches VIPR20, VIPR220, VIPR2220... but not VIPR0'],
+      [['?'], 'Optional (zero or one)', 'VIPR2<strong>?</strong>0', 'Matches VIPR0 or VIPR20'],
+      [['{n,m}'], 'Repeat count', 'QF\\d<strong>{3,4}</strong>', 'Matches QF followed by 3 to 4 digits'],
+      [['|'], 'OR', 'A320<strong>|</strong>B738', 'Matches A320 or B738'],
+      [['()'], 'Grouping', '<strong>(</strong>VIPR|COBRA<strong>)</strong>\\d+', 'Matches VIPR or COBRA followed by one or more digits, e.g. VIPR20, COBRA07'],
     ],
   },
   satellites: {
@@ -731,7 +755,7 @@ const FILTER_HELP = {
     fields: [
       ['sat_name', 'Which satellite/pass this is'],
     ],
-    regex: [
+    examples: [
       ['sat_name=ISS', 'Only ISS passes'],
       ['-sat_name=Starlink', 'Exclude Starlink trains'],
       ['sat_name=ISS|Hubble', 'Only ISS or Hubble passes'],
@@ -780,7 +804,16 @@ const TOKEN_HELP = {
 function twoColTable(h1, h2, rows, sort = true) {
   const ordered = sort ? [...rows].sort((a, b) => a[0].localeCompare(b[0])) : rows;
   return `<div class="help-table-wrap"><table class="help-table"><tr><th>${h1}</th><th>${h2}</th></tr>` +
-    ordered.map(([a, b]) => `<tr><td><code>${a}</code></td><td class="help-desc">${b}</td></tr>`).join('') +
+    ordered.map(([a, b]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">${a}</code></td><td class="help-desc">${b}</td></tr>`).join('') +
+    '</table></div>';
+}
+
+function threeColTable(h1, h2, h3, rows) {
+  return `<div class="help-table-wrap"><table class="help-table"><tr><th>${h1}</th><th>${h2}</th><th>${h3}</th></tr>` +
+    rows.map(([symbols, meaning, pattern, explanation]) => {
+      const symbolHtml = symbols.map(s => `<code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">${s}</code>`).join('<br>');
+      return `<tr><td class="help-symbol">${symbolHtml}</td><td>${meaning}</td><td><code class="help-pattern">${pattern}</code><span class="help-explain">${explanation}</span></td></tr>`;
+    }).join('') +
     '</table></div>';
 }
 
@@ -809,12 +842,80 @@ function openFilterHelp(category) {
   if (info.notes) {
     html += `<ul class="help-notes">${info.notes.map(n => `<li>${n}</li>`).join('')}</ul>`;
   }
-  html += `<div class="help-section-title">Fields</div>${twoColTable('Field', 'Meaning', info.fields)}`;
-  html += `<div class="help-section-title">Regex syntax</div>${twoColTable('Pattern', 'Matches', info.regex, false)}`;
-  if (info.ranges) {
-    html += `<div class="help-section-title">Range syntax</div>${twoColTable('Rule', 'Effect', info.ranges, false)}`;
+  html += `<div class="help-section-title">Fields</div>`;
+  if (Array.isArray(info.fields)) {
+    html += twoColTable('Field', 'Meaning', info.fields);
+  } else {
+    html += `<div class="help-subsection-title">String fields (regex)</div>${twoColTable('Field', 'Meaning', info.fields.string)}`;
+    html += `<div class="help-subsection-title">Numeric fields (range)</div>${twoColTable('Field', 'Meaning', info.fields.numeric)}`;
   }
+  if (category === 'aircraft') {
+    html += `<div class="help-section-title">Regex syntax</div>${threeColTable('Symbol', 'Meaning', 'Example', info.regex)}`;
+    if (info.ranges) {
+      html += `<div class="help-section-title">Range syntax</div>${threeColTable('Symbol', 'Meaning', 'Example', info.ranges)}`;
+    }
+  } else {
+    html += `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples, false)}`;
+  }
+  html += `<div class="help-section-title">Test a rule</div>` + filterTesterHtml(category);
   openHelpModal(info.title, html);
+}
+
+function filterTesterHtml(category) {
+  const rulePh = category === 'aircraft' ? 'e.g. altitude<5000' : 'e.g. sat_name=ISS|Hubble';
+  const valPh = category === 'aircraft' ? 'e.g. 4500' : 'e.g. ISS';
+  return `<div class="filter-tester">` +
+    `<div class="filter-tester-row">` +
+    `<div class="filter-tester-field"><label class="filter-tester-label" for="filter-test-rule">Rule</label><input type="text" id="filter-test-rule" class="filter-tester-input" placeholder="${rulePh}" oninput="evalFilterTest()"></div>` +
+    `<div class="filter-tester-field"><label class="filter-tester-label" for="filter-test-value">Test value</label><input type="text" id="filter-test-value" class="filter-tester-input" placeholder="${valPh}" oninput="evalFilterTest()"></div>` +
+    `</div>` +
+    `<div class="filter-tester-badge neutral" id="filter-test-badge">Enter a rule and a value above</div>` +
+    `</div>`;
+}
+
+const NUM_FILTER_TEST_RE = /^(\w+)\s*(>=|<=|>|<)\s*(-?\d+(?:\.\d+)?)\s*$/;
+const REGEX_FILTER_TEST_RE = /^(-?)\w+=(.+)$/;
+
+function evalFilterTest() {
+  const badge = document.getElementById('filter-test-badge');
+  const rule = document.getElementById('filter-test-rule').value.trim();
+  const value = document.getElementById('filter-test-value').value;
+  const setBadge = (text, cls) => {
+    badge.textContent = text;
+    badge.className = `filter-tester-badge ${cls}`;
+  };
+  if (!rule || !value) {
+    setBadge('Enter a rule and a value above', 'neutral');
+    return;
+  }
+  const numMatch = rule.match(NUM_FILTER_TEST_RE);
+  if (numMatch) {
+    const num = parseFloat(value);
+    if (isNaN(num)) {
+      setBadge('Value must be a number for a range rule', 'neutral');
+      return;
+    }
+    const [, , op, boundStr] = numMatch;
+    const bound = parseFloat(boundStr);
+    const passes = op === '>' ? num > bound : op === '<' ? num < bound : op === '>=' ? num >= bound : num <= bound;
+    setBadge(passes ? 'Passes' : 'Fails', passes ? 'pass' : 'fail');
+    return;
+  }
+  const regexMatch = rule.match(REGEX_FILTER_TEST_RE);
+  if (regexMatch) {
+    const [, exclude, pattern] = regexMatch;
+    let matched;
+    try {
+      matched = new RegExp(pattern, 'i').test(value);
+    } catch (e) {
+      setBadge('Not a valid pattern', 'neutral');
+      return;
+    }
+    const passes = exclude ? !matched : matched;
+    setBadge(passes ? 'Passes' : 'Fails', passes ? 'pass' : 'fail');
+    return;
+  }
+  setBadge("Can't parse this line (won't be saved either)", 'neutral');
 }
 
 function openTokenHelp(kind) {
