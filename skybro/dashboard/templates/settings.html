@@ -207,6 +207,9 @@ select.target-template:focus{border-color:var(--accent)}
 /* Help modal (filter syntax / template placeholders) */
 .help-link{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;margin-left:6px;text-decoration:underline;text-underline-offset:2px}
 .help-link:hover{opacity:.8}
+.card-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.help-icon-btn{flex-shrink:0;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:none;color:var(--muted);font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.help-icon-btn:hover{color:var(--accent);border-color:var(--accent)}
 .modal-body{padding:16px 18px;overflow-y:auto;font-size:13px;line-height:1.6}
 .modal-body p{margin:0 0 12px}
 .help-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text);margin:16px 0 8px}
@@ -367,10 +370,11 @@ select.target-template:focus{border-color:var(--accent)}
         </div>
 
         <div class="card">
-          <div class="card-title">Global Aircraft Filters</div>
-          <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.
-            <button type="button" class="help-link" onclick="openFilterHelp('aircraft')">Filter syntax &amp; fields</button>
+          <div class="card-title-row">
+            <span class="card-title" style="margin-bottom:0">Global Aircraft Filters</span>
+            <button type="button" class="help-icon-btn" onclick="openFilterHelp('aircraft')" title="Filter syntax &amp; fields" aria-label="Filter syntax &amp; fields">?</button>
           </div>
+          <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
           <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
         </div>
 
@@ -397,10 +401,11 @@ select.target-template:focus{border-color:var(--accent)}
         </div>
 
         <div class="card">
-          <div class="card-title">Global Satellite Filters</div>
-          <div class="card-desc">Applies to every satellite target below. Leave blank to alert on every tracked satellite type.
-            <button type="button" class="help-link" onclick="openFilterHelp('satellites')">Filter syntax &amp; fields</button>
+          <div class="card-title-row">
+            <span class="card-title" style="margin-bottom:0">Global Satellite Filters</span>
+            <button type="button" class="help-icon-btn" onclick="openFilterHelp('satellites')" title="Filter syntax &amp; fields" aria-label="Filter syntax &amp; fields">?</button>
           </div>
+          <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
           <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
         </div>
 
