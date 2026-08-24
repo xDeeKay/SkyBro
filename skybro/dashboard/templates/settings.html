@@ -78,7 +78,7 @@ textarea.mono-textarea{
 }
 textarea.mono-textarea:focus{border-color:var(--accent)}
 .target-list{margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
-.target-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.target-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px}
 .target-card input,.target-card textarea{margin-top:8px}
 .target-card input:first-of-type{margin-top:0}
 .target-card .field-group{margin-top:10px}
@@ -208,8 +208,8 @@ select.target-template:focus{border-color:var(--accent)}
 .help-link{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;margin-left:6px;text-decoration:underline;text-underline-offset:2px}
 .help-link:hover{opacity:.8}
 .card-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-.help-icon-btn{flex-shrink:0;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:none;color:var(--muted);font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
-.help-icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+.help-icon-btn{flex-shrink:0;width:18px;height:18px;border-radius:50%;border:1px solid var(--accent);background:none;color:var(--accent);font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.help-icon-btn:hover{opacity:.75}
 .modal-body{padding:16px 18px;overflow-y:auto;font-size:13px;line-height:1.6}
 .modal-body p{margin:0 0 12px}
 .help-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text);margin:16px 0 8px}
@@ -701,7 +701,7 @@ const TOKENS_BY_KIND = {
 // ── Help modal (filter syntax / template placeholders) ────────────────────────
 const FILTER_HELP = {
   aircraft: {
-    title: 'Aircraft filter syntax',
+    title: 'Aircraft Filter Syntax',
     intro: [
       'One rule per line: <code>field=pattern</code> includes matches, <code>-field=pattern</code> excludes them.',
       'Patterns are case-insensitive, see regex syntax below.',
@@ -755,8 +755,12 @@ const FILTER_HELP = {
     ],
   },
   satellites: {
-    title: 'Satellite filter syntax',
-    intro: 'Same syntax as aircraft filters, but the only field available is <code>sat_name</code>, which covers all four tracked pass types.',
+    title: 'Satellite Filter Syntax',
+    intro: [
+      'One rule per line: <code>field=pattern</code> includes matches, <code>-field=pattern</code> excludes them.',
+      'Patterns are case-insensitive, see examples below.',
+      'The only field available is <code>sat_name</code>, which covers all four tracked pass types.',
+    ],
     fields: [
       ['sat_name', 'Which satellite/pass this is'],
     ],
