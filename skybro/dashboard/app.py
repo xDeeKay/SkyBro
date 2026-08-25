@@ -54,7 +54,7 @@ DEFAULTS = {
     "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
     "use_location_time": False, "time_format": "12h",
     "units_speed": "aviation", "units_temp": "imperial",
-    "digest_send_time": "07:00",
+    "digest_send_time": "08:00",
 }
 
 # Fields the UI is allowed to read/write

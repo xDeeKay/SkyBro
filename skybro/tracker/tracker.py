@@ -86,7 +86,7 @@ DEFAULTS = {
     "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
     "use_location_time":  False,
     "time_format":        "12h",
-    "digest_send_time":   "07:00",
+    "digest_send_time":   "08:00",
 }
 
 cfg = dict(DEFAULTS)
@@ -1127,7 +1127,7 @@ def maybe_send_digest():
         utc_off = _get_utc_offset_seconds(conn)
         local_now = datetime.fromtimestamp(int(time.time()) + utc_off, tz=timezone.utc)
         try:
-            sh, sm = (int(x) for x in cfg.get("digest_send_time", "07:00").split(":"))
+            sh, sm = (int(x) for x in cfg.get("digest_send_time", "08:00").split(":"))
         except Exception:
             sh, sm = 7, 0
         if local_now.hour * 60 + local_now.minute < sh * 60 + sm:
