@@ -33,7 +33,7 @@ DEFAULT_TEMPLATES_LIST = [
         "body":  "Visible pass in ~{minutes} min (at {time} local), lasting {duration}s\nRises {start_az} • peaks at {max_el} • sets {end_az}",
     },
     {
-        "id": "default_digest", "name": "Default Digest", "kind": "digest",
+        "id": "default_digest", "name": "Default Daily Digest", "kind": "digest",
         "title": "🌌 SkyBro Daily Digest",
         "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es), {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
     },
