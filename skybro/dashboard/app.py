@@ -167,6 +167,23 @@ def _seed_templates(raw_cfg):
         return True
     return False
 
+def _seed_notification_categories(raw_cfg):
+    """A `notifications` dict from before a new category existed (e.g. `digest`)
+    survives the top-level DEFAULTS merge as-is, since that merge is shallow and
+    `notifications` already exists. Without this, settings.html's unconditional
+    `cfg.notifications.digest.filters` etc. raises a Jinja UndefinedError (500)
+    on any install saved before that category was added. Backfills any missing
+    category with its DEFAULTS shape; existing categories are untouched."""
+    notif = raw_cfg.get("notifications")
+    if not isinstance(notif, dict):
+        return False
+    changed = False
+    for key, default_val in DEFAULTS["notifications"].items():
+        if key not in notif:
+            notif[key] = dict(default_val)
+            changed = True
+    return changed
+
 # Server-side bounds mirroring the settings page's HTML min/max, since those
 # are only client-side hints and can be bypassed via a direct API call.
 NUMERIC_BOUNDS = {
@@ -192,8 +209,9 @@ def read_config():
             loaded = json.load(f)
         loaded, migrated = _migrate_legacy_notifications(loaded)
         seeded = _seed_templates(loaded)
+        seeded_cats = _seed_notification_categories(loaded)
         merged = {**DEFAULTS, **loaded}
-        if migrated or seeded:
+        if migrated or seeded or seeded_cats:
             # Write directly, not via write_config() (which itself calls
             # read_config() to merge, that would recurse).
             DATA_DIR.mkdir(parents=True, exist_ok=True)

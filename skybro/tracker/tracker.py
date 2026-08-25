@@ -147,6 +147,23 @@ def _seed_templates(raw_cfg):
         return True
     return False
 
+def _seed_notification_categories(raw_cfg):
+    """A `notifications` dict from before a new category existed (e.g. `digest`)
+    survives the top-level DEFAULTS merge as-is, since that merge is shallow and
+    `notifications` already exists. Backfills any missing category with its
+    DEFAULTS shape (mirrors app.py's copy of this function) so notify_category()
+    sees a real, if empty, `digest` entry instead of relying on app.py's own
+    Settings-page self-heal to have run first."""
+    notif = raw_cfg.get("notifications")
+    if not isinstance(notif, dict):
+        return False
+    changed = False
+    for key, default_val in DEFAULTS["notifications"].items():
+        if key not in notif:
+            notif[key] = dict(default_val)
+            changed = True
+    return changed
+
 def load_config():
     global cfg, _cfg_mtime, _weather_last, _moon_last, _astronomy_last, _sat_last_check, _starlink_last
     if not CFG_PATH.exists():
@@ -161,10 +178,11 @@ def load_config():
             loaded = json.load(f)
         loaded, migrated = _migrate_legacy_notifications(loaded)
         seeded = _seed_templates(loaded)
-        if migrated or seeded:
+        seeded_cats = _seed_notification_categories(loaded)
+        if migrated or seeded or seeded_cats:
             save_config({**DEFAULTS, **loaded})
         cfg = {**DEFAULTS, **loaded}
-        _cfg_mtime = CFG_PATH.stat().st_mtime if (migrated or seeded) else mtime
+        _cfg_mtime = CFG_PATH.stat().st_mtime if (migrated or seeded or seeded_cats) else mtime
         log.info("Config reloaded")
         if (cfg.get("home_lat"), cfg.get("home_lon")) != (prev_lat, prev_lon):
             _weather_last = _moon_last = _astronomy_last = _sat_last_check = _starlink_last = 0.0
