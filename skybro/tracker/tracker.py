@@ -79,8 +79,8 @@ DEFAULTS = {
     "opensky_client_secret": "",
     "n2yo_api_key":       "",
     "notifications": {
-        "aircraft":   {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"}},
-        "satellites": {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"}},
+        "aircraft":   {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "08:00"}},
+        "satellites": {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "08:00"}},
         "digest":     {"filters": "", "targets": []},
     },
     "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
@@ -531,7 +531,7 @@ def _in_quiet_hours(cfg, category, utc_off_seconds):
         return False
     try:
         sh, sm = (int(x) for x in qh.get("start", "22:00").split(":"))
-        eh, em = (int(x) for x in qh.get("end", "07:00").split(":"))
+        eh, em = (int(x) for x in qh.get("end", "08:00").split(":"))
     except Exception:
         return False
     local_now = datetime.fromtimestamp(int(time.time()) + utc_off_seconds, tz=timezone.utc)

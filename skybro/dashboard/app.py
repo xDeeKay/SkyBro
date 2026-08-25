@@ -47,8 +47,8 @@ DEFAULTS = {
     "opensky_client_id": "", "opensky_client_secret": "",
     "n2yo_api_key": "",
     "notifications": {
-        "aircraft":   {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"}},
-        "satellites": {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"}},
+        "aircraft":   {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "08:00"}},
+        "satellites": {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "08:00"}},
         "digest":     {"filters": "", "targets": []},
     },
     "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
@@ -527,7 +527,7 @@ def _clean_quiet_hours(submitted, current):
     start = str(submitted.get("start", ""))
     end   = str(submitted.get("end", ""))
     if not _HHMM_RE.match(start): start = current.get("start", "22:00")
-    if not _HHMM_RE.match(end):   end   = current.get("end", "07:00")
+    if not _HHMM_RE.match(end):   end   = current.get("end", "08:00")
     return {"enabled": bool(submitted.get("enabled", False)), "start": start, "end": end}
 
 def _clean_notif_category(key, submitted, current, valid_template_ids):
