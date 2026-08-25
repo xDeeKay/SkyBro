@@ -360,7 +360,7 @@ select.target-template:focus{border-color:var(--accent)}
     <div class="subtabs" id="notif-subtabs">
       <div class="subtab active" data-subtab="aircraft">✈️ Aircraft</div>
       <div class="subtab" data-subtab="satellites">🛰️ Satellites</div>
-      <div class="subtab" data-subtab="digest">📋 Digest</div>
+      <div class="subtab" data-subtab="digest">📋 Daily Digest</div>
     </div>
 
     <div class="subtab-pane active" id="subpane-aircraft">
@@ -477,7 +477,7 @@ select.target-template:focus{border-color:var(--accent)}
 
       <div class="inner-pane active" id="inner-digest-targets">
         <div class="card">
-          <div class="card-title">Digest Schedule</div>
+          <div class="card-title">Daily Digest Schedule</div>
           <div class="card-desc">Sent once per day at this local time.</div>
           <div class="form-row single">
             <div><label>Send time</label><input type="time" id="digest_send_time" value="{{ cfg.digest_send_time }}"></div>
@@ -497,7 +497,7 @@ select.target-template:focus{border-color:var(--accent)}
       <div class="inner-pane" id="inner-digest-templates">
         <div class="card">
           <div class="card-title-row">
-            <span class="card-title" style="margin-bottom:0">Digest Templates</span>
+            <span class="card-title" style="margin-bottom:0">Daily Digest Templates</span>
             <button type="button" class="help-icon-btn" onclick="openTokenHelp('digest')" title="Template placeholders" aria-label="Template placeholders">?</button>
           </div>
           <div class="card-desc">Reusable message templates for the daily digest.</div>
@@ -895,7 +895,7 @@ const TOKEN_HELP = {
     ],
   },
   digest: {
-    title: 'Digest Template Placeholders',
+    title: 'Daily Digest Template Placeholders',
     intro: 'Drop any of these into the digest template. Filled in once per day at your configured send time.',
     fields: [
       ['aircraft_count', 'Aircraft alerted on yesterday', '3'],
