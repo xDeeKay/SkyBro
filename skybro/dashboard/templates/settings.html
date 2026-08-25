@@ -80,6 +80,7 @@ textarea.mono-textarea{
 textarea.mono-textarea:focus{border-color:var(--accent)}
 .target-list{margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
 .target-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px}
+.list-empty-hint{color:var(--muted);font-size:12px;text-align:center;padding:14px 12px;border:1px dashed var(--border);border-radius:8px}
 .target-card input,.target-card textarea{margin-top:8px}
 .target-card input:first-of-type{margin-top:0}
 .target-card .field-group{margin-top:10px}
@@ -1306,7 +1307,7 @@ function buildTargetCard(category, target) {
   removeBtn.className = 'btn-remove';
   removeBtn.title = 'Remove target';
   removeBtn.textContent = '✕';
-  removeBtn.onclick = () => card.remove();
+  removeBtn.onclick = () => { card.remove(); updateTargetListEmptyState(category); };
   hdrActions.append(toggleLabel, removeBtn);
   hdr.append(hdrLabel, hdrActions);
 
@@ -1473,12 +1474,32 @@ function addTarget(category) {
   document.getElementById(`targets_${category}`).appendChild(
     buildTargetCard(category, {enabled: true, template_id: CATEGORY_DEFAULT_TEMPLATE_ID[category]})
   );
+  updateTargetListEmptyState(category);
+}
+
+const EMPTY_TARGET_HINTS = {
+  aircraft: 'No targets configured yet. Add one below to start receiving aircraft alerts.',
+  satellites: 'No targets configured yet. Add one below to start receiving satellite alerts.',
+  digest: 'No targets configured yet. Add one below to start receiving the daily digest.',
+};
+
+function updateTargetListEmptyState(category) {
+  const list = document.getElementById(`targets_${category}`);
+  const existing = list.querySelector('.list-empty-hint');
+  if (existing) existing.remove();
+  if (list.children.length === 0) {
+    const hint = document.createElement('div');
+    hint.className = 'list-empty-hint';
+    hint.textContent = EMPTY_TARGET_HINTS[category] || 'No targets configured yet.';
+    list.appendChild(hint);
+  }
 }
 
 function renderTargets(category) {
   const list = document.getElementById(`targets_${category}`);
   const targets = (NOTIF_DATA[category] && NOTIF_DATA[category].targets) || [];
   targets.forEach(t => list.appendChild(buildTargetCard(category, t)));
+  updateTargetListEmptyState(category);
 }
 NOTIF_CATEGORIES.forEach(renderTargets);
 
