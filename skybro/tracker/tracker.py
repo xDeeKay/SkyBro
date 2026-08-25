@@ -62,7 +62,7 @@ DEFAULT_TEMPLATES_LIST = [
     {
         "id": "default_digest", "name": "Default Digest", "kind": "digest",
         "title": "🌌 SkyBro Daily Digest",
-        "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es) - {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
+        "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es), {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
     },
 ]
 _CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite", "digest": "default_digest"}
@@ -521,10 +521,10 @@ def _get_utc_offset_seconds(conn):
 
 def _in_quiet_hours(cfg, category, utc_off_seconds):
     """Whether real-time alerts for `category` should be suppressed right now.
-    Each category owns its own independent enable/start/end window - there is
+    Each category owns its own independent enable/start/end window. There is
     no shared window or cross-category exemption. Only ever consulted around
     the notify_category() call itself, never near the aircraft/satellite DB
-    writes, so live tracking/history is unaffected - quiet hours only mutes
+    writes, so live tracking/history is unaffected: quiet hours only mutes
     the push, it never stops anything being recorded."""
     qh = cfg.get("notifications", {}).get(category, {}).get("quiet_hours", {})
     if not qh.get("enabled"):
@@ -1054,7 +1054,7 @@ def dispatch_satellite_alerts():
             }, notify_type=apprise.NotifyType.WARNING)
         # Scope by sat_name too: pass_time alone can collide across satellite
         # types sharing the same second-resolution timestamp. Unconditional
-        # regardless of quiet hours - suppression is silent-drop, not
+        # regardless of quiet hours: suppression is silent-drop, not
         # deferred, so a suppressed pass must not re-queue once the window ends.
         c.execute("UPDATE iss_alerts SET alerted=1 WHERE pass_time=? AND sat_name=?",
                   (pass_time, sat_name))
@@ -1121,7 +1121,7 @@ def _build_digest_values(conn, utc_off, local_now):
 def maybe_send_digest():
     """Fires once per local calendar day at cfg['digest_send_time'], tracked in
     digest_state so a same-day container restart doesn't double-send. Not
-    subject to quiet hours - it's a scheduled summary, not a real-time alert."""
+    subject to quiet hours: it's a scheduled summary, not a real-time alert."""
     conn = sqlite3.connect(DB_PATH)
     try:
         utc_off = _get_utc_offset_seconds(conn)

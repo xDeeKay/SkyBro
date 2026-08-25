@@ -35,7 +35,7 @@ DEFAULT_TEMPLATES_LIST = [
     {
         "id": "default_digest", "name": "Default Digest", "kind": "digest",
         "title": "🌌 SkyBro Daily Digest",
-        "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es) - {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
+        "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es), {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
     },
 ]
 _CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite", "digest": "default_digest"}

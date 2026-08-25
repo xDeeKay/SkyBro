@@ -382,7 +382,7 @@ select.target-template:focus{border-color:var(--accent)}
 
         <div class="card">
           <div class="card-title">🌙 Quiet Hours</div>
-          <div class="card-desc">Silently suppress aircraft alerts during this window. Aircraft are still tracked and appear in history as normal - only the push is muted.</div>
+          <div class="card-desc">Silently suppress aircraft alerts during this window. Aircraft are still tracked and appear in history as normal, only the push is muted.</div>
           <div class="toggle-row">
             <div><div class="toggle-label">Enable quiet hours</div><div class="toggle-sub">No aircraft alerts sent between the start and end time below</div></div>
             <label class="toggle"><input type="checkbox" id="quiet_hours_enabled_aircraft" {% if cfg.notifications.aircraft.quiet_hours.enabled %}checked{% endif %}><span class="slider"></span></label>
@@ -435,7 +435,7 @@ select.target-template:focus{border-color:var(--accent)}
 
         <div class="card">
           <div class="card-title">🌙 Quiet Hours</div>
-          <div class="card-desc">Silently suppress satellite alerts during this window. Passes are still tracked and appear on the Satellites tab as normal - only the push is muted.</div>
+          <div class="card-desc">Silently suppress satellite alerts during this window. Passes are still tracked and appear on the Satellites tab as normal, only the push is muted.</div>
           <div class="toggle-row">
             <div><div class="toggle-label">Enable quiet hours</div><div class="toggle-sub">No satellite alerts sent between the start and end time below</div></div>
             <label class="toggle"><input type="checkbox" id="quiet_hours_enabled_satellites" {% if cfg.notifications.satellites.quiet_hours.enabled %}checked{% endif %}><span class="slider"></span></label>
@@ -1548,8 +1548,8 @@ function collectNotifications() {
       filters: document.getElementById(`filters_${cat}`).value,
       targets: collectTargets(cat),
     };
-    // Only aircraft/satellites have their own quiet hours card - digest has
-    // none, so this element simply won't exist for that category.
+    // Only aircraft/satellites have their own quiet hours card (digest has
+    // none), so this element simply won't exist for that category.
     const qhEnabled = document.getElementById(`quiet_hours_enabled_${cat}`);
     if (qhEnabled) {
       result[cat].quiet_hours = {
