@@ -929,7 +929,7 @@ function threeColTable(h1, h2, h3, rows) {
 
 function placeholderTable(rows) {
   const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
-  return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:200px"><col style="width:180px"><col></colgroup><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
+  return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:178px"><col style="width:180px"><col></colgroup><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
     sorted.map(([t, d, e]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">{${t}}</code></td><td class="help-desc">${d}</td><td class="help-example">${e}</td></tr>`).join('') +
     '</table></div>';
 }
