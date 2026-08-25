@@ -32,8 +32,13 @@ DEFAULT_TEMPLATES_LIST = [
         "title": "🛰️ {sat_name} flyover coming up",
         "body":  "Visible pass in ~{minutes} min (at {time} local), lasting {duration}s\nRises {start_az} • peaks at {max_el} • sets {end_az}",
     },
+    {
+        "id": "default_digest", "name": "Default Digest", "kind": "digest",
+        "title": "🌌 SkyBro Daily Digest",
+        "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es) - {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
+    },
 ]
-_CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite"}
+_CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite", "digest": "default_digest"}
 
 DEFAULTS = {
     "home_lat": 1.3521, "home_lon": 103.8198,
@@ -44,10 +49,13 @@ DEFAULTS = {
     "notifications": {
         "aircraft":   {"filters": "", "targets": []},
         "satellites": {"filters": "", "targets": []},
+        "digest":     {"filters": "", "targets": []},
     },
     "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
     "use_location_time": False, "time_format": "12h",
     "units_speed": "aviation", "units_temp": "imperial",
+    "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"},
+    "digest_send_time": "07:00",
 }
 
 # Fields the UI is allowed to read/write
@@ -220,7 +228,7 @@ def index():
                            first_run=first_run)
 
 SETTINGS_TABS = {"location", "display", "polling", "notifications", "opensky", "n2yo", "danger"}
-NOTIF_SUBTABS = {"aircraft", "satellites"}
+NOTIF_SUBTABS = {"aircraft", "satellites", "digest"}
 NOTIF_INNER_TABS = {"targets", "templates"}
 
 @app.route("/settings")
@@ -467,6 +475,17 @@ def _clean_filter_text(text):
              if _FILTER_LINE_RE.match(l.strip())]
     return "\n".join(lines)
 
+_HHMM_RE = re.compile(r'^([01]\d|2[0-3]):([0-5]\d)$')
+
+def _clean_quiet_hours(submitted, current):
+    submitted = submitted if isinstance(submitted, dict) else {}
+    current = current if isinstance(current, dict) else {}
+    start = str(submitted.get("start", ""))
+    end   = str(submitted.get("end", ""))
+    if not _HHMM_RE.match(start): start = current.get("start", "22:00")
+    if not _HHMM_RE.match(end):   end   = current.get("end", "07:00")
+    return {"enabled": bool(submitted.get("enabled", False)), "start": start, "end": end}
+
 def _clean_notif_category(key, submitted, current, valid_template_ids):
     """Validate/sanitize one category's submitted notifications block,
     restoring a masked target URL (by target id) from the currently-saved
@@ -496,9 +515,10 @@ def _clean_notif_category(key, submitted, current, valid_template_ids):
             "template_id": template_id,
             "filters": _clean_filter_text(row.get("filters", "")),
         })
-    return {"targets": out_targets, "filters": _clean_filter_text(submitted.get("filters", ""))}
+    return {"targets": out_targets, "filters": _clean_filter_text(submitted.get("filters", "")),
+            "quiet_hours_exempt": bool(submitted.get("quiet_hours_exempt", False))}
 
-NOTIF_CATEGORIES = ["aircraft", "satellites"]
+NOTIF_CATEGORIES = ["aircraft", "satellites", "digest"]
 TEMPLATES_CAP = 20
 TEMPLATE_NAME_CAP = 60
 
@@ -527,7 +547,7 @@ def _clean_templates(submitted, current):
             continue
         cur = cur_by_id.get(rid)
         kind = cur.get("kind") if cur else row.get("kind")
-        if kind not in ("aircraft", "satellite"):
+        if kind not in ("aircraft", "satellite", "digest"):
             continue
         # A brand-new template's client-generated id must be preserved (not
         # replaced) so a target's template_id in the same save payload, set
@@ -581,6 +601,10 @@ def api_config_post():
     if "notifications" in data:
         valid_template_ids = {t["id"] for t in data.get("templates", current.get("templates", []))}
         data["notifications"] = _clean_notifications(data["notifications"], current.get("notifications", {}), valid_template_ids)
+    if "quiet_hours" in data:
+        data["quiet_hours"] = _clean_quiet_hours(data["quiet_hours"], current.get("quiet_hours", DEFAULTS["quiet_hours"]))
+    if "digest_send_time" in data and not _HHMM_RE.match(str(data["digest_send_time"])):
+        data.pop("digest_send_time", None)
     for k, (lo, hi) in NUMERIC_BOUNDS.items():
         if k in data:
             try:
@@ -599,6 +623,10 @@ def _sample_placeholders(category, cfg):
     per the Display tab's units_speed setting (same conversions as
     process_states in tracker.py) and time-format-aware per time_format, so a
     test alert previews the units/format a real alert would actually use."""
+    if category == "digest":
+        return {"aircraft_count": "3", "aircraft_closest": "closest was QFA123 (BOEING 737-8AS) at 8.4 km",
+                "satellite_count": "2", "satellite_list": "ISS at 8:15 PM, Starlink at 9:40 PM",
+                "astronomy_highlight": "Jupiter visible; Perseids meteor shower active; Bortle: Suburban sky"}
     if category != "aircraft":
         sample_time = "8:15 PM" if cfg.get("time_format", "12h") == "12h" else "20:15"
         return {"sat_name": "ISS", "time": sample_time, "minutes": "12", "duration": "420",

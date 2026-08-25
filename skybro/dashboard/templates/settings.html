@@ -42,7 +42,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .form-row.single{grid-template-columns:1fr}
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
-input[type=text],input[type=number],input[type=password]{
+input[type=text],input[type=number],input[type=password],input[type=time]{
   width:100%;background:var(--surface2);border:1px solid var(--border);
   border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;
   transition:border-color .15s;outline:none;font-family:inherit
@@ -357,9 +357,23 @@ select.target-template:focus{border-color:var(--accent)}
 
   <!-- Notifications -->
   <div class="tab-pane" id="pane-notifications">
+    <div class="card">
+      <div class="card-title">🌙 Quiet Hours</div>
+      <div class="card-desc">Silently suppress real-time aircraft/satellite alerts during this window. The daily digest is never affected.</div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Enable quiet hours</div><div class="toggle-sub">No alerts sent between the start and end time below</div></div>
+        <label class="toggle"><input type="checkbox" id="quiet_hours_enabled" {% if cfg.quiet_hours.enabled %}checked{% endif %}><span class="slider"></span></label>
+      </div>
+      <div class="form-row">
+        <div><label>Start</label><input type="time" id="quiet_hours_start" value="{{ cfg.quiet_hours.start }}"></div>
+        <div><label>End</label><input type="time" id="quiet_hours_end" value="{{ cfg.quiet_hours.end }}"></div>
+      </div>
+    </div>
+
     <div class="subtabs" id="notif-subtabs">
       <div class="subtab active" data-subtab="aircraft">✈️ Aircraft</div>
       <div class="subtab" data-subtab="satellites">🛰️ Satellites</div>
+      <div class="subtab" data-subtab="digest">📋 Digest</div>
     </div>
 
     <div class="subtab-pane active" id="subpane-aircraft">
@@ -376,6 +390,10 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
           <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
+          <div class="toggle-row" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+            <div><div class="toggle-label">Exempt from quiet hours</div><div class="toggle-sub">Send aircraft alerts even during the quiet hours window above</div></div>
+            <label class="toggle"><input type="checkbox" id="quiet_hours_exempt_aircraft" {% if cfg.notifications.aircraft.quiet_hours_exempt %}checked{% endif %}><span class="slider"></span></label>
+          </div>
         </div>
 
         <div class="card">
@@ -416,6 +434,10 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
           <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
+          <div class="toggle-row" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+            <div><div class="toggle-label">Exempt from quiet hours</div><div class="toggle-sub">Send satellite alerts even during the quiet hours window above</div></div>
+            <label class="toggle"><input type="checkbox" id="quiet_hours_exempt_satellites" {% if cfg.notifications.satellites.quiet_hours_exempt %}checked{% endif %}><span class="slider"></span></label>
+          </div>
         </div>
 
         <div class="card">
@@ -439,6 +461,46 @@ select.target-template:focus{border-color:var(--accent)}
 
         <div class="target-list" id="template-list-satellite"></div>
         <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('satellite')">+ Add template</button>
+      </div>
+    </div>
+
+    <div class="subtab-pane" id="subpane-digest">
+      <div class="subtabs inner-subtabs">
+        <div class="subtab active" data-inner="targets">🎯 Targets</div>
+        <div class="subtab" data-inner="templates">📝 Templates</div>
+      </div>
+
+      <div class="inner-pane active" id="inner-digest-targets">
+        <div class="card">
+          <div class="card-title">Digest Schedule</div>
+          <div class="card-desc">Sent once per day at this local time.</div>
+          <div class="form-row single">
+            <div><label>Send time</label><input type="time" id="digest_send_time" value="{{ cfg.digest_send_time }}"></div>
+          </div>
+        </div>
+        <!-- Hidden placeholders: digest has no per-item filtering, but the
+             shared NOTIF_CATEGORIES-driven JS loops assume every category
+             has these elements. Keeping them in the DOM (hidden) avoids
+             forking collectNotifications()/the filter-tester init loop. -->
+        <textarea id="filters_digest" style="display:none">{{ cfg.notifications.digest.filters }}</textarea>
+        <div id="filter-tester-digest" style="display:none"></div>
+        <input type="checkbox" id="quiet_hours_exempt_digest" style="display:none">
+
+        <div class="target-list" id="targets_digest"></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('digest')">+ Add target</button>
+      </div>
+
+      <div class="inner-pane" id="inner-digest-templates">
+        <div class="card">
+          <div class="card-title-row">
+            <span class="card-title" style="margin-bottom:0">Digest Templates</span>
+            <button type="button" class="help-icon-btn" onclick="openTokenHelp('digest')" title="Template placeholders" aria-label="Template placeholders">?</button>
+          </div>
+          <div class="card-desc">Reusable message templates for the daily digest.</div>
+        </div>
+
+        <div class="target-list" id="template-list-digest"></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="addTemplate('digest')">+ Add template</button>
       </div>
     </div>
   </div>
@@ -713,9 +775,11 @@ _syncUrl(true, {tab: INITIAL_TAB, subtab: INITIAL_TAB === 'notifications' ? INIT
   pathForTab(INITIAL_TAB, INITIAL_SUBTAB, INITIAL_INNER));
 
 // ── Notifications ────────────────────────────────────────────────────────────
-const NOTIF_CATEGORIES = ['aircraft', 'satellites'];
-const CATEGORY_KIND = {aircraft: 'aircraft', satellites: 'satellite'};
-const CATEGORY_DEFAULT_TEMPLATE_ID = {aircraft: 'default_aircraft', satellites: 'default_satellite'};
+const NOTIF_CATEGORIES = ['aircraft', 'satellites', 'digest'];
+const CATEGORY_KIND = {aircraft: 'aircraft', satellites: 'satellite', digest: 'digest'};
+const CATEGORY_DEFAULT_TEMPLATE_ID = {aircraft: 'default_aircraft', satellites: 'default_satellite', digest: 'default_digest'};
+const KIND_TO_CATEGORY = {aircraft: 'aircraft', satellite: 'satellites', digest: 'digest'};
+const KIND_LABEL = {aircraft: 'Aircraft', satellite: 'Satellite', digest: 'Digest'};
 // ── Help modal (filter syntax / template placeholders) ────────────────────────
 const FILTER_HELP = {
   aircraft: {
@@ -824,6 +888,17 @@ const TOKEN_HELP = {
       ['start_az', 'Compass direction the pass starts at', 'NW'],
       ['max_el', 'Peak elevation above the horizon', '45°'],
       ['end_az', 'Compass direction the pass ends at', 'NE'],
+    ],
+  },
+  digest: {
+    title: 'Digest Template Placeholders',
+    intro: 'Drop any of these into the digest template. Filled in once per day at your configured send time.',
+    fields: [
+      ['aircraft_count', 'Aircraft alerted on yesterday', '3'],
+      ['aircraft_closest', 'Closest yesterday sighting, or "no aircraft seen"', 'closest was QFA123 (BOEING 737-8AS) at 8.4 km'],
+      ['satellite_count', 'Satellite passes today', '2'],
+      ['satellite_list', 'Short list of today\'s passes, or "no passes today"', 'ISS at 8:15 PM, Starlink at 9:40 PM'],
+      ['astronomy_highlight', 'Best visible planet + active shower + Bortle, one line', 'Jupiter visible; Perseids meteor shower active; Bortle: Suburban sky'],
     ],
   },
 };
@@ -1328,6 +1403,7 @@ function buildTargetCard(category, target) {
   filtersInput.rows = 2;
   filtersInput.value = target.filters || '';
   filtersGroup.append(filtersLabel, filtersInput);
+  filtersGroup.style.display = category === 'digest' ? 'none' : '';
 
   const testRow = document.createElement('div');
   testRow.style.cssText = 'margin-top:10px;display:flex;align-items:center;gap:10px';
@@ -1356,7 +1432,7 @@ function populateTemplateSelect(select, kind, selectedId) {
   });
   const newOpt = document.createElement('option');
   newOpt.value = '__new__';
-  newOpt.textContent = kind === 'aircraft' ? '+ Add aircraft template' : '+ Add satellite template';
+  newOpt.textContent = `+ Add ${KIND_LABEL[kind].toLowerCase()} template`;
   select.appendChild(newOpt);
   const want = selectedId !== undefined ? selectedId : prevValue;
   const options = [...select.options].filter(o => o.value !== '__new__');
@@ -1370,7 +1446,7 @@ function populateTemplateSelect(select, kind, selectedId) {
 function createTemplateFromTarget(kind, select) {
   const tmpl = addTemplate(kind);
   select.value = tmpl.id;
-  const category = kind === 'aircraft' ? 'aircraft' : 'satellites';
+  const category = KIND_TO_CATEGORY[kind];
   showTab('notifications');
   showSubtab(category);
   showInner('templates', true, category);
@@ -1446,13 +1522,14 @@ function collectNotifications() {
     result[cat] = {
       filters: document.getElementById(`filters_${cat}`).value,
       targets: collectTargets(cat),
+      quiet_hours_exempt: document.getElementById(`quiet_hours_exempt_${cat}`).checked,
     };
   });
   return result;
 }
 
 // ── Templates ────────────────────────────────────────────────────────────────
-const PROTECTED_TEMPLATE_IDS = new Set(['default_aircraft', 'default_satellite']);
+const PROTECTED_TEMPLATE_IDS = new Set(['default_aircraft', 'default_satellite', 'default_digest']);
 
 function buildTemplateCard(tmpl) {
   const protectedTmpl = PROTECTED_TEMPLATE_IDS.has(tmpl.id);
@@ -1536,7 +1613,7 @@ function fallbackCopy(text, done, fail) {
 }
 
 function renderTemplates() {
-  ['aircraft', 'satellite'].forEach(kind => {
+  ['aircraft', 'satellite', 'digest'].forEach(kind => {
     const list = document.getElementById(`template-list-${kind}`);
     list.innerHTML = '';
     TEMPLATES.filter(t => t.kind === kind).forEach(t => list.appendChild(buildTemplateCard(t)));
@@ -1547,7 +1624,7 @@ renderTemplates();
 function addTemplate(kind) {
   const id = (crypto.randomUUID ? crypto.randomUUID() : `t${Date.now()}${Math.random()}`).replace(/-/g, '').slice(0, 12);
   const seed = TEMPLATES.find(t => t.id === `default_${kind}`) || {title: '', body: ''};
-  const tmpl = {id, name: kind === 'aircraft' ? 'New Aircraft Template' : 'New Satellite Template',
+  const tmpl = {id, name: `New ${KIND_LABEL[kind]} Template`,
                 kind, title: seed.title, body: seed.body};
   TEMPLATES.push(tmpl);
   document.getElementById(`template-list-${kind}`).appendChild(buildTemplateCard(tmpl));
@@ -1568,7 +1645,7 @@ function collectTemplates() {
 function findIncompleteTemplate() {
   for (const card of document.querySelectorAll('.template-card')) {
     if (PROTECTED_TEMPLATE_IDS.has(card.dataset.id)) continue;
-    const cat = card.dataset.kind === 'aircraft' ? 'aircraft' : 'satellites';
+    const cat = KIND_TO_CATEGORY[card.dataset.kind];
     const nameInput = card.querySelector('.template-name');
     if (!nameInput.value.trim()) return {cat, card, input: nameInput, label: 'Template name'};
     const titleInput = card.querySelector('.template-title');
@@ -1619,8 +1696,13 @@ async function save() {
   const payload = {};
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
    'iss_check_hours','iss_warn_mins','opensky_client_id','opensky_client_secret','n2yo_api_key',
-   'use_location_time','units_speed','units_temp'].forEach(k => payload[k] = getVal(k));
+   'use_location_time','units_speed','units_temp','digest_send_time'].forEach(k => payload[k] = getVal(k));
   payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
+  payload.quiet_hours = {
+    enabled: getVal('quiet_hours_enabled'),
+    start: getVal('quiet_hours_start'),
+    end: getVal('quiet_hours_end'),
+  };
   payload.templates = collectTemplates();
   payload.notifications = collectNotifications();
 
@@ -1632,6 +1714,20 @@ async function save() {
       document.getElementById(key).focus();
       return;
     }
+  }
+
+  const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  if (payload.quiet_hours.enabled && (!HHMM_RE.test(payload.quiet_hours.start) || !HHMM_RE.test(payload.quiet_hours.end))) {
+    showToast('❌ Quiet hours start/end must both be set', 'error');
+    showTab('notifications');
+    document.getElementById('quiet_hours_start').focus();
+    return;
+  }
+  if (!HHMM_RE.test(payload.digest_send_time)) {
+    showToast('❌ Digest send time must be set', 'error');
+    showTab('notifications'); showSubtab('digest'); showInner('targets', true, 'digest');
+    document.getElementById('digest_send_time').focus();
+    return;
   }
 
   try {

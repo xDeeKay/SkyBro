@@ -59,8 +59,13 @@ DEFAULT_TEMPLATES_LIST = [
         "title": "🛰️ {sat_name} flyover coming up",
         "body":  "Visible pass in ~{minutes} min (at {time} local), lasting {duration}s\nRises {start_az} • peaks at {max_el} • sets {end_az}",
     },
+    {
+        "id": "default_digest", "name": "Default Digest", "kind": "digest",
+        "title": "🌌 SkyBro Daily Digest",
+        "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es) - {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
+    },
 ]
-_CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite"}
+_CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite", "digest": "default_digest"}
 
 DEFAULTS = {
     "home_lat":           1.3521,
@@ -76,10 +81,13 @@ DEFAULTS = {
     "notifications": {
         "aircraft":   {"filters": "", "targets": []},
         "satellites": {"filters": "", "targets": []},
+        "digest":     {"filters": "", "targets": []},
     },
     "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
     "use_location_time":  False,
     "time_format":        "12h",
+    "quiet_hours":        {"enabled": False, "start": "22:00", "end": "07:00"},
+    "digest_send_time":   "07:00",
 }
 
 cfg = dict(DEFAULTS)
@@ -226,6 +234,7 @@ def init_db():
             thumb_url TEXT,
             fetched INTEGER
         );
+        CREATE TABLE IF NOT EXISTS digest_state (id INTEGER PRIMARY KEY, last_sent_date TEXT);
     """)
     conn.commit()
     conn.close()
@@ -350,6 +359,7 @@ def update_source_status(source, success, detail='', status_override=None):
 _FILTER_FIELDS = {
     "aircraft":   {"callsign", "country", "model", "airframe", "direction", "icao24", "registration", "squawk"},
     "satellites": {"sat_name"},
+    "digest":     set(),
 }
 # Range-comparison fields (>, <, >=, <=), evaluated against raw numeric values
 # (feet/knots/fpm/km/degrees) rather than the formatted, unit-suffixed strings
@@ -463,6 +473,34 @@ def notify_category(key, values, photo_url=None, notify_type=None, filter_values
         except Exception as e:
             # Don't log str(e): the target URL is a secret and may appear in it
             log.error(f"Notify error ({key}/{target.get('id','?')}): {type(e).__name__}")
+
+def _get_utc_offset_seconds(conn):
+    row = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
+    try:
+        return json.loads(row[0]).get("utc_offset_seconds", 0) if row else 0
+    except Exception:
+        return 0
+
+def _in_quiet_hours(cfg, category, utc_off_seconds):
+    """Whether real-time alerts for `category` should be suppressed right now.
+    Only ever consulted around the notify_category() call itself, never near
+    the aircraft/satellite DB writes, so live tracking/history is unaffected -
+    quiet hours only mutes the push, it never stops anything being recorded."""
+    qh = cfg.get("quiet_hours", {})
+    if not qh.get("enabled"):
+        return False
+    if cfg.get("notifications", {}).get(category, {}).get("quiet_hours_exempt"):
+        return False
+    try:
+        sh, sm = (int(x) for x in qh.get("start", "22:00").split(":"))
+        eh, em = (int(x) for x in qh.get("end", "07:00").split(":"))
+    except Exception:
+        return False
+    local_now = datetime.fromtimestamp(int(time.time()) + utc_off_seconds, tz=timezone.utc)
+    now_m, start_m, end_m = local_now.hour * 60 + local_now.minute, sh * 60 + sm, eh * 60 + em
+    if start_m == end_m:
+        return False  # degenerate window: treat as "never quiet" rather than "always quiet"
+    return (start_m <= now_m < end_m) if start_m < end_m else (now_m >= start_m or now_m < end_m)
 
 # ── Aircraft photos ───────────────────────────────────────────────────────────
 def get_cached_photo(icao24):
@@ -733,6 +771,7 @@ def process_states(states):
                 (_alerted[icao24], icao24, now, lat, lon, alt_ft, speed_kts, heading, dist_km))
 
     c.execute("DELETE FROM live_aircraft WHERE updated < ?", (now - 90,))
+    aircraft_quiet = _in_quiet_hours(cfg, "aircraft", _get_utc_offset_seconds(conn))
     conn.commit()
     conn.close()
     # ── No DB connections open beyond this point until Phase 4 ───────────────
@@ -785,7 +824,8 @@ def process_states(states):
         # doesn't change what a saved filter threshold means.
         filter_values = dict(values, altitude=alert['alt_ft'], speed=alert['speed_kts'],
                               vertical_speed=round(alert['vrate'] * 196.85))
-        notify_category("aircraft", values, photo_url=photo_url, filter_values=filter_values)
+        if not aircraft_quiet:
+            notify_category("aircraft", values, photo_url=photo_url, filter_values=filter_values)
 
     live_icaos = {s[0] for s in states if s[6] and s[5]}
     for icao in list(_alerted):
@@ -956,9 +996,9 @@ def dispatch_satellite_alerts():
     warn = cfg["iss_warn_mins"] * 60
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    wr = conn.execute("SELECT data FROM weather_current WHERE id=1").fetchone()
-    utc_off = json.loads(wr[0]).get("utc_offset_seconds", 0) if wr else 0
+    utc_off = _get_utc_offset_seconds(conn)
     local_tz = timezone(timedelta(seconds=utc_off))
+    sat_quiet = _in_quiet_hours(cfg, "satellites", utc_off)
     rows = c.execute(
         "SELECT pass_time, duration, sat_name, start_az, max_el, end_az FROM iss_alerts "
         "WHERE alerted=0 AND pass_time BETWEEN ? AND ?",
@@ -968,16 +1008,102 @@ def dispatch_satellite_alerts():
         local_dt = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz)
         dt = local_dt.strftime("%I:%M %p").lstrip("0") if cfg.get("time_format") == "12h" \
             else local_dt.strftime("%H:%M")
-        notify_category("satellites", {
-            'sat_name': sat_name, 'time': dt, 'minutes': str(mins), 'duration': str(duration),
-            'start_az': start_az or "N/A", 'end_az': end_az or "N/A",
-            'max_el': f"{round(max_el)}°" if max_el is not None else "N/A",
-        }, notify_type=apprise.NotifyType.WARNING)
+        if not sat_quiet:
+            notify_category("satellites", {
+                'sat_name': sat_name, 'time': dt, 'minutes': str(mins), 'duration': str(duration),
+                'start_az': start_az or "N/A", 'end_az': end_az or "N/A",
+                'max_el': f"{round(max_el)}°" if max_el is not None else "N/A",
+            }, notify_type=apprise.NotifyType.WARNING)
         # Scope by sat_name too: pass_time alone can collide across satellite
-        # types sharing the same second-resolution timestamp.
+        # types sharing the same second-resolution timestamp. Unconditional
+        # regardless of quiet hours - suppression is silent-drop, not
+        # deferred, so a suppressed pass must not re-queue once the window ends.
         c.execute("UPDATE iss_alerts SET alerted=1 WHERE pass_time=? AND sat_name=?",
                   (pass_time, sat_name))
     conn.commit(); conn.close()
+
+# ── Daily digest ─────────────────────────────────────────────────────────────
+def _build_digest_values(conn, utc_off, local_now):
+    """Lean digest content: yesterday's aircraft, today's satellite passes,
+    one-line tonight's astronomy highlight. Reads already-computed data
+    (seen_aircraft/iss_alerts/astronomy_data) rather than re-deriving any of it."""
+    local_ts = int(local_now.timestamp())
+    today_start_local = local_ts - (local_ts % 86400)
+    y_start_utc = today_start_local - 86400 - utc_off
+    y_end_utc   = today_start_local - utc_off - 1
+    today_start_utc = today_start_local - utc_off
+
+    c = conn.cursor()
+    ac_count = c.execute(
+        "SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen BETWEEN ? AND ?",
+        (y_start_utc, y_end_utc)).fetchone()[0]
+    closest = c.execute(
+        "SELECT callsign, model, min_dist_km FROM seen_aircraft WHERE alerted=1 AND last_seen BETWEEN ? AND ? "
+        "ORDER BY min_dist_km ASC LIMIT 1", (y_start_utc, y_end_utc)).fetchone()
+    aircraft_closest = "no aircraft seen" if not closest else \
+        f"closest was {closest[0]} ({closest[1]}) at {closest[2]} km"
+
+    sat_rows = c.execute(
+        "SELECT sat_name, pass_time FROM iss_alerts WHERE pass_time BETWEEN ? AND ? ORDER BY pass_time ASC",
+        (today_start_utc, today_start_utc + 86399)).fetchall()
+    sat_count = len(sat_rows)
+    if not sat_rows:
+        satellite_list = "no passes today"
+    else:
+        local_tz = timezone(timedelta(seconds=utc_off))
+        items = []
+        for sat_name, pass_time in sat_rows[:5]:
+            dt = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz)
+            t = dt.strftime("%I:%M %p").lstrip("0") if cfg.get("time_format") == "12h" else dt.strftime("%H:%M")
+            items.append(f"{sat_name or 'ISS'} at {t}")
+        satellite_list = ", ".join(items)
+
+    astro_row = c.execute("SELECT data FROM astronomy_data WHERE id=1").fetchone()
+    parts = []
+    if astro_row:
+        try:
+            adata = json.loads(astro_row[0])
+        except Exception:
+            adata = {}
+        up = sorted((p for p in adata.get("planets", []) if p.get("is_up")), key=lambda p: p.get("magnitude", 99))
+        if up:
+            parts.append(f"{up[0]['name']} visible")
+        active = [m for m in adata.get("meteor_showers", []) if m.get("active")]
+        if active:
+            parts.append(f"{active[0]['name']} meteor shower active")
+        bortle = adata.get("bortle")
+        if bortle and bortle.get("description"):
+            parts.append(f"Bortle: {bortle['description']}")
+    astronomy_highlight = "; ".join(parts) or "no astronomy data available"
+
+    return {"aircraft_count": str(ac_count), "aircraft_closest": aircraft_closest,
+            "satellite_count": str(sat_count), "satellite_list": satellite_list,
+            "astronomy_highlight": astronomy_highlight}
+
+def maybe_send_digest():
+    """Fires once per local calendar day at cfg['digest_send_time'], tracked in
+    digest_state so a same-day container restart doesn't double-send. Not
+    subject to quiet hours - it's a scheduled summary, not a real-time alert."""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        utc_off = _get_utc_offset_seconds(conn)
+        local_now = datetime.fromtimestamp(int(time.time()) + utc_off, tz=timezone.utc)
+        try:
+            sh, sm = (int(x) for x in cfg.get("digest_send_time", "07:00").split(":"))
+        except Exception:
+            sh, sm = 7, 0
+        if local_now.hour * 60 + local_now.minute < sh * 60 + sm:
+            return
+        today_str = local_now.strftime("%Y-%m-%d")
+        row = conn.execute("SELECT last_sent_date FROM digest_state WHERE id=1").fetchone()
+        if row and row[0] == today_str:
+            return
+        values = _build_digest_values(conn, utc_off, local_now)
+        notify_category("digest", values)
+        conn.execute("INSERT OR REPLACE INTO digest_state (id, last_sent_date) VALUES (1, ?)", (today_str,))
+        conn.commit()
+    finally:
+        conn.close()
 
 # ── Weather ───────────────────────────────────────────────────────────────────
 def maybe_update_weather():
@@ -1060,6 +1186,10 @@ def main():
             maybe_update_astronomy()
         except Exception as e:
             log.error(f"Astronomy error: {e}", exc_info=True)
+        try:
+            maybe_send_digest()
+        except Exception as e:
+            log.error(f"Digest error: {e}", exc_info=True)
         Path("/tmp/heartbeat").write_text(str(time.time()))
         time.sleep(max(1, cfg["poll_interval"]))
 
