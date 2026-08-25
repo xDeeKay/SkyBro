@@ -79,14 +79,13 @@ DEFAULTS = {
     "opensky_client_secret": "",
     "n2yo_api_key":       "",
     "notifications": {
-        "aircraft":   {"filters": "", "targets": []},
-        "satellites": {"filters": "", "targets": []},
+        "aircraft":   {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"}},
+        "satellites": {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"}},
         "digest":     {"filters": "", "targets": []},
     },
     "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
     "use_location_time":  False,
     "time_format":        "12h",
-    "quiet_hours":        {"enabled": False, "start": "22:00", "end": "07:00"},
     "digest_send_time":   "07:00",
 }
 
@@ -148,12 +147,15 @@ def _seed_templates(raw_cfg):
     return False
 
 def _seed_notification_categories(raw_cfg):
-    """A `notifications` dict from before a new category existed (e.g. `digest`)
-    survives the top-level DEFAULTS merge as-is, since that merge is shallow and
-    `notifications` already exists. Backfills any missing category with its
-    DEFAULTS shape (mirrors app.py's copy of this function) so notify_category()
-    sees a real, if empty, `digest` entry instead of relying on app.py's own
-    Settings-page self-heal to have run first."""
+    """A `notifications` dict from before a new category/field existed survives
+    the top-level DEFAULTS merge as-is, since that merge is shallow and
+    `notifications` already exists. Backfills (1) an entirely missing category
+    (e.g. `digest`, added after `notifications` already existed elsewhere) and
+    (2) a missing per-category `quiet_hours` block for aircraft/satellites
+    (mirrors app.py's copy of this function). Also drops the short-lived
+    top-level `quiet_hours` + per-category `quiet_hours_exempt` shape from an
+    earlier build of the quiet-hours feature, since each category now owns its
+    own independent window instead of sharing one with an exemption flag."""
     notif = raw_cfg.get("notifications")
     if not isinstance(notif, dict):
         return False
@@ -162,6 +164,15 @@ def _seed_notification_categories(raw_cfg):
         if key not in notif:
             notif[key] = dict(default_val)
             changed = True
+        elif "quiet_hours" in default_val and "quiet_hours" not in notif[key]:
+            notif[key]["quiet_hours"] = dict(default_val["quiet_hours"])
+            changed = True
+        if isinstance(notif.get(key), dict) and "quiet_hours_exempt" in notif[key]:
+            del notif[key]["quiet_hours_exempt"]
+            changed = True
+    if "quiet_hours" in raw_cfg:
+        del raw_cfg["quiet_hours"]
+        changed = True
     return changed
 
 def load_config():
@@ -501,13 +512,13 @@ def _get_utc_offset_seconds(conn):
 
 def _in_quiet_hours(cfg, category, utc_off_seconds):
     """Whether real-time alerts for `category` should be suppressed right now.
-    Only ever consulted around the notify_category() call itself, never near
-    the aircraft/satellite DB writes, so live tracking/history is unaffected -
-    quiet hours only mutes the push, it never stops anything being recorded."""
-    qh = cfg.get("quiet_hours", {})
+    Each category owns its own independent enable/start/end window - there is
+    no shared window or cross-category exemption. Only ever consulted around
+    the notify_category() call itself, never near the aircraft/satellite DB
+    writes, so live tracking/history is unaffected - quiet hours only mutes
+    the push, it never stops anything being recorded."""
+    qh = cfg.get("notifications", {}).get(category, {}).get("quiet_hours", {})
     if not qh.get("enabled"):
-        return False
-    if cfg.get("notifications", {}).get(category, {}).get("quiet_hours_exempt"):
         return False
     try:
         sh, sm = (int(x) for x in qh.get("start", "22:00").split(":"))

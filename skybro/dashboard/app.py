@@ -47,14 +47,13 @@ DEFAULTS = {
     "opensky_client_id": "", "opensky_client_secret": "",
     "n2yo_api_key": "",
     "notifications": {
-        "aircraft":   {"filters": "", "targets": []},
-        "satellites": {"filters": "", "targets": []},
+        "aircraft":   {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"}},
+        "satellites": {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"}},
         "digest":     {"filters": "", "targets": []},
     },
     "templates": [dict(t) for t in DEFAULT_TEMPLATES_LIST],
     "use_location_time": False, "time_format": "12h",
     "units_speed": "aviation", "units_temp": "imperial",
-    "quiet_hours": {"enabled": False, "start": "22:00", "end": "07:00"},
     "digest_send_time": "07:00",
 }
 
@@ -168,12 +167,17 @@ def _seed_templates(raw_cfg):
     return False
 
 def _seed_notification_categories(raw_cfg):
-    """A `notifications` dict from before a new category existed (e.g. `digest`)
-    survives the top-level DEFAULTS merge as-is, since that merge is shallow and
+    """A `notifications` dict from before a new category/field existed survives
+    the top-level DEFAULTS merge as-is, since that merge is shallow and
     `notifications` already exists. Without this, settings.html's unconditional
     `cfg.notifications.digest.filters` etc. raises a Jinja UndefinedError (500)
-    on any install saved before that category was added. Backfills any missing
-    category with its DEFAULTS shape; existing categories are untouched."""
+    on any install saved before that category was added. Backfills (1) an
+    entirely missing category (e.g. `digest`) and (2) a missing per-category
+    `quiet_hours` block for aircraft/satellites (mirrors tracker.py's copy of
+    this function). Also drops the short-lived top-level `quiet_hours` +
+    per-category `quiet_hours_exempt` shape from an earlier build of the
+    quiet-hours feature, since each category now owns its own independent
+    window instead of sharing one with an exemption flag."""
     notif = raw_cfg.get("notifications")
     if not isinstance(notif, dict):
         return False
@@ -182,6 +186,15 @@ def _seed_notification_categories(raw_cfg):
         if key not in notif:
             notif[key] = dict(default_val)
             changed = True
+        elif "quiet_hours" in default_val and "quiet_hours" not in notif[key]:
+            notif[key]["quiet_hours"] = dict(default_val["quiet_hours"])
+            changed = True
+        if isinstance(notif.get(key), dict) and "quiet_hours_exempt" in notif[key]:
+            del notif[key]["quiet_hours_exempt"]
+            changed = True
+    if "quiet_hours" in raw_cfg:
+        del raw_cfg["quiet_hours"]
+        changed = True
     return changed
 
 # Server-side bounds mirroring the settings page's HTML min/max, since those
@@ -533,8 +546,11 @@ def _clean_notif_category(key, submitted, current, valid_template_ids):
             "template_id": template_id,
             "filters": _clean_filter_text(row.get("filters", "")),
         })
-    return {"targets": out_targets, "filters": _clean_filter_text(submitted.get("filters", "")),
-            "quiet_hours_exempt": bool(submitted.get("quiet_hours_exempt", False))}
+    result = {"targets": out_targets, "filters": _clean_filter_text(submitted.get("filters", ""))}
+    if "quiet_hours" in DEFAULTS["notifications"][key]:
+        result["quiet_hours"] = _clean_quiet_hours(
+            submitted.get("quiet_hours"), current.get("quiet_hours", DEFAULTS["notifications"][key]["quiet_hours"]))
+    return result
 
 NOTIF_CATEGORIES = ["aircraft", "satellites", "digest"]
 TEMPLATES_CAP = 20
@@ -619,8 +635,6 @@ def api_config_post():
     if "notifications" in data:
         valid_template_ids = {t["id"] for t in data.get("templates", current.get("templates", []))}
         data["notifications"] = _clean_notifications(data["notifications"], current.get("notifications", {}), valid_template_ids)
-    if "quiet_hours" in data:
-        data["quiet_hours"] = _clean_quiet_hours(data["quiet_hours"], current.get("quiet_hours", DEFAULTS["quiet_hours"]))
     if "digest_send_time" in data and not _HHMM_RE.match(str(data["digest_send_time"])):
         data.pop("digest_send_time", None)
     for k, (lo, hi) in NUMERIC_BOUNDS.items():

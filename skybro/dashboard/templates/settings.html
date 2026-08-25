@@ -357,19 +357,6 @@ select.target-template:focus{border-color:var(--accent)}
 
   <!-- Notifications -->
   <div class="tab-pane" id="pane-notifications">
-    <div class="card">
-      <div class="card-title">🌙 Quiet Hours</div>
-      <div class="card-desc">Silently suppress real-time aircraft/satellite alerts during this window. The daily digest is never affected.</div>
-      <div class="toggle-row">
-        <div><div class="toggle-label">Enable quiet hours</div><div class="toggle-sub">No alerts sent between the start and end time below</div></div>
-        <label class="toggle"><input type="checkbox" id="quiet_hours_enabled" {% if cfg.quiet_hours.enabled %}checked{% endif %}><span class="slider"></span></label>
-      </div>
-      <div class="form-row">
-        <div><label>Start</label><input type="time" id="quiet_hours_start" value="{{ cfg.quiet_hours.start }}"></div>
-        <div><label>End</label><input type="time" id="quiet_hours_end" value="{{ cfg.quiet_hours.end }}"></div>
-      </div>
-    </div>
-
     <div class="subtabs" id="notif-subtabs">
       <div class="subtab active" data-subtab="aircraft">✈️ Aircraft</div>
       <div class="subtab" data-subtab="satellites">🛰️ Satellites</div>
@@ -390,9 +377,18 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
           <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
-          <div class="toggle-row" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
-            <div><div class="toggle-label">Exempt from quiet hours</div><div class="toggle-sub">Send aircraft alerts even during the quiet hours window above</div></div>
-            <label class="toggle"><input type="checkbox" id="quiet_hours_exempt_aircraft" {% if cfg.notifications.aircraft.quiet_hours_exempt %}checked{% endif %}><span class="slider"></span></label>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🌙 Quiet Hours</div>
+          <div class="card-desc">Silently suppress aircraft alerts during this window. Aircraft are still tracked and appear in history as normal - only the push is muted.</div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">Enable quiet hours</div><div class="toggle-sub">No aircraft alerts sent between the start and end time below</div></div>
+            <label class="toggle"><input type="checkbox" id="quiet_hours_enabled_aircraft" {% if cfg.notifications.aircraft.quiet_hours.enabled %}checked{% endif %}><span class="slider"></span></label>
+          </div>
+          <div class="form-row">
+            <div><label>Start</label><input type="time" id="quiet_hours_start_aircraft" value="{{ cfg.notifications.aircraft.quiet_hours.start }}"></div>
+            <div><label>End</label><input type="time" id="quiet_hours_end_aircraft" value="{{ cfg.notifications.aircraft.quiet_hours.end }}"></div>
           </div>
         </div>
 
@@ -434,9 +430,18 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
           <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
-          <div class="toggle-row" style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
-            <div><div class="toggle-label">Exempt from quiet hours</div><div class="toggle-sub">Send satellite alerts even during the quiet hours window above</div></div>
-            <label class="toggle"><input type="checkbox" id="quiet_hours_exempt_satellites" {% if cfg.notifications.satellites.quiet_hours_exempt %}checked{% endif %}><span class="slider"></span></label>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🌙 Quiet Hours</div>
+          <div class="card-desc">Silently suppress satellite alerts during this window. Passes are still tracked and appear on the Satellites tab as normal - only the push is muted.</div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">Enable quiet hours</div><div class="toggle-sub">No satellite alerts sent between the start and end time below</div></div>
+            <label class="toggle"><input type="checkbox" id="quiet_hours_enabled_satellites" {% if cfg.notifications.satellites.quiet_hours.enabled %}checked{% endif %}><span class="slider"></span></label>
+          </div>
+          <div class="form-row">
+            <div><label>Start</label><input type="time" id="quiet_hours_start_satellites" value="{{ cfg.notifications.satellites.quiet_hours.start }}"></div>
+            <div><label>End</label><input type="time" id="quiet_hours_end_satellites" value="{{ cfg.notifications.satellites.quiet_hours.end }}"></div>
           </div>
         </div>
 
@@ -484,7 +489,6 @@ select.target-template:focus{border-color:var(--accent)}
              forking collectNotifications()/the filter-tester init loop. -->
         <textarea id="filters_digest" style="display:none">{{ cfg.notifications.digest.filters }}</textarea>
         <div id="filter-tester-digest" style="display:none"></div>
-        <input type="checkbox" id="quiet_hours_exempt_digest" style="display:none">
 
         <div class="target-list" id="targets_digest"></div>
         <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('digest')">+ Add target</button>
@@ -1522,8 +1526,17 @@ function collectNotifications() {
     result[cat] = {
       filters: document.getElementById(`filters_${cat}`).value,
       targets: collectTargets(cat),
-      quiet_hours_exempt: document.getElementById(`quiet_hours_exempt_${cat}`).checked,
     };
+    // Only aircraft/satellites have their own quiet hours card - digest has
+    // none, so this element simply won't exist for that category.
+    const qhEnabled = document.getElementById(`quiet_hours_enabled_${cat}`);
+    if (qhEnabled) {
+      result[cat].quiet_hours = {
+        enabled: qhEnabled.checked,
+        start: getVal(`quiet_hours_start_${cat}`),
+        end: getVal(`quiet_hours_end_${cat}`),
+      };
+    }
   });
   return result;
 }
@@ -1698,11 +1711,6 @@ async function save() {
    'iss_check_hours','iss_warn_mins','opensky_client_id','opensky_client_secret','n2yo_api_key',
    'use_location_time','units_speed','units_temp','digest_send_time'].forEach(k => payload[k] = getVal(k));
   payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
-  payload.quiet_hours = {
-    enabled: getVal('quiet_hours_enabled'),
-    start: getVal('quiet_hours_start'),
-    end: getVal('quiet_hours_end'),
-  };
   payload.templates = collectTemplates();
   payload.notifications = collectNotifications();
 
@@ -1717,11 +1725,14 @@ async function save() {
   }
 
   const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  if (payload.quiet_hours.enabled && (!HHMM_RE.test(payload.quiet_hours.start) || !HHMM_RE.test(payload.quiet_hours.end))) {
-    showToast('❌ Quiet hours start/end must both be set', 'error');
-    showTab('notifications');
-    document.getElementById('quiet_hours_start').focus();
-    return;
+  for (const cat of ['aircraft', 'satellites']) {
+    const qh = payload.notifications[cat].quiet_hours;
+    if (qh && qh.enabled && (!HHMM_RE.test(qh.start) || !HHMM_RE.test(qh.end))) {
+      showToast(`❌ ${KIND_LABEL[CATEGORY_KIND[cat]]} quiet hours start/end must both be set`, 'error');
+      showTab('notifications'); showSubtab(cat); showInner('targets', true, cat);
+      document.getElementById(`quiet_hours_start_${cat}`).focus();
+      return;
+    }
   }
   if (!HHMM_RE.test(payload.digest_send_time)) {
     showToast('❌ Digest send time must be set', 'error');
