@@ -140,11 +140,20 @@ def _migrate_legacy_notifications(raw_cfg):
 def _seed_templates(raw_cfg):
     """Separate from _migrate_legacy_notifications: an install can already have
     a `notifications` key (e.g. from testing a pre-templates build) without yet
-    having `templates`, so this must not be gated by that migration's own guard."""
+    having `templates`, so this must not be gated by that migration's own guard.
+    Also backfills any individual DEFAULT_TEMPLATES_LIST entry (e.g.
+    default_digest, added after `templates` already existed on some installs)
+    that isn't present yet (mirrors app.py's copy of this function)."""
     if "templates" not in raw_cfg:
         raw_cfg["templates"] = [dict(t) for t in DEFAULT_TEMPLATES_LIST]
         return True
-    return False
+    existing_ids = {t.get("id") for t in raw_cfg["templates"] if isinstance(t, dict)}
+    changed = False
+    for d in DEFAULT_TEMPLATES_LIST:
+        if d["id"] not in existing_ids:
+            raw_cfg["templates"].append(dict(d))
+            changed = True
+    return changed
 
 def _seed_notification_categories(raw_cfg):
     """A `notifications` dict from before a new category/field existed survives
