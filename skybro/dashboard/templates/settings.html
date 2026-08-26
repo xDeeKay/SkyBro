@@ -275,7 +275,8 @@ select.target-template:focus{border-color:var(--accent)}
 .help-notes li:last-child{margin-bottom:0}
 .help-subsection-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:12px 0 6px}
 .help-subsection-title:first-child{margin-top:0}
-.filter-tester{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-tester{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.filter-tester-row{display:flex;gap:8px;flex-wrap:wrap;width:100%}
 .filter-tester-input{flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:var(--mono);font-size:12px}
 .filter-tester-input:focus{outline:none;border-color:var(--accent)}
 .filter-tester-badge{font-size:11px;font-weight:600;padding:4px 8px;border-radius:5px;white-space:nowrap}
@@ -995,8 +996,10 @@ function filterTesterHtml(category) {
   const rulePh = category === 'aircraft' ? 'e.g. altitude<5000' : 'e.g. sat_name=ISS|Hubble';
   const valPh = category === 'aircraft' ? 'e.g. 4500' : 'e.g. ISS';
   return `<div class="filter-tester">` +
+    `<div class="filter-tester-row">` +
     `<input type="text" id="filter-test-rule-${category}" class="filter-tester-input" placeholder="${rulePh}" oninput="evalFilterTest('${category}')">` +
     `<input type="text" id="filter-test-value-${category}" class="filter-tester-input" placeholder="${valPh}" oninput="evalFilterTest('${category}')">` +
+    `</div>` +
     `<span class="filter-tester-badge neutral" id="filter-test-badge-${category}">No test yet</span>` +
     `</div>`;
 }
@@ -1026,7 +1029,7 @@ function evalFilterTest(category) {
     const [, , op, boundStr] = numMatch;
     const bound = parseFloat(boundStr);
     const passes = op === '>' ? num > bound : op === '<' ? num < bound : op === '>=' ? num >= bound : num <= bound;
-    setBadge(passes ? 'Pass' : 'Fail', passes ? 'pass' : 'fail');
+    setBadge(passes ? 'Passes' : 'Fails', passes ? 'pass' : 'fail');
     return;
   }
   const regexMatch = rule.match(REGEX_FILTER_TEST_RE);
@@ -1040,7 +1043,7 @@ function evalFilterTest(category) {
       return;
     }
     const passes = exclude ? !matched : matched;
-    setBadge(passes ? 'Pass' : 'Fail', passes ? 'pass' : 'fail');
+    setBadge(passes ? 'Passes' : 'Fails', passes ? 'pass' : 'fail');
     return;
   }
   setBadge("Can't parse this line (won't be saved either)", 'neutral');
