@@ -813,7 +813,7 @@ const NOTIF_CATEGORIES = ['aircraft', 'satellites', 'digest'];
 const CATEGORY_KIND = {aircraft: 'aircraft', satellites: 'satellite', digest: 'digest'};
 const CATEGORY_DEFAULT_TEMPLATE_ID = {aircraft: 'default_aircraft', satellites: 'default_satellite', digest: 'default_digest'};
 const KIND_TO_CATEGORY = {aircraft: 'aircraft', satellite: 'satellites', digest: 'digest'};
-const KIND_LABEL = {aircraft: 'Aircraft', satellite: 'Satellite', digest: 'Digest'};
+const KIND_LABEL = {aircraft: 'Aircraft', satellite: 'Satellite', digest: 'Daily Digest'};
 // ── Help modal (filter syntax / template placeholders) ────────────────────────
 const FILTER_HELP = {
   aircraft: {
@@ -1904,7 +1904,7 @@ async function save() {
     }
   }
   if (!HHMM_RE.test(payload.digest_send_time)) {
-    showToast('❌ Digest send time must be set', 'error');
+    showToast('❌ Daily digest send time must be set', 'error');
     showTab('notifications'); showSubtab('digest'); showInner('targets', true, 'digest');
     focusTimeField('digest_send_time');
     return;
