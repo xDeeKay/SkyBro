@@ -140,11 +140,11 @@ select.target-template:focus{border-color:var(--accent)}
   display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;font-variant-numeric:tabular-nums
 }
 .time-picker-trigger:focus-within,.time-picker-trigger.open{border-color:var(--accent)}
-.time-picker-segments{display:flex;align-items:center}
-.time-picker-segment{padding:1px 3px;border-radius:4px;cursor:text;outline:none}
+.time-picker-segments{display:flex;align-items:center;gap:2px}
+.time-picker-segment{padding:2px 3px;border-radius:4px;cursor:text;outline:none;text-align:center}
 .time-picker-segment:focus{background:var(--accent);color:#fff}
-.time-picker-segment-period{margin-left:4px}
-.time-picker-sep{padding:0 1px}
+.time-picker-segment-period{margin-left:2px}
+.time-picker-sep{color:var(--muted)}
 .time-picker-icon{color:var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;outline:none}
 .time-picker-icon svg{display:block;position:relative;z-index:1}
 .time-picker-icon::before{content:'';position:absolute;inset:-6px;border-radius:5px;transition:.15s}
@@ -1368,9 +1368,11 @@ function buildTimePicker(input) {
   document.addEventListener('click', e => { if (!wrap.contains(e.target)) closePanel(); });
 
   // Direct keyboard typing into a segment, matching how the native time
-  // input let you type digits/am-pm straight into the field. A short-lived
-  // digit buffer lets "1" then "1" build "11" while a lone "9" (which can't
-  // start a valid two-digit hour/minute) commits immediately.
+  // input let you type digits/am-pm straight into the field. Each digit
+  // commits and displays immediately; a short-lived buffer separately
+  // tracks whether a second digit could still extend it (e.g. "1" then "1"
+  // builds "11"), while a lone "9" (which can't start a valid two-digit
+  // hour/minute) advances right away.
   let buf = '', bufSeg = null, bufTimer = null;
   function clearBuf() {
     buf = ''; bufSeg = null;
@@ -1394,8 +1396,9 @@ function buildTimePicker(input) {
     if (seg === 'h') {
       if (buf.length === 1) {
         if (n === 0) { buf = ''; return; }
-        if (n >= 2) { commitHour(n); clearBuf(); focusSegment('m'); return; }
-        bufTimer = setTimeout(() => { commitHour(n); clearBuf(); }, 900);
+        commitHour(n);
+        if (n >= 2) { clearBuf(); focusSegment('m'); return; }
+        bufTimer = setTimeout(clearBuf, 900);
       } else {
         if (n >= 1 && n <= 12) commitHour(n);
         clearBuf();
@@ -1403,10 +1406,11 @@ function buildTimePicker(input) {
       }
     } else if (seg === 'm') {
       if (buf.length === 1) {
-        if (n >= 6) { commitMinute(n); clearBuf(); focusSegment('p'); return; }
-        bufTimer = setTimeout(() => { commitMinute(n); clearBuf(); }, 900);
+        commitMinute(n);
+        if (n >= 6) { clearBuf(); focusSegment('p'); return; }
+        bufTimer = setTimeout(clearBuf, 900);
       } else {
-        commitMinute(n <= 59 ? n : Math.floor(n / 10));
+        if (n <= 59) commitMinute(n);
         clearBuf();
         focusSegment('p');
       }
