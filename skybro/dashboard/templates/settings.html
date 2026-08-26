@@ -174,7 +174,7 @@ select.target-template:focus{border-color:var(--accent)}
 .masked-wrap{position:relative}
 .masked-wrap input.masked-input{
   position:relative;z-index:1;padding-right:34px;background:transparent;border-color:transparent;
-  caret-color:var(--text)
+  caret-color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
 }
 .masked-wrap input.masked-input:focus{border-color:transparent}
 .masked-wrap input.masked-input::placeholder{color:var(--muted);opacity:1}
@@ -184,6 +184,7 @@ select.target-template:focus{border-color:var(--accent)}
   position:absolute;inset:0;z-index:0;display:flex;align-items:center;pointer-events:none;
   padding:8px 34px 10px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
   color:var(--text);font-size:13px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   transition:border-color .15s
 }
 .masked-overlay-text{overflow:hidden;white-space:nowrap;flex:1;min-width:0}
