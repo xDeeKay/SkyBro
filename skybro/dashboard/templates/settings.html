@@ -46,7 +46,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
 input[type=text],input[type=number],input[type=password]{
   width:100%;background:var(--surface2);border:1px solid var(--border);
-  border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;
+  border-radius:6px;padding:0 10px;height:35px;line-height:33px;color:var(--text);font-size:13px;
   transition:border-color .15s;outline:none;font-family:inherit
 }
 input:focus{border-color:var(--accent)}
@@ -71,15 +71,15 @@ input:checked+.slider:before{transform:translateX(18px)}
 .toast-close{background:none;border:none;color:inherit;opacity:.7;cursor:pointer;font-size:15px;line-height:1;padding:0;flex-shrink:0}
 .toast-close:hover{opacity:1}
 .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
-select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
+select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0 10px;height:35px;line-height:33px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
 select.inline-select:focus{border-color:var(--accent)}
 .notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-textarea.mono-textarea{
+textarea.field-textarea{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
   padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.5;transition:border-color .15s
+  font-family:inherit;line-height:1.5;transition:border-color .15s
 }
-textarea.mono-textarea:focus{border-color:var(--accent)}
+textarea.field-textarea:focus{border-color:var(--accent)}
 .target-list{margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
 .target-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px}
 .list-empty-hint{color:var(--muted);font-size:12px;text-align:center;padding:14px 12px;border:1px dashed var(--border);border-radius:8px}
@@ -98,7 +98,7 @@ textarea.mono-textarea:focus{border-color:var(--accent)}
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
 select.target-template{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:8px 28px 8px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
+  padding:0 28px 0 10px;height:35px;line-height:33px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
   font-family:inherit;margin-top:8px;
   -webkit-appearance:none;appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%237b7f9e' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
@@ -108,7 +108,7 @@ select.target-template:focus{border-color:var(--accent)}
 .combo-wrap{position:relative;margin-top:8px}
 .combo-trigger{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:8px 10px;color:var(--text);font-size:13px;cursor:pointer;transition:border-color .15s;
+  padding:0 10px;height:35px;color:var(--text);font-size:13px;cursor:pointer;transition:border-color .15s;
   display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;box-sizing:border-box
 }
 .combo-trigger-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -136,7 +136,7 @@ select.target-template:focus{border-color:var(--accent)}
 .time-picker{position:relative;margin-top:0}
 .time-picker-trigger{
   width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:6px 10px;color:var(--text);font-size:13px;cursor:pointer;transition:border-color .15s;
+  padding:0 10px;height:35px;color:var(--text);font-size:13px;cursor:pointer;transition:border-color .15s;
   display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;font-variant-numeric:tabular-nums
 }
 .time-picker-trigger:focus-within,.time-picker-trigger.open{border-color:var(--accent)}
@@ -174,7 +174,7 @@ select.target-template:focus{border-color:var(--accent)}
 .masked-wrap{position:relative}
 .masked-wrap input.masked-input{
   position:relative;z-index:1;padding-right:34px;background:transparent;border-color:transparent;
-  caret-color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+  caret-color:var(--text)
 }
 .masked-wrap input.masked-input:focus{border-color:transparent}
 .masked-wrap input.masked-input::placeholder{color:var(--muted);opacity:1}
@@ -184,7 +184,6 @@ select.target-template:focus{border-color:var(--accent)}
   position:absolute;inset:0;z-index:0;display:flex;align-items:center;pointer-events:none;
   padding:8px 34px 8px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
   color:var(--text);font-size:13px;
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   transition:border-color .15s
 }
 .masked-overlay-text{overflow:hidden;white-space:nowrap;flex:1;min-width:0}
@@ -277,7 +276,7 @@ select.target-template:focus{border-color:var(--accent)}
 .help-subsection-title:first-child{margin-top:0}
 .filter-tester{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
 .filter-tester-row{display:flex;gap:8px;flex-wrap:wrap;width:100%}
-.filter-tester-input{flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:var(--mono);font-size:12px}
+.filter-tester-input{flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:12px}
 .filter-tester-input:focus{outline:none;border-color:var(--accent)}
 .filter-tester-badge{font-size:11px;font-weight:600;padding:4px 8px;border-radius:5px;white-space:nowrap}
 .filter-tester-badge.neutral{background:transparent;color:var(--muted);font-weight:400;padding:4px 0}
@@ -411,7 +410,7 @@ select.target-template:focus{border-color:var(--accent)}
             <button type="button" class="help-icon-btn" onclick="openFilterHelp('aircraft')" title="Filter syntax &amp; fields" aria-label="Filter syntax &amp; fields">?</button>
           </div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
-          <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
+          <textarea class="field-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
         </div>
 
         <div class="card">
@@ -458,7 +457,7 @@ select.target-template:focus{border-color:var(--accent)}
             <button type="button" class="help-icon-btn" onclick="openFilterHelp('satellites')" title="Filter syntax &amp; fields" aria-label="Filter syntax &amp; fields">?</button>
           </div>
           <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
-          <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
+          <textarea class="field-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
         </div>
 
         <div class="card">
@@ -1650,7 +1649,7 @@ function buildTargetCard(category, target) {
   const filtersLabel = document.createElement('label');
   filtersLabel.textContent = 'Target filters';
   const filtersInput = document.createElement('textarea');
-  filtersInput.className = 'mono-textarea target-filters';
+  filtersInput.className = 'field-textarea target-filters';
   filtersInput.rows = 2;
   filtersInput.value = target.filters || '';
   filtersGroup.append(filtersLabel, filtersInput);
@@ -1861,7 +1860,7 @@ function buildTemplateCard(tmpl) {
   titleInput.disabled = protectedTmpl;
 
   const bodyInput = document.createElement('textarea');
-  bodyInput.className = 'mono-textarea template-body';
+  bodyInput.className = 'field-textarea template-body';
   bodyInput.rows = 3;
   bodyInput.placeholder = 'Template body';
   bodyInput.value = tmpl.body || '';
