@@ -970,7 +970,7 @@ function openFilterHelp(category) {
   if (info.notes) {
     html += `<ul class="help-notes">${info.notes.map(n => `<li>${n}</li>`).join('')}</ul>`;
   }
-  html += `<div class="help-section-title">Test a Rule</div>`;
+  html += `<div class="help-section-title">Verify</div>`;
   html += `<p class="help-lede">Check whether a rule matches a sample value before saving it.</p>`;
   html += filterTesterHtml(category);
   html += `<div class="help-section-title">Fields</div>`;
@@ -992,8 +992,8 @@ function openFilterHelp(category) {
 }
 
 function filterTesterHtml(category) {
-  const rulePh = category === 'aircraft' ? 'Rule, e.g. altitude<5000' : 'Rule, e.g. sat_name=ISS|Hubble';
-  const valPh = category === 'aircraft' ? 'Value, e.g. 4500' : 'Value, e.g. ISS';
+  const rulePh = category === 'aircraft' ? 'e.g. altitude<5000' : 'e.g. sat_name=ISS|Hubble';
+  const valPh = category === 'aircraft' ? 'e.g. 4500' : 'e.g. ISS';
   return `<div class="filter-tester">` +
     `<input type="text" id="filter-test-rule-${category}" class="filter-tester-input" placeholder="${rulePh}" oninput="evalFilterTest('${category}')">` +
     `<input type="text" id="filter-test-value-${category}" class="filter-tester-input" placeholder="${valPh}" oninput="evalFilterTest('${category}')">` +
@@ -1026,7 +1026,7 @@ function evalFilterTest(category) {
     const [, , op, boundStr] = numMatch;
     const bound = parseFloat(boundStr);
     const passes = op === '>' ? num > bound : op === '<' ? num < bound : op === '>=' ? num >= bound : num <= bound;
-    setBadge(passes ? 'Passes' : 'Fails', passes ? 'pass' : 'fail');
+    setBadge(passes ? 'Pass' : 'Fail', passes ? 'pass' : 'fail');
     return;
   }
   const regexMatch = rule.match(REGEX_FILTER_TEST_RE);
@@ -1040,7 +1040,7 @@ function evalFilterTest(category) {
       return;
     }
     const passes = exclude ? !matched : matched;
-    setBadge(passes ? 'Passes' : 'Fails', passes ? 'pass' : 'fail');
+    setBadge(passes ? 'Pass' : 'Fail', passes ? 'pass' : 'fail');
     return;
   }
   setBadge("Can't parse this line (won't be saved either)", 'neutral');
