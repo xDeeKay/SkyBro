@@ -158,7 +158,7 @@ select.target-template:focus{border-color:var(--accent)}
   box-shadow:0 8px 24px rgba(0,0,0,.4);padding:6px;gap:2px
 }
 .time-picker-panel.open{display:flex}
-.time-picker-col{display:flex;flex-direction:column;overflow-y:auto;max-height:176px;width:50px;padding-right:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.time-picker-col{display:flex;flex-direction:column;overflow-y:auto;max-height:176px;min-height:0;width:50px;padding-right:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .time-picker-col::-webkit-scrollbar{width:6px}
 .time-picker-col::-webkit-scrollbar-track{background:transparent}
 .time-picker-col::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -1334,9 +1334,12 @@ function buildTimePicker(input) {
   }
 
   function scrollToSelected() {
+    // Set scrollTop directly rather than sel.scrollIntoView(), which can walk
+    // up to and scroll outer ancestors (even the page itself) in some
+    // browsers; this can only ever affect the column's own scroll position.
     [hourCol, minCol, perCol].forEach(col => {
       const sel = col.querySelector('.selected');
-      if (sel) sel.scrollIntoView({block: 'center'});
+      if (sel) col.scrollTop = sel.offsetTop - col.clientHeight / 2 + sel.offsetHeight / 2;
     });
   }
 
