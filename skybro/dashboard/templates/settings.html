@@ -274,7 +274,7 @@ select.target-template:focus{border-color:var(--accent)}
 .help-notes li:last-child{margin-bottom:0}
 .help-subsection-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:12px 0 6px}
 .help-subsection-title:first-child{margin-top:0}
-.filter-tester{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-tester{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .filter-tester-input{flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:var(--mono);font-size:12px}
 .filter-tester-input:focus{outline:none;border-color:var(--accent)}
 .filter-tester-badge{font-size:11px;font-weight:600;padding:4px 8px;border-radius:5px;white-space:nowrap}
@@ -410,7 +410,6 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
           <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
-          <div id="filter-tester-aircraft"></div>
         </div>
 
         <div class="card">
@@ -458,7 +457,6 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
           <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
-          <div id="filter-tester-satellites"></div>
         </div>
 
         <div class="card">
@@ -506,12 +504,11 @@ select.target-template:focus{border-color:var(--accent)}
             <div><label>Send time</label><input type="time" id="digest_send_time" value="{{ cfg.digest_send_time }}" style="display:none"></div>
           </div>
         </div>
-        <!-- Hidden placeholders: digest has no per-item filtering, but the
-             shared NOTIF_CATEGORIES-driven JS loops assume every category
-             has these elements. Keeping them in the DOM (hidden) avoids
-             forking collectNotifications()/the filter-tester init loop. -->
+        <!-- Hidden placeholder: digest has no per-item filtering, but the
+             shared NOTIF_CATEGORIES-driven collectNotifications() assumes
+             every category has this element. Keeping it in the DOM (hidden)
+             avoids forking that function. -->
         <textarea id="filters_digest" style="display:none">{{ cfg.notifications.digest.filters }}</textarea>
-        <div id="filter-tester-digest" style="display:none"></div>
 
         <div class="target-list" id="targets_digest"></div>
         <button type="button" class="btn btn-secondary btn-sm" onclick="addTarget('digest')">+ Add target</button>
@@ -972,6 +969,9 @@ function openFilterHelp(category) {
   if (info.notes) {
     html += `<ul class="help-notes">${info.notes.map(n => `<li>${n}</li>`).join('')}</ul>`;
   }
+  html += `<div class="help-section-title">Test a Rule</div>`;
+  html += `<p>Check whether a rule matches a sample value before saving it.</p>`;
+  html += filterTesterHtml(category);
   html += `<div class="help-section-title">Fields</div>`;
   if (Array.isArray(info.fields)) {
     html += twoColTable('Field', 'Meaning', info.fields);
@@ -999,10 +999,6 @@ function filterTesterHtml(category) {
     `<span class="filter-tester-badge neutral" id="filter-test-badge-${category}">No test yet</span>` +
     `</div>`;
 }
-
-NOTIF_CATEGORIES.forEach(cat => {
-  document.getElementById(`filter-tester-${cat}`).innerHTML = filterTesterHtml(cat);
-});
 
 const NUM_FILTER_TEST_RE = /^(\w+)\s*(>=|<=|>|<)\s*(-?\d+(?:\.\d+)?)\s*$/;
 const REGEX_FILTER_TEST_RE = /^(-?)\w+=(.+)$/;
