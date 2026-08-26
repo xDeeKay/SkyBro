@@ -1392,7 +1392,7 @@ function buildTimePicker(input) {
     const n = parseInt(buf, 10);
     if (seg === 'h') {
       if (buf.length === 1) {
-        if (n === 0) { buf = ''; return; }
+        if (n === 0) return; // no bare "0" hour, but keep buffering for e.g. "01"
         commitHour(n);
         if (n >= 2) { clearBuf(); focusSegment('m'); }
       } else {
