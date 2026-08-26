@@ -1345,7 +1345,10 @@ function buildTimePicker(input) {
     renderPanel();
     panel.classList.add('open');
     trigger.classList.add('open');
-    scrollToSelected();
+    // Deferred a frame: scrolling the selected option into view right after
+    // unhiding the panel (its first layout of the page) could still see the
+    // pre-layout box and scroll the whole page instead of just the column.
+    requestAnimationFrame(scrollToSelected);
   }
   function closePanel() {
     panel.classList.remove('open');
