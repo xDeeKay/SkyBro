@@ -140,7 +140,13 @@ select.target-template:focus{border-color:var(--accent)}
   display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;font-variant-numeric:tabular-nums
 }
 .time-picker-trigger:focus,.time-picker-trigger.open{outline:none;border-color:var(--accent)}
-.time-picker-icon{color:var(--muted);flex-shrink:0;display:flex}
+.time-picker-icon{
+  color:var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  width:26px;height:26px;margin:-6px 0;border-radius:5px;transition:.15s
+}
+.time-picker-icon svg{display:block}
+.time-picker-trigger:hover .time-picker-icon{color:var(--text);background:var(--surface)}
+.time-picker-trigger.open .time-picker-icon{color:var(--accent)}
 .time-picker-panel{
   display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:50;
   background:var(--surface2);border:1px solid var(--border);border-radius:8px;
