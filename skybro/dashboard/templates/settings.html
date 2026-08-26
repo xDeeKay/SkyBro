@@ -46,7 +46,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
 input[type=text],input[type=number],input[type=password]{
   width:100%;background:var(--surface2);border:1px solid var(--border);
-  border-radius:6px;padding:0 10px;height:35px;line-height:33px;color:var(--text);font-size:13px;
+  border-radius:6px;padding:0 10px 2px;height:35px;color:var(--text);font-size:13px;
   transition:border-color .15s;outline:none;font-family:inherit
 }
 input:focus{border-color:var(--accent)}
@@ -71,7 +71,7 @@ input:checked+.slider:before{transform:translateX(18px)}
 .toast-close{background:none;border:none;color:inherit;opacity:.7;cursor:pointer;font-size:15px;line-height:1;padding:0;flex-shrink:0}
 .toast-close:hover{opacity:1}
 .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
-select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0 10px;height:35px;line-height:33px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
+select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0 10px 2px;height:35px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
 select.inline-select:focus{border-color:var(--accent)}
 .notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 textarea.field-textarea{
@@ -98,7 +98,7 @@ textarea.field-textarea:focus{border-color:var(--accent)}
 .btn-remove:hover{color:var(--red);border-color:var(--red)}
 select.target-template{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:0 28px 0 10px;height:35px;line-height:33px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
+  padding:0 28px 2px 10px;height:35px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s;
   font-family:inherit;margin-top:8px;
   -webkit-appearance:none;appearance:none;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%237b7f9e' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
@@ -108,7 +108,7 @@ select.target-template:focus{border-color:var(--accent)}
 .combo-wrap{position:relative;margin-top:8px}
 .combo-trigger{
   width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:0 10px;height:35px;color:var(--text);font-size:13px;cursor:pointer;transition:border-color .15s;
+  padding:0 10px 2px;height:35px;color:var(--text);font-size:13px;cursor:pointer;transition:border-color .15s;
   display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;box-sizing:border-box
 }
 .combo-trigger-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -140,7 +140,7 @@ select.target-template:focus{border-color:var(--accent)}
   display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;font-variant-numeric:tabular-nums
 }
 .time-picker-trigger:focus-within,.time-picker-trigger.open{border-color:var(--accent)}
-.time-picker-segments{display:flex;align-items:center}
+.time-picker-segments{display:flex;align-items:center;position:relative;top:-1px}
 .time-picker-segment{padding:2px 1px;border-radius:4px;cursor:text;outline:none;text-align:center}
 .time-picker-segment:focus{background:var(--accent);color:#fff}
 .time-picker-segment-period{margin-left:5px}
@@ -182,7 +182,7 @@ select.target-template:focus{border-color:var(--accent)}
 .masked-wrap:not(.revealed) input.masked-input::-moz-selection{color:transparent;background:rgba(79,124,255,.35)}
 .masked-overlay{
   position:absolute;inset:0;z-index:0;display:flex;align-items:center;pointer-events:none;
-  padding:8px 34px 8px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
+  padding:8px 34px 10px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);
   color:var(--text);font-size:13px;
   transition:border-color .15s
 }
