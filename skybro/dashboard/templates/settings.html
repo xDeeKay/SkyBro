@@ -274,14 +274,11 @@ select.target-template:focus{border-color:var(--accent)}
 .help-notes li:last-child{margin-bottom:0}
 .help-subsection-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:12px 0 6px}
 .help-subsection-title:first-child{margin-top:0}
-.filter-tester{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px}
-.filter-tester-row{display:flex;gap:8px;flex-wrap:wrap}
-.filter-tester-field{flex:1;min-width:140px;display:flex;flex-direction:column;gap:4px}
-.filter-tester-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
-.filter-tester-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:var(--mono);font-size:12px}
+.filter-tester{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-tester-input{flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:var(--mono);font-size:12px}
 .filter-tester-input:focus{outline:none;border-color:var(--accent)}
-.filter-tester-badge{margin-top:10px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:6px;text-align:center}
-.filter-tester-badge.neutral{background:transparent;color:var(--muted);font-weight:400}
+.filter-tester-badge{font-size:11px;font-weight:600;padding:4px 8px;border-radius:5px;white-space:nowrap}
+.filter-tester-badge.neutral{background:transparent;color:var(--muted);font-weight:400;padding:4px 0}
 .filter-tester-badge.pass{background:rgba(46,204,113,.14);color:var(--green)}
 .filter-tester-badge.fail{background:rgba(231,76,60,.14);color:var(--red)}
 </style>
@@ -413,6 +410,7 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
           <textarea class="mono-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
+          <div id="filter-tester-aircraft"></div>
         </div>
 
         <div class="card">
@@ -426,12 +424,6 @@ select.target-template:focus{border-color:var(--accent)}
             <div><label>Start</label><input type="time" id="quiet_hours_start_aircraft" value="{{ cfg.notifications.aircraft.quiet_hours.start }}" style="display:none"></div>
             <div><label>End</label><input type="time" id="quiet_hours_end_aircraft" value="{{ cfg.notifications.aircraft.quiet_hours.end }}" style="display:none"></div>
           </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Test a Rule</div>
-          <div class="card-desc">Check whether a rule matches a sample value before saving it.</div>
-          <div id="filter-tester-aircraft"></div>
         </div>
 
         <div class="target-list" id="targets_aircraft"></div>
@@ -466,6 +458,7 @@ select.target-template:focus{border-color:var(--accent)}
           </div>
           <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
           <textarea class="mono-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
+          <div id="filter-tester-satellites"></div>
         </div>
 
         <div class="card">
@@ -479,12 +472,6 @@ select.target-template:focus{border-color:var(--accent)}
             <div><label>Start</label><input type="time" id="quiet_hours_start_satellites" value="{{ cfg.notifications.satellites.quiet_hours.start }}" style="display:none"></div>
             <div><label>End</label><input type="time" id="quiet_hours_end_satellites" value="{{ cfg.notifications.satellites.quiet_hours.end }}" style="display:none"></div>
           </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Test a Rule</div>
-          <div class="card-desc">Check whether a rule matches a sample value before saving it.</div>
-          <div id="filter-tester-satellites"></div>
         </div>
 
         <div class="target-list" id="targets_satellites"></div>
@@ -1004,14 +991,12 @@ function openFilterHelp(category) {
 }
 
 function filterTesterHtml(category) {
-  const rulePh = category === 'aircraft' ? 'e.g. altitude<5000' : 'e.g. sat_name=ISS|Hubble';
-  const valPh = category === 'aircraft' ? 'e.g. 4500' : 'e.g. ISS';
+  const rulePh = category === 'aircraft' ? 'Rule, e.g. altitude<5000' : 'Rule, e.g. sat_name=ISS|Hubble';
+  const valPh = category === 'aircraft' ? 'Value, e.g. 4500' : 'Value, e.g. ISS';
   return `<div class="filter-tester">` +
-    `<div class="filter-tester-row">` +
-    `<div class="filter-tester-field"><label class="filter-tester-label" for="filter-test-rule-${category}">Rule</label><input type="text" id="filter-test-rule-${category}" class="filter-tester-input" placeholder="${rulePh}" oninput="evalFilterTest('${category}')"></div>` +
-    `<div class="filter-tester-field"><label class="filter-tester-label" for="filter-test-value-${category}">Test value</label><input type="text" id="filter-test-value-${category}" class="filter-tester-input" placeholder="${valPh}" oninput="evalFilterTest('${category}')"></div>` +
-    `</div>` +
-    `<div class="filter-tester-badge neutral" id="filter-test-badge-${category}">Enter a rule and a value above</div>` +
+    `<input type="text" id="filter-test-rule-${category}" class="filter-tester-input" placeholder="${rulePh}" oninput="evalFilterTest('${category}')">` +
+    `<input type="text" id="filter-test-value-${category}" class="filter-tester-input" placeholder="${valPh}" oninput="evalFilterTest('${category}')">` +
+    `<span class="filter-tester-badge neutral" id="filter-test-badge-${category}">No test yet</span>` +
     `</div>`;
 }
 
@@ -1031,7 +1016,7 @@ function evalFilterTest(category) {
     badge.className = `filter-tester-badge ${cls}`;
   };
   if (!rule || !value) {
-    setBadge('Enter a rule and a value above', 'neutral');
+    setBadge('No test yet', 'neutral');
     return;
   }
   const numMatch = rule.match(NUM_FILTER_TEST_RE);
