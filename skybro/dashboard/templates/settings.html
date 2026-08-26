@@ -270,6 +270,7 @@ select.target-template:focus{border-color:var(--accent)}
 .help-table .help-symbol code + code{margin-top:4px}
 .help-table .help-explain{display:block;color:var(--muted);font-size:12px;margin-top:4px;font-weight:400;white-space:normal}
 .help-notes{margin:0;padding-left:18px;color:var(--muted)}
+.help-lede{color:var(--muted)}
 .help-notes li{margin-bottom:6px}
 .help-notes li:last-child{margin-bottom:0}
 .help-subsection-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:12px 0 6px}
@@ -938,7 +939,7 @@ function threeColTable(h1, h2, h3, rows) {
   return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:70px"><col style="width:150px"><col></colgroup><tr><th>${h1}</th><th>${h2}</th><th>${h3}</th></tr>` +
     rows.map(([symbols, meaning, pattern, explanation]) => {
       const symbolHtml = symbols.map(s => `<code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">${s}</code>`).join('<br>');
-      return `<tr><td class="help-symbol">${symbolHtml}</td><td>${meaning}</td><td><code class="help-pattern">${pattern}</code><span class="help-explain">${explanation}</span></td></tr>`;
+      return `<tr><td class="help-symbol">${symbolHtml}</td><td class="help-desc">${meaning}</td><td><code class="help-pattern">${pattern}</code><span class="help-explain">${explanation}</span></td></tr>`;
     }).join('') +
     '</table></div>';
 }
@@ -970,7 +971,7 @@ function openFilterHelp(category) {
     html += `<ul class="help-notes">${info.notes.map(n => `<li>${n}</li>`).join('')}</ul>`;
   }
   html += `<div class="help-section-title">Test a Rule</div>`;
-  html += `<p>Check whether a rule matches a sample value before saving it.</p>`;
+  html += `<p class="help-lede">Check whether a rule matches a sample value before saving it.</p>`;
   html += filterTesterHtml(category);
   html += `<div class="help-section-title">Fields</div>`;
   if (Array.isArray(info.fields)) {
