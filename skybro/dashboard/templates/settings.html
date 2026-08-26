@@ -147,7 +147,10 @@ select.target-template:focus{border-color:var(--accent)}
   box-shadow:0 8px 24px rgba(0,0,0,.4);padding:6px;gap:2px
 }
 .time-picker-panel.open{display:flex}
-.time-picker-col{display:flex;flex-direction:column;overflow-y:auto;max-height:176px;width:46px}
+.time-picker-col{display:flex;flex-direction:column;overflow-y:auto;max-height:176px;width:50px;padding-right:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.time-picker-col::-webkit-scrollbar{width:6px}
+.time-picker-col::-webkit-scrollbar-track{background:transparent}
+.time-picker-col::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .time-picker-col-period{width:40px}
 .time-picker-option{padding:6px 0;text-align:center;font-size:13px;border-radius:5px;cursor:pointer;color:var(--text);font-variant-numeric:tabular-nums}
 .time-picker-option:hover{background:var(--surface)}
