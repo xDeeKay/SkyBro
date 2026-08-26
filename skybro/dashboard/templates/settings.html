@@ -140,11 +140,10 @@ select.target-template:focus{border-color:var(--accent)}
   display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none;font-variant-numeric:tabular-nums
 }
 .time-picker-trigger:focus-within,.time-picker-trigger.open{border-color:var(--accent)}
-.time-picker-segments{display:flex;align-items:center;gap:2px}
+.time-picker-segments{display:flex;align-items:center}
 .time-picker-segment{padding:2px 3px;border-radius:4px;cursor:text;outline:none;text-align:center}
 .time-picker-segment:focus{background:var(--accent);color:#fff}
-.time-picker-segment-period{margin-left:2px}
-.time-picker-sep{color:var(--muted)}
+.time-picker-sep{padding:2px 3px;color:var(--muted)}
 .time-picker-icon{color:var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative;outline:none}
 .time-picker-icon svg{display:block;position:relative;z-index:1}
 .time-picker-icon::before{content:'';position:absolute;inset:-6px;border-radius:5px;transition:.15s}
@@ -1260,7 +1259,7 @@ function buildTimePicker(input) {
   const minSeg = document.createElement('span');
   minSeg.className = 'time-picker-segment';
   const perSeg = document.createElement('span');
-  perSeg.className = 'time-picker-segment time-picker-segment-period';
+  perSeg.className = 'time-picker-segment';
   [hourSeg, minSeg, perSeg].forEach(seg => { seg.tabIndex = 0; seg.setAttribute('role', 'spinbutton'); });
   segments.append(hourSeg, sep, minSeg, perSeg);
 
@@ -1369,16 +1368,15 @@ function buildTimePicker(input) {
 
   // Direct keyboard typing into a segment, matching how the native time
   // input let you type digits/am-pm straight into the field. Each digit
-  // commits and displays immediately; a short-lived buffer separately
-  // tracks whether a second digit could still extend it (e.g. "1" then "1"
-  // builds "11"), while a lone "9" (which can't start a valid two-digit
-  // hour/minute) advances right away.
-  let buf = '', bufSeg = null, bufTimer = null;
-  function clearBuf() {
-    buf = ''; bufSeg = null;
-    if (bufTimer) clearTimeout(bufTimer);
-    bufTimer = null;
-  }
+  // commits and displays immediately; a buffer separately tracks whether a
+  // second digit could still extend it (e.g. "1" then "1" builds "11"),
+  // while a lone "9" (which can't start a valid two-digit hour/minute)
+  // advances right away. The buffer has no time limit, since a fixed
+  // timeout gave an unpredictably short window to type the second digit;
+  // it only clears once you actually leave the segment (click elsewhere,
+  // Tab, arrow to another segment).
+  let buf = '', bufSeg = null;
+  function clearBuf() { buf = ''; bufSeg = null; }
   function focusSegment(seg) {
     clearBuf();
     ({h: hourSeg, m: minSeg, p: perSeg}[seg]).focus();
@@ -1390,15 +1388,13 @@ function buildTimePicker(input) {
     if (bufSeg !== seg) buf = '';
     bufSeg = seg;
     buf += digit;
-    if (bufTimer) clearTimeout(bufTimer);
 
     const n = parseInt(buf, 10);
     if (seg === 'h') {
       if (buf.length === 1) {
         if (n === 0) { buf = ''; return; }
         commitHour(n);
-        if (n >= 2) { clearBuf(); focusSegment('m'); return; }
-        bufTimer = setTimeout(clearBuf, 900);
+        if (n >= 2) { clearBuf(); focusSegment('m'); }
       } else {
         if (n >= 1 && n <= 12) commitHour(n);
         clearBuf();
@@ -1407,8 +1403,7 @@ function buildTimePicker(input) {
     } else if (seg === 'm') {
       if (buf.length === 1) {
         commitMinute(n);
-        if (n >= 6) { clearBuf(); focusSegment('p'); return; }
-        bufTimer = setTimeout(clearBuf, 900);
+        if (n >= 6) { clearBuf(); focusSegment('p'); }
       } else {
         if (n <= 59) commitMinute(n);
         clearBuf();
@@ -1426,6 +1421,7 @@ function buildTimePicker(input) {
 
   [['h', hourSeg], ['m', minSeg], ['p', perSeg]].forEach(([seg, el]) => {
     el.addEventListener('click', e => { e.stopPropagation(); el.focus(); });
+    el.addEventListener('focusout', () => { if (bufSeg === seg) clearBuf(); });
     el.addEventListener('keydown', e => {
       if (e.key >= '0' && e.key <= '9') {
         e.preventDefault();
