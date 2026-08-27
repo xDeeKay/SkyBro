@@ -41,7 +41,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
   .hdr-clock{font-size:14px;gap:5px}
 }
 .main{display:flex;flex:1;overflow:hidden;position:relative}
-#map{flex:1;min-width:0;position:relative;z-index:0}
+#map{flex:1;min-width:0;position:relative;z-index:0;background:#090909}
 .sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease;position:relative}
 .sidebar.collapsed{width:0;min-width:0;border:none}
 .sidebar-tab{position:absolute;right:var(--sidebar-w);top:50%;transform:translateY(-50%);width:18px;height:44px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;z-index:500;transition:right .2s ease;padding:0;line-height:1;user-select:none}
@@ -524,7 +524,10 @@ function loadDarkMatterStyle() {
     roadname_major: { 'text-color': '#333333', 'text-halo-color': '#030303' }
   };
   return fetch('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json')
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error('CARTO style fetch returned ' + r.status);
+      return r.json();
+    })
     .then(style => {
       style.layers.forEach(layer => {
         const ov = overrides[layer.id];
@@ -536,7 +539,8 @@ function loadDarkMatterStyle() {
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 const map = L.map('map', {zoomControl:true, maxZoom:19}).setView([_initLat, _initLon], 11);
-loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(map));
+loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(map))
+  .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');
 const radiusCircle = L.circle([_initLat, _initLon], {radius:RADIUS*1000, color:'#4f7cff',
