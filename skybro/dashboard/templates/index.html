@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SkyBro</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -421,9 +424,9 @@ if (FIRST_RUN) {
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
-const map = L.map('map', {zoomControl:true}).setView([_initLat, _initLon], 11);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution:'© OpenStreetMap © CARTO', maxZoom:19
+const map = L.map('map', {zoomControl:true, maxZoom:19}).setView([_initLat, _initLon], 11);
+L.maplibreGL({
+  style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 }).addTo(map);
 L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');
