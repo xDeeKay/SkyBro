@@ -144,7 +144,11 @@ select.target-template:focus{border-color:var(--accent)}
 }
 .time-picker-trigger:focus-within,.time-picker-trigger.open{border-color:var(--accent)}
 .time-picker-segments{display:flex;align-items:center;position:relative;top:-1px}
-.time-picker-segment{padding:2px 1px;border-radius:4px;cursor:text;outline:none;text-align:center}
+.time-picker-segment{
+  padding:2px 1px;border-radius:4px;cursor:text;outline:none;text-align:center;
+  border:none;background:transparent;color:inherit;font:inherit;font-variant-numeric:tabular-nums;
+  width:2ch;-webkit-appearance:none;appearance:none
+}
 .time-picker-segment:focus{background:var(--accent);color:#fff}
 .time-picker-segment-period{margin-left:5px}
 .time-picker-sep{padding:2px 0;color:var(--muted)}
@@ -1238,16 +1242,32 @@ function buildTimePicker(input) {
 
   const segments = document.createElement('div');
   segments.className = 'time-picker-segments';
-  const hourSeg = document.createElement('span');
+  // Real <input> elements, not spans: iOS only raises the on-screen keyboard
+  // for an editable form control, so tapping a plain focusable span just
+  // highlights it with no way to type. Everything typed still routes through
+  // the same keydown handling below; the input's own value is never allowed
+  // to diverge from what that logic sets (see the trailing else-branch).
+  const hourSeg = document.createElement('input');
+  hourSeg.type = 'text';
+  hourSeg.inputMode = 'numeric';
   hourSeg.className = 'time-picker-segment';
   const sep = document.createElement('span');
   sep.className = 'time-picker-sep';
   sep.textContent = ':';
-  const minSeg = document.createElement('span');
+  const minSeg = document.createElement('input');
+  minSeg.type = 'text';
+  minSeg.inputMode = 'numeric';
   minSeg.className = 'time-picker-segment';
-  const perSeg = document.createElement('span');
+  const perSeg = document.createElement('input');
+  perSeg.type = 'text';
   perSeg.className = 'time-picker-segment time-picker-segment-period';
-  [hourSeg, minSeg, perSeg].forEach(seg => { seg.tabIndex = 0; seg.setAttribute('role', 'spinbutton'); });
+  [hourSeg, minSeg, perSeg].forEach(seg => {
+    seg.setAttribute('role', 'spinbutton');
+    seg.autocomplete = 'off';
+    seg.autocapitalize = 'off';
+    seg.spellcheck = false;
+    seg.setAttribute('autocorrect', 'off');
+  });
   segments.append(hourSeg, sep, minSeg, perSeg);
 
   const icon = document.createElement('span');
@@ -1277,9 +1297,9 @@ function buildTimePicker(input) {
 
   function syncSegments() {
     const {h12, m, period} = parts();
-    hourSeg.textContent = String(h12).padStart(2, '0');
-    minSeg.textContent = String(m).padStart(2, '0');
-    perSeg.textContent = period;
+    hourSeg.value = String(h12).padStart(2, '0');
+    minSeg.value = String(m).padStart(2, '0');
+    perSeg.value = period;
   }
 
   function setTime(h24, m) {
@@ -1437,6 +1457,12 @@ function buildTimePicker(input) {
         e.preventDefault();
         const cur = parts();
         setTime(to24Hour(cur.h12, (e.key === 'a' || e.key === 'A') ? 'am' : 'pm'), cur.m);
+      } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key.length === 1) {
+        // These segments are a real <input> only so iOS raises its keyboard on
+        // tap; every edit still has to go through handleDigit/step above, so
+        // block anything else (backspacing a digit, typing an unhandled key)
+        // from mutating the input's own value out from under syncSegments().
+        e.preventDefault();
       }
     });
   });
