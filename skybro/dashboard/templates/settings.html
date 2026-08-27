@@ -2034,6 +2034,34 @@ async function doResetHistory() {
   setTimeout(() => { el.textContent = ''; }, 4000);
 }
 
+// CARTO's hosted vector style shifted water/roads to a blue-tinted palette that no
+// longer matches the neutral-grey raster tiles it replaced; swap those colors back.
+function loadDarkMatterStyle() {
+  const swap = {
+    '#2c353c': '#262626',
+    'rgba(63, 90, 109, 1)': '#242424',
+    'rgba(65, 71, 88, 1)': 'rgba(48, 48, 48, 1)',
+    'rgba(83, 86, 102, 1)': 'rgba(60, 60, 60, 1)',
+    'rgba(109, 123, 129, 1)': '#555'
+  };
+  function fix(v) {
+    if (typeof v === 'string') return swap[v.toLowerCase()] || v;
+    if (v && Array.isArray(v.stops)) return Object.assign({}, v, { stops: v.stops.map(s => [s[0], fix(s[1])]) });
+    return v;
+  }
+  return fetch('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json')
+    .then(r => r.json())
+    .then(style => {
+      style.layers.forEach(layer => {
+        if (!layer.paint) return;
+        Object.keys(layer.paint).forEach(key => {
+          if (key.endsWith('-color')) layer.paint[key] = fix(layer.paint[key]);
+        });
+      });
+      return style;
+    });
+}
+
 // ── Location picker ───────────────────────────────────────────────────────────
 let pickerMap = null, pickerMarker = null, pickedLat = null, pickedLon = null;
 
@@ -2049,9 +2077,7 @@ function openMapPicker() {
   if (!pickerMap) {
     setTimeout(() => {
       pickerMap = L.map('picker-map', {maxZoom:19}).setView([pickedLat, pickedLon], 11);
-      L.maplibreGL({
-        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
-      }).addTo(pickerMap);
+      loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(pickerMap));
       pickerMarker = L.marker([pickedLat, pickedLon], {draggable:true}).addTo(pickerMap);
       pickerMarker.on('drag dragend', e => {
         const p = e.target.getLatLng();
