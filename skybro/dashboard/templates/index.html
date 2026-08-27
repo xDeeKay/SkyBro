@@ -423,29 +423,112 @@ if (FIRST_RUN) {
   } catch (e) { /* Intl.DateTimeFormat unsupported, keep Singapore fallback */ }
 }
 
-// CARTO's hosted vector style shifted water/roads to a blue-tinted palette that no
-// longer matches the neutral-grey raster tiles it replaced; swap those colors back.
+// CARTO's hosted vector style has drifted from the neutral-grey raster tiles it
+// replaced (blue-tinted water/roads, brighter labels/boundaries). These per-layer
+// overrides pull every color back to the original dark_all raster's own values
+// (github.com/CartoDB/basemap-styles, cartocss/web-styles/dark-matter.tm2). Each
+// layer gets one flat color rather than a per-zoom translation: the two renderers
+// don't share zoom-stop breakpoints, so matching them stop-for-stop wouldn't mean
+// anything anyway.
 function loadDarkMatterStyle() {
-  const swap = {
-    '#2c353c': '#262626',
-    'rgba(63, 90, 109, 1)': '#242424',
-    'rgba(65, 71, 88, 1)': 'rgba(48, 48, 48, 1)',
-    'rgba(83, 86, 102, 1)': 'rgba(60, 60, 60, 1)',
-    'rgba(109, 123, 129, 1)': '#555'
+  const overrides = {
+    background: { 'background-color': '#090909' },
+    landcover: { 'fill-color': '#090909' },
+    park_national_park: { 'fill-color': '#090909' },
+    park_nature_reserve: { 'fill-color': '#090909' },
+    landuse: { 'fill-color': '#090909' },
+    landuse_residential: { 'fill-color': 'rgba(0, 0, 0, 0.35)' },
+    water: { 'fill-color': '#262626' },
+    waterway: { 'line-color': '#242424' },
+    boundary_county: { 'line-color': '#292929' },
+    boundary_state: { 'line-color': '#292929' },
+    boundary_country_outline: { 'line-color': '#0e0e0e' },
+    boundary_country_inner: { 'line-color': '#292929' },
+    'aeroway-runway': { 'line-color': '#111111' },
+    'aeroway-taxiway': { 'line-color': '#111111' },
+    tunnel_service_case: { 'line-color': '#1a1a1a' },
+    tunnel_minor_case: { 'line-color': '#1a1a1a' },
+    tunnel_sec_case: { 'line-color': '#1a1a1a' },
+    tunnel_pri_case: { 'line-color': '#1a1a1a' },
+    tunnel_trunk_case: { 'line-color': '#1a1a1a' },
+    tunnel_mot_case: { 'line-color': '#1a1a1a' },
+    tunnel_path: { 'line-color': '#040404' },
+    tunnel_service_fill: { 'line-color': '#040404' },
+    tunnel_minor_fill: { 'line-color': '#040404' },
+    tunnel_sec_fill: { 'line-color': '#040404' },
+    tunnel_pri_fill: { 'line-color': '#040404' },
+    tunnel_trunk_fill: { 'line-color': '#040404' },
+    tunnel_mot_fill: { 'line-color': '#040404' },
+    tunnel_rail: { 'line-color': '#1a1a1a' },
+    tunnel_rail_dash: { 'line-color': '#000000' },
+    road_service_case: { 'line-color': '#080808' },
+    road_minor_case: { 'line-color': '#080808' },
+    road_pri_case_ramp: { 'line-color': '#2a2a2a' },
+    road_trunk_case_ramp: { 'line-color': '#2a2a2a' },
+    road_mot_case_ramp: { 'line-color': '#2a2a2a' },
+    road_sec_case_noramp: { 'line-color': '#222222' },
+    road_pri_case_noramp: { 'line-color': '#2a2a2a' },
+    road_trunk_case_noramp: { 'line-color': '#2a2a2a' },
+    road_mot_case_noramp: { 'line-color': '#2a2a2a' },
+    road_path: { 'line-color': '#262626' },
+    road_service_fill: { 'line-color': '#191919' },
+    road_minor_fill: { 'line-color': '#191919' },
+    road_pri_fill_ramp: { 'line-color': '#030303' },
+    road_trunk_fill_ramp: { 'line-color': '#030303' },
+    road_mot_fill_ramp: { 'line-color': '#030303' },
+    road_sec_fill_noramp: { 'line-color': '#030303' },
+    road_pri_fill_noramp: { 'line-color': '#030303' },
+    road_trunk_fill_noramp: { 'line-color': '#030303' },
+    road_mot_fill_noramp: { 'line-color': '#030303' },
+    rail: { 'line-color': '#1a1a1a' },
+    rail_dash: { 'line-color': '#000000' },
+    bridge_service_case: { 'line-color': '#080808' },
+    bridge_minor_case: { 'line-color': '#080808' },
+    bridge_sec_case: { 'line-color': '#222222' },
+    bridge_pri_case: { 'line-color': '#2a2a2a' },
+    bridge_trunk_case: { 'line-color': '#2a2a2a' },
+    bridge_mot_case: { 'line-color': '#2a2a2a' },
+    bridge_path: { 'line-color': '#262626' },
+    bridge_service_fill: { 'line-color': '#191919' },
+    bridge_minor_fill: { 'line-color': '#191919' },
+    bridge_sec_fill: { 'line-color': '#030303' },
+    bridge_pri_fill: { 'line-color': '#030303' },
+    bridge_trunk_fill: { 'line-color': '#030303' },
+    bridge_mot_fill: { 'line-color': '#030303' },
+    'building-top': { 'fill-color': '#000000', 'fill-outline-color': '#111111' },
+    waterway_label: { 'text-color': '#444444', 'text-halo-color': '#090909' },
+    watername_ocean: { 'text-color': '#555555', 'text-halo-color': 'rgba(50, 50, 50, 0.8)' },
+    watername_sea: { 'text-color': '#555555', 'text-halo-color': 'rgba(50, 50, 50, 0.8)' },
+    watername_lake: { 'text-color': '#444444', 'text-halo-color': '#090909' },
+    watername_lake_line: { 'text-color': '#444444', 'text-halo-color': '#090909' },
+    place_hamlet: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_suburbs: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_villages: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_town: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_city_r5: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_city_r6: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_city_dot_r7: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_city_dot_r4: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_city_dot_r2: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_city_dot_z7: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_capital_dot_z7: { 'text-color': '#444444', 'icon-color': '#444444', 'text-halo-color': '#191919' },
+    place_country_1: { 'text-color': '#3a3a3a', 'text-halo-color': '#111111' },
+    place_country_2: { 'text-color': '#3a3a3a', 'text-halo-color': '#111111' },
+    place_state: { 'text-color': '#3c3c3c', 'text-halo-color': '#111111' },
+    place_continent: { 'text-color': '#3c3c3c', 'text-halo-color': '#111111' },
+    poi_stadium: { 'text-color': '#444444', 'text-halo-color': '#111111' },
+    poi_park: { 'text-color': '#444444', 'text-halo-color': '#111111' },
+    roadname_minor: { 'text-color': '#333333', 'text-halo-color': '#030303' },
+    roadname_sec: { 'text-color': '#333333', 'text-halo-color': '#030303' },
+    roadname_pri: { 'text-color': '#333333', 'text-halo-color': '#030303' },
+    roadname_major: { 'text-color': '#333333', 'text-halo-color': '#030303' }
   };
-  function fix(v) {
-    if (typeof v === 'string') return swap[v.toLowerCase()] || v;
-    if (v && Array.isArray(v.stops)) return Object.assign({}, v, { stops: v.stops.map(s => [s[0], fix(s[1])]) });
-    return v;
-  }
   return fetch('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json')
     .then(r => r.json())
     .then(style => {
       style.layers.forEach(layer => {
-        if (!layer.paint) return;
-        Object.keys(layer.paint).forEach(key => {
-          if (key.endsWith('-color')) layer.paint[key] = fix(layer.paint[key]);
-        });
+        const ov = overrides[layer.id];
+        if (ov && layer.paint) Object.assign(layer.paint, ov);
       });
       return style;
     });
