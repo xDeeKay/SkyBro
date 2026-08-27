@@ -409,15 +409,6 @@ select.target-template:focus{border-color:var(--accent)}
 
       <div class="inner-pane active" id="inner-aircraft-targets">
         <div class="card">
-          <div class="card-title-row">
-            <span class="card-title" style="margin-bottom:0">Global Aircraft Filters</span>
-            <button type="button" class="help-icon-btn" onclick="openFilterHelp('aircraft')" title="Filter syntax &amp; fields" aria-label="Filter syntax &amp; fields">?</button>
-          </div>
-          <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
-          <textarea class="field-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
-        </div>
-
-        <div class="card">
           <div class="card-title">Quiet Hours</div>
           <div class="toggle-row">
             <div><div class="toggle-label">Enable quiet hours</div><div class="toggle-sub">No aircraft alerts sent between the start/end time below; aircraft are still tracked as normal</div></div>
@@ -427,6 +418,15 @@ select.target-template:focus{border-color:var(--accent)}
             <div><label>Start</label><input type="time" id="quiet_hours_start_aircraft" value="{{ cfg.notifications.aircraft.quiet_hours.start }}" style="display:none"></div>
             <div><label>End</label><input type="time" id="quiet_hours_end_aircraft" value="{{ cfg.notifications.aircraft.quiet_hours.end }}" style="display:none"></div>
           </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row">
+            <span class="card-title" style="margin-bottom:0">Global Aircraft Filters</span>
+            <button type="button" class="help-icon-btn" onclick="openFilterHelp('aircraft')" title="Filter syntax &amp; fields" aria-label="Filter syntax &amp; fields">?</button>
+          </div>
+          <div class="card-desc">Applies to every aircraft target below. Leave blank to alert on everything within your radius/altitude window.</div>
+          <textarea class="field-textarea" id="filters_aircraft" rows="3">{{ cfg.notifications.aircraft.filters }}</textarea>
         </div>
 
         <div class="target-list" id="targets_aircraft"></div>
@@ -455,15 +455,6 @@ select.target-template:focus{border-color:var(--accent)}
 
       <div class="inner-pane active" id="inner-satellites-targets">
         <div class="card">
-          <div class="card-title-row">
-            <span class="card-title" style="margin-bottom:0">Global Satellite Filters</span>
-            <button type="button" class="help-icon-btn" onclick="openFilterHelp('satellites')" title="Filter syntax &amp; fields" aria-label="Filter syntax &amp; fields">?</button>
-          </div>
-          <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
-          <textarea class="field-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
-        </div>
-
-        <div class="card">
           <div class="card-title">Quiet Hours</div>
           <div class="toggle-row">
             <div><div class="toggle-label">Enable quiet hours</div><div class="toggle-sub">No satellite alerts sent between the start/end time below; passes are still tracked as normal</div></div>
@@ -473,6 +464,15 @@ select.target-template:focus{border-color:var(--accent)}
             <div><label>Start</label><input type="time" id="quiet_hours_start_satellites" value="{{ cfg.notifications.satellites.quiet_hours.start }}" style="display:none"></div>
             <div><label>End</label><input type="time" id="quiet_hours_end_satellites" value="{{ cfg.notifications.satellites.quiet_hours.end }}" style="display:none"></div>
           </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row">
+            <span class="card-title" style="margin-bottom:0">Global Satellite Filters</span>
+            <button type="button" class="help-icon-btn" onclick="openFilterHelp('satellites')" title="Filter syntax &amp; fields" aria-label="Filter syntax &amp; fields">?</button>
+          </div>
+          <div class="card-desc">Applies to every satellite target below; leave blank to alert on all tracked satellites.</div>
+          <textarea class="field-textarea" id="filters_satellites" rows="3">{{ cfg.notifications.satellites.filters }}</textarea>
         </div>
 
         <div class="target-list" id="targets_satellites"></div>
