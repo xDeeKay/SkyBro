@@ -1410,7 +1410,7 @@ function buildTimePicker(input) {
     const n = parseInt(buf, 10);
     if (seg === 'h') {
       if (buf.length === 1) {
-        if (n === 0) return; // no bare "0" hour, but keep buffering for e.g. "01"
+        if (n === 0) { hourSeg.value = buf; return; } // no bare "0" hour, but show it while buffering for e.g. "01"
         commitHour(n);
         if (n >= 2) { clearBuf(); focusSegment('m'); }
       } else {
@@ -1439,7 +1439,7 @@ function buildTimePicker(input) {
 
   [['h', hourSeg], ['m', minSeg], ['p', perSeg]].forEach(([seg, el]) => {
     el.addEventListener('click', e => { e.stopPropagation(); el.focus(); });
-    el.addEventListener('focusout', () => { if (bufSeg === seg) clearBuf(); });
+    el.addEventListener('focusout', () => { if (bufSeg === seg) { clearBuf(); syncSegments(); } });
     el.addEventListener('keydown', e => {
       if (e.key >= '0' && e.key <= '9') {
         e.preventDefault();
