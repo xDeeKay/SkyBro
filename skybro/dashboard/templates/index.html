@@ -538,7 +538,7 @@ function loadDarkMatterStyle() {
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
-const map = L.map('map', {zoomControl:true, maxZoom:19}).setView([_initLat, _initLon], 11);
+const map = L.map('map', {zoomControl:true, maxZoom:19, zoomAnimation:false}).setView([_initLat, _initLon], 11);
 loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(map))
   .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
