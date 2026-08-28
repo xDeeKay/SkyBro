@@ -1415,6 +1415,7 @@ function buildTimePicker(input) {
         if (n >= 2) { clearBuf(); focusSegment('m'); }
       } else {
         if (n >= 1 && n <= 12) commitHour(n);
+        else syncSegments(); // invalid (e.g. "00"), revert the buffered preview back to the real value
         clearBuf();
         focusSegment('m');
       }
