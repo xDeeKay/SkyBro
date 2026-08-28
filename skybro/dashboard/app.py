@@ -271,7 +271,7 @@ def index():
                            git_sha=os.environ.get("GIT_SHA", "").strip(),
                            first_run=first_run)
 
-SETTINGS_TABS = {"location", "display", "polling", "notifications", "opensky", "n2yo", "danger"}
+SETTINGS_TABS = {"location", "display", "polling", "notifications", "credentials", "danger"}
 NOTIF_SUBTABS = {"aircraft", "satellites", "digest"}
 NOTIF_INNER_TABS = {"targets", "templates"}
 

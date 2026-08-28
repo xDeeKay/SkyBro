@@ -317,8 +317,7 @@ select.target-template:focus{border-color:var(--accent)}
     <div class="tab" data-tab="display">🖥️ Display</div>
     <div class="tab" data-tab="polling">⏱️ Polling</div>
     <div class="tab" data-tab="notifications">🔔 Notifications</div>
-    <div class="tab" data-tab="opensky">🔑 OpenSky</div>
-    <div class="tab" data-tab="n2yo">🛰️ n2yo</div>
+    <div class="tab" data-tab="credentials">🔑 Credentials</div>
     <div class="tab" data-tab="danger">⚠️ Danger zone</div>
   </div>
 
@@ -537,8 +536,8 @@ select.target-template:focus{border-color:var(--accent)}
     </div>
   </div>
 
-  <!-- OpenSky OAuth2 (optional) -->
-  <div class="tab-pane" id="pane-opensky">
+  <!-- OpenSky OAuth2 + n2yo API key -->
+  <div class="tab-pane" id="pane-credentials">
     <div class="card">
       <div class="card-title">🔑 OpenSky Credentials (optional)</div>
       <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials.</div>
@@ -547,17 +546,13 @@ select.target-template:focus{border-color:var(--accent)}
         <div><label>Client Secret</label><input type="text" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other"></div>
       </div>
     </div>
-  </div>
-
-  <!-- n2yo API key -->
-  <div class="tab-pane" id="pane-n2yo">
     <div class="card">
       <div class="card-title">🛰️ n2yo API Key (for ISS passes)</div>
       <div class="card-desc">Required for ISS flyover alerts. Sign up for free at n2yo.com. The API key arrives by email. Leave blank to disable ISS tracking.</div>
       <div class="form-row single">
         <div>
           <label>n2yo API Key</label>
-          <input type="text" id="n2yo_api_key" placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX" value="{{ cfg.n2yo_api_key }}">
+          <input type="text" id="n2yo_api_key" placeholder="XXXXXX-XXXXXX-XXXXXX-XXXXXX" value="{{ cfg.n2yo_api_key }}" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other">
         </div>
       </div>
     </div>
@@ -702,6 +697,7 @@ fetchLocationName();
 refreshHeader();
 setInterval(refreshHeader, 15000);
 attachMaskedReveal(document.getElementById('opensky_client_secret'));
+attachMaskedReveal(document.getElementById('n2yo_api_key'));
 
 function getVal(id) {
   const el = document.getElementById(id);
