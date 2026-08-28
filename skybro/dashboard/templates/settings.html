@@ -63,11 +63,12 @@ input:focus{border-color:var(--accent)}
 input:checked+.slider{background:var(--accent)}
 input:checked+.slider:before{transform:translateX(18px)}
 .actions{display:flex;gap:10px;margin-top:20px;align-items:center}
-.btn{padding:9px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
+.btn{height:35px;display:inline-flex;align-items:center;justify-content:center;padding:0 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
 .btn:hover{opacity:.85}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
-.btn-sm{padding:6px 12px;font-size:12px}
+.btn-danger{background:var(--red);color:#fff}
+.btn-sm{height:28px;padding:0 12px;font-size:12px}
 .toast{position:fixed;bottom:24px;right:24px;padding:10px 14px 10px 18px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:10010;display:flex;align-items:center;gap:10px}
 .toast.success{background:var(--green);color:#000;opacity:1;pointer-events:auto}
 .toast.error{background:var(--red);color:#fff;opacity:1;pointer-events:auto}
@@ -232,9 +233,9 @@ select.target-template:focus{border-color:var(--accent)}
 .modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:2px 6px;line-height:1}
 .modal-close:hover{color:var(--text)}
 .modal-search{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
-.modal-search-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.modal-search-input{flex:1;height:35px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0 10px 2px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
 .modal-search-input:focus{border-color:var(--accent)}
-.modal-search-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.modal-search-btn{height:35px;display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:0 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .modal-search-btn:hover{opacity:.85}
 .modal-search-err{font-size:11px;color:var(--red);padding:0 16px 8px;flex-shrink:0;display:none}
 .search-dropdown{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:6px;z-index:10001;display:none;box-shadow:0 4px 16px rgba(0,0,0,.5);max-height:220px;overflow-y:auto}
@@ -575,8 +576,8 @@ select.target-template:focus{border-color:var(--accent)}
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;max-width:300px;width:90%;text-align:center">
       <p style="font-size:14px;margin-bottom:18px;line-height:1.5">Delete all aircraft history? This cannot be undone.</p>
       <div style="display:flex;gap:8px;justify-content:center">
-        <button onclick="doResetHistory()" style="background:#e74c3c;border:none;color:#fff;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Delete all</button>
-        <button onclick="document.getElementById('reset-confirm').style.display='none'" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 18px;border-radius:6px;font-size:13px;cursor:pointer">Cancel</button>
+        <button class="btn btn-danger" onclick="doResetHistory()">Delete all</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('reset-confirm').style.display='none'">Cancel</button>
       </div>
     </div>
   </div>
