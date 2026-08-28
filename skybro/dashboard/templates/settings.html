@@ -1410,7 +1410,7 @@ function buildTimePicker(input) {
     const n = parseInt(buf, 10);
     if (seg === 'h') {
       if (buf.length === 1) {
-        if (n === 0) { hourSeg.value = buf; return; } // no bare "0" hour, but show it while buffering for e.g. "01"
+        if (n === 0) { hourSeg.value = buf.padStart(2, '0'); return; } // no bare "0" hour, but show it padded like a committed value while buffering for e.g. "01"
         commitHour(n);
         if (n >= 2) { clearBuf(); focusSegment('m'); }
       } else {
