@@ -147,7 +147,8 @@ select.target-template:focus{border-color:var(--accent)}
 .time-picker-segments input.time-picker-segment{
   padding:2px 1px;border-radius:4px;cursor:text;outline:none;text-align:center;
   border:none;background:transparent;color:inherit;font:inherit;font-variant-numeric:tabular-nums;
-  width:2.6ch;height:auto;-webkit-appearance:none;appearance:none
+  width:2.6ch;height:auto;-webkit-appearance:none;appearance:none;
+  -webkit-user-select:none;user-select:none
 }
 .time-picker-segment:focus{background:var(--accent);color:#fff}
 .time-picker-segment-period{margin-left:3px}
@@ -1268,6 +1269,10 @@ function buildTimePicker(input) {
     seg.autocapitalize = 'off';
     seg.spellcheck = false;
     seg.setAttribute('autocorrect', 'off');
+    // Dragging selected text between/within segments bypasses the keydown
+    // handling below entirely and can leave an invalid value; block it.
+    seg.addEventListener('dragstart', e => e.preventDefault());
+    seg.addEventListener('drop', e => e.preventDefault());
   });
   segments.append(hourSeg, sep, minSeg, perSeg);
 
