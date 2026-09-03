@@ -515,7 +515,7 @@ def _mask_notifications(notifications):
 _FILTER_LINE_RE = re.compile(r'^(-?\w+=.+|\w+\s*(?:>=|<=|>|<)\s*-?\d+(?:\.\d+)?)$')
 
 def _clean_filter_text(text):
-    lines = [l for l in str(text or "")[:FILTERS_CAP].splitlines()
+    lines = [l.strip() for l in str(text or "")[:FILTERS_CAP].splitlines()
              if _FILTER_LINE_RE.match(l.strip())]
     return "\n".join(lines)
 
