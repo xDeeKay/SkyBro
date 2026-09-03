@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SkyBro - Page not found</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3248;
+  --text:#e2e4f0;--muted:#7b7f9e;--accent:#4f7cff;
+  --font:system-ui,-apple-system,sans-serif;
+}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font);
+  height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;
+  padding:24px;text-align:center;
+}
+.logo{font-size:20px;font-weight:700;letter-spacing:-0.3px;margin-bottom:22px}
+.logo span{color:var(--accent)}
+.code{font-size:64px;font-weight:800;color:var(--accent);line-height:1;margin-bottom:10px}
+.msg{font-size:15px;color:var(--muted);margin-bottom:26px;max-width:420px}
+.home-btn{
+  display:inline-block;background:var(--accent);color:#fff;text-decoration:none;
+  font-size:13px;font-weight:600;padding:10px 20px;border-radius:8px;transition:opacity .15s;
+}
+.home-btn:hover{opacity:.85}
+</style>
+</head>
+<body>
+  <div>
+    <div class="logo">Sky<span>Bro</span></div>
+    <div class="code">404</div>
+    <div class="msg" id="msg">This page isn't tracked here.</div>
+    <a class="home-btn" href="/">Back to the dashboard</a>
+  </div>
+<script>
+const MESSAGES = [
+  "This page isn't tracked here.",
+  "Nothing on our radar for this page.",
+  "This page isn't on our flight path.",
+  "We don't have this one tracked.",
+  "This page isn't showing up on our scope.",
+  "Nothing here matches what you're tracking.",
+  "This page hasn't been sighted.",
+  "Off our radar. This page doesn't exist.",
+  "This one's not on our map.",
+  "No flight record of this page.",
+  "This page never filed a flight plan.",
+  "No transponder signal from this page.",
+  "This page went off-grid somewhere over the Pacific.",
+  "Squawk 7500. This page isn't where it should be.",
+  "We lost contact with this page.",
+  "This page isn't cleared for landing here.",
+  "This page has decayed from orbit.",
+  "No satellite passes over this page's coordinates.",
+  "This page isn't in our constellation.",
+  "Signal lost. This page has left the coverage zone.",
+  "This page's orbit doesn't intersect with reality.",
+  "No weather system detected at this page.",
+  "This page is outside our forecast area.",
+  "Clear skies. This page isn't showing up.",
+  "This page evaporated before it hit the radar.",
+  "This page isn't in our star catalog.",
+  "Nothing but empty space at this page's address.",
+  "This page hasn't been observed by any telescope.",
+  "We charted the whole sky and still didn't find this page.",
+  "This page is beyond our field of view.",
+  "This page's coordinates don't match anything real.",
+  "This page isn't currently in range.",
+  "This page took you into uncharted territory.",
+  "This page doesn't appear on any of our instruments.",
+];
+document.getElementById('msg').textContent = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+</script>
+</body>
+</html>

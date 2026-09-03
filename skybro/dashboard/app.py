@@ -291,6 +291,12 @@ def settings(tab=None, subtab=None, inner=None):
                            initial_subtab=subtab or "aircraft",
                            initial_inner=inner or "targets")
 
+@app.errorhandler(404)
+def not_found(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "not found"}), 404
+    return render_template("404.html"), 404
+
 # ── REST API ──────────────────────────────────────────────────────────────────
 @app.route("/api/live")
 def api_live():
