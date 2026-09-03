@@ -540,7 +540,7 @@ select.target-template:focus{border-color:var(--accent)}
   <!-- OpenSky OAuth2 + n2yo API key -->
   <div class="tab-pane" id="pane-integrations">
     <div class="card">
-      <div class="card-title">🔑 OpenSky Credentials (optional)</div>
+      <div class="card-title">OpenSky Credentials</div>
       <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials.</div>
       <div class="form-row">
         <div><label>Client ID</label><input type="text" id="opensky_client_id" value="{{ cfg.opensky_client_id }}"></div>
@@ -548,7 +548,7 @@ select.target-template:focus{border-color:var(--accent)}
       </div>
     </div>
     <div class="card">
-      <div class="card-title">🛰️ n2yo API Key (for ISS passes)</div>
+      <div class="card-title">n2yo API Key</div>
       <div class="card-desc">Required for ISS flyover alerts. Sign up for free at n2yo.com. The API key arrives by email. Leave blank to disable ISS tracking.</div>
       <div class="form-row single">
         <div>
