@@ -396,7 +396,7 @@ def update_source_status(source, success, detail='', status_override=None):
 # ── Notifications ─────────────────────────────────────────────────────────────
 _FILTER_FIELDS = {
     "aircraft":   {"callsign", "country", "model", "airframe", "direction", "icao24", "registration", "squawk"},
-    "satellites": {"sat_name"},
+    "satellites": {"sat_name", "start_az", "end_az"},
     "digest":     set(),
 }
 # Range-comparison fields (>, <, >=, <=), evaluated against raw numeric values
@@ -404,7 +404,8 @@ _FILTER_FIELDS = {
 # templates render, and independent of the Display tab's metric/aviation
 # setting. See notify_category's filter_values param.
 _NUMERIC_FILTER_FIELDS = {
-    "aircraft": {"altitude", "distance_km", "heading", "lat", "long", "speed", "vertical_speed"},
+    "aircraft":   {"altitude", "distance_km", "heading", "lat", "long", "speed", "vertical_speed"},
+    "satellites": {"max_el", "duration"},
 }
 _NUM_FILTER_RE = re.compile(r"^(\w+)\s*(>=|<=|>|<)\s*(-?\d+(?:\.\d+)?)\s*$")
 _TOKEN_RE = re.compile(r"\{(\w+)\}")
@@ -1047,11 +1048,14 @@ def dispatch_satellite_alerts():
         dt = local_dt.strftime("%I:%M %p").lstrip("0") if cfg.get("time_format") == "12h" \
             else local_dt.strftime("%H:%M")
         if not sat_quiet:
-            notify_category("satellites", {
+            values = {
                 'sat_name': sat_name, 'time': dt, 'minutes': str(mins), 'duration': str(duration),
                 'start_az': start_az or "N/A", 'end_az': end_az or "N/A",
                 'max_el': f"{round(max_el)}°" if max_el is not None else "N/A",
-            }, notify_type=apprise.NotifyType.WARNING)
+            }
+            filter_values = dict(values, max_el=max_el if max_el is not None else "")
+            notify_category("satellites", values, notify_type=apprise.NotifyType.WARNING,
+                             filter_values=filter_values)
         # Scope by sat_name too: pass_time alone can collide across satellite
         # types sharing the same second-resolution timestamp. Unconditional
         # regardless of quiet hours: suppression is silent-drop, not

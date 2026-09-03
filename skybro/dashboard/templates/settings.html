@@ -870,15 +870,35 @@ const FILTER_HELP = {
     intro: [
       'One rule per line: <code>field=pattern</code> includes matches, <code>-field=pattern</code> excludes them.',
       'Patterns are case-insensitive, see examples below.',
-      'The only field available is <code>sat_name</code>, which covers all four tracked pass types.',
+      'Numeric fields use range bounds instead, see range syntax below.',
     ],
-    fields: [
-      ['sat_name', 'Which satellite/pass this is'],
+    notes: [
+      'Range bounds always compare against raw degree/second values, never the unit-suffixed text your templates render.',
+      'A target\'s own filters (if set) are checked in addition to these category-wide ones: both must pass.',
+    ],
+    fields: {
+      string: [
+        ['sat_name', 'Which satellite/pass this is: ISS, Hubble, Tiangong, or Starlink'],
+        ['start_az', 'Compass direction the pass rises at'],
+        ['end_az', 'Compass direction the pass sets at'],
+      ],
+      numeric: [
+        ['max_el', 'Peak elevation above the horizon, in degrees'],
+        ['duration', 'Pass duration, in seconds'],
+      ],
+    },
+    ranges: [
+      [['&lt;'], 'Less than', 'max_el<strong>&lt;</strong>30', 'Only passes peaking below 30°'],
+      [['&lt;='], 'Less than or equal to', 'duration<strong>&lt;=</strong>180', 'Only passes lasting 180s or less, boundary included'],
+      [['&gt;'], 'Greater than', 'max_el<strong>&gt;</strong>45', 'Only passes peaking above 45°'],
+      [['&gt;='], 'Greater than or equal to', 'duration<strong>&gt;=</strong>300', 'Only passes lasting 300s or more, boundary included'],
+      [['&gt;', '&lt;'], 'Min+max window', 'max_el<strong>&gt;</strong>20<br>max_el<strong>&lt;</strong>60', 'Combine a &gt; line and a &lt; line on the same field: only between 20° and 60°'],
     ],
     examples: [
       ['sat_name=ISS', 'Only ISS passes'],
       ['-sat_name=Starlink', 'Exclude Starlink trains'],
       ['sat_name=ISS|Hubble', 'Only ISS or Hubble passes'],
+      ['start_az=^N', 'Only passes rising in a northerly direction (N, NE, NNE, NW, NNW)'],
     ],
   },
 };
@@ -984,12 +1004,13 @@ function openFilterHelp(category) {
     html += `<div class="help-subsection-title">String fields (regex)</div>${twoColTable('Field', 'Meaning', info.fields.string)}`;
     html += `<div class="help-subsection-title">Numeric fields (range)</div>${twoColTable('Field', 'Meaning', info.fields.numeric)}`;
   }
-  if (category === 'aircraft') {
+  if (info.regex) {
     html += `<div class="help-section-title">Regex syntax</div>${threeColTable('Symbol', 'Meaning', 'Example', info.regex)}`;
-    if (info.ranges) {
-      html += `<div class="help-section-title">Range syntax</div>${threeColTable('Symbol', 'Meaning', 'Example', info.ranges)}`;
-    }
-  } else {
+  }
+  if (info.ranges) {
+    html += `<div class="help-section-title">Range syntax</div>${threeColTable('Symbol', 'Meaning', 'Example', info.ranges)}`;
+  }
+  if (info.examples) {
     html += `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples, false, 200)}`;
   }
   openHelpModal(info.title, html);
