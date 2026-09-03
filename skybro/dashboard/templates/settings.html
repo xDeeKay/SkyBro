@@ -819,7 +819,7 @@ const FILTER_HELP = {
       'Numeric fields use range bounds instead, see range syntax below.',
     ],
     notes: [
-      'Range bounds always compare against raw ft/kts/fpm/km/degree values, never the unit-suffixed text your templates render, regardless of your Display tab\'s metric/aviation setting.',
+      'Range bounds always compare against raw values, never the unit-suffixed text your templates render, regardless of your Display tab\'s settings.',
       'A target\'s own filters (if set) are checked in addition to these category-wide ones: both must pass.',
     ],
     fields: {
@@ -849,8 +849,6 @@ const FILTER_HELP = {
       [['&gt;'], 'Greater than', 'altitude<strong>&gt;</strong>1000', 'Only above 1,000 ft'],
       [['&gt;='], 'Greater than or equal to', 'speed<strong>&gt;=</strong>250', 'Only at or above 250 kts, boundary included'],
       [['&gt;', '&lt;'], 'Min+max window', 'altitude<strong>&gt;</strong>1000<br>altitude<strong>&lt;</strong>5000', 'Combine a &gt; line and a &lt; line on the same field: only between 1,000 and 5,000 ft'],
-      [['N'], 'Positive values', 'distance_km&lt;<strong>10</strong>', 'No sign needed: only within 10 km'],
-      [['-N'], 'Negative values', 'lat&lt;<strong>-30</strong>', 'Prefix the number with -: only south of -30° latitude'],
     ],
     regex: [
       [['^', '$'], 'Anchors', '<strong>^</strong>VIPR20<strong>$</strong>', 'Matches only the exact value VIPR20, not VIPR200 or VIPR21'],
@@ -869,11 +867,11 @@ const FILTER_HELP = {
     title: 'Satellite Filter Syntax',
     intro: [
       'One rule per line: <code>field=pattern</code> includes matches, <code>-field=pattern</code> excludes them.',
-      'Patterns are case-insensitive, see examples below.',
+      'Patterns are case-insensitive, see regex syntax below.',
       'Numeric fields use range bounds instead, see range syntax below.',
     ],
     notes: [
-      'Range bounds always compare against raw degree/second values, never the unit-suffixed text your templates render.',
+      'Range bounds always compare against raw values, never the unit-suffixed text your templates render, regardless of your Display tab\'s settings.',
       'A target\'s own filters (if set) are checked in addition to these category-wide ones: both must pass.',
     ],
     fields: {
@@ -894,11 +892,16 @@ const FILTER_HELP = {
       [['&gt;='], 'Greater than or equal to', 'duration<strong>&gt;=</strong>300', 'Only passes lasting 300s or more, boundary included'],
       [['&gt;', '&lt;'], 'Min+max window', 'max_el<strong>&gt;</strong>20<br>max_el<strong>&lt;</strong>60', 'Combine a &gt; line and a &lt; line on the same field: only between 20° and 60°'],
     ],
-    examples: [
-      ['sat_name=ISS', 'Only ISS passes'],
-      ['-sat_name=Starlink', 'Exclude Starlink trains'],
-      ['sat_name=ISS|Hubble', 'Only ISS or Hubble passes'],
-      ['start_az=^N', 'Only passes rising in a northerly direction (N, NE, NNE, NW, NNW)'],
+    regex: [
+      [['^', '$'], 'Anchors', '<strong>^</strong>N<strong>$</strong>', 'Matches only the exact value N, not NE, NNE, NW, or NNW'],
+      [['.'], 'Any character', 'Hu<strong>.</strong>ble', 'Matches Hubble: anything with one character between Hu and ble'],
+      [['[...]'], 'Character class', '<strong>[NS]</strong>', 'Matches any compass value containing N or S, e.g. N, NE, SW, SSE'],
+      [['*'], 'Zero or more', 'Star<strong>*</strong>link', 'Matches Stalink, Starlink, Starrlink...'],
+      [['+'], 'One or more', 'Star<strong>+</strong>link', 'Matches Starlink, Starrlink... but not Stalink'],
+      [['?'], 'Optional (zero or one)', 'Hubble<strong>?</strong>', 'Matches Hubbl or Hubble'],
+      [['{n,m}'], 'Repeat count', 'N<strong>{1,2}</strong>E', 'Matches NE or NNE: one or two Ns followed by E'],
+      [['|'], 'OR', 'ISS<strong>|</strong>Hubble', 'Matches ISS or Hubble passes'],
+      [['()'], 'Grouping', '<strong>(</strong>SS|NN<strong>)</strong>E', 'Matches SSE or NNE'],
     ],
   },
 };
