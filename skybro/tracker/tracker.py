@@ -11,20 +11,26 @@ import apprise
 import ephem
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from logging.handlers import RotatingFileHandler
 from weather import fetch_weather, process_weather, process_moon
 from astronomy import process_astronomy
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-log = logging.getLogger("skybro")
 
 DATA_DIR  = Path("/data")
 DB_PATH   = DATA_DIR / "skybro.db"
 AC_DB     = DATA_DIR / "aircraft_db.json"
 CFG_PATH  = DATA_DIR / "config.json"
+LOG_PATH  = DATA_DIR / "tracker.log"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.StreamHandler(),
+        RotatingFileHandler(LOG_PATH, maxBytes=2*1024*1024, backupCount=1),
+    ],
+)
+log = logging.getLogger("skybro")
 
 WEATHER_INTERVAL   = 900    # 15 minutes
 _weather_last      = 0.0

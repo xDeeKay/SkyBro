@@ -16,6 +16,7 @@ app = Flask(__name__)
 DATA_DIR = Path("/data")
 DB_PATH  = DATA_DIR / "skybro.db"
 CFG_PATH = DATA_DIR / "config.json"
+LOG_PATH = DATA_DIR / "tracker.log"
 
 # Named, reusable title/body pairs. Targets reference one by id (linked
 # reference: editing a template here updates every target using it) instead
@@ -484,6 +485,21 @@ def api_history_reset():
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/api/logs")
+def api_logs():
+    try:
+        n = min(max(int(request.args.get("lines", 300)), 1), 1000)
+    except (TypeError, ValueError):
+        n = 300
+    if not LOG_PATH.exists():
+        return jsonify({"lines": []})
+    try:
+        with open(LOG_PATH, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+        return jsonify({"lines": [l.rstrip("\n") for l in lines[-n:]]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/stats")
 def api_stats():

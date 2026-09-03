@@ -560,6 +560,12 @@ select.target-template:focus{border-color:var(--accent)}
   </div>
 
   <div class="tab-pane" id="pane-danger">
+    <div class="card">
+      <div class="card-title">Tracker Log</div>
+      <div class="card-desc">Last 300 lines from the tracker service.</div>
+      <div id="log-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;max-height:360px;overflow-y:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--text)"></div>
+      <button class="btn btn-secondary" style="margin-top:10px" onclick="loadLogs()">Refresh</button>
+    </div>
     <div class="card" style="border-color:#e74c3c22">
       <div class="card-title" style="color:var(--red)">⚠️ Danger zone</div>
       <div class="card-desc">These actions cannot be undone.</div>
@@ -761,6 +767,7 @@ function _syncUrl(replace, state, path) {
 function showTab(tabId, push=true) {
   document.querySelectorAll('#settings-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tabId}`));
+  if (tabId === 'danger') loadLogs();
   if (push) {
     _syncUrl(false, {tab: tabId, subtab: tabId === 'notifications' ? _currentSubtab : null, inner: tabId === 'notifications' ? _currentInner : null},
       pathForTab(tabId, _currentSubtab, _currentInner));
@@ -2067,6 +2074,24 @@ async function save() {
     if (r.ok) showToast('✅ Settings saved');
     else showToast('❌ Save failed', 'error');
   } catch(e) { showToast('❌ '+e.message, 'error'); }
+}
+
+let _logsReqId = 0;
+async function loadLogs() {
+  const myId = ++_logsReqId;
+  const box = document.getElementById('log-box');
+  box.textContent = 'Loading…';
+  try {
+    const r = await fetch('/api/logs?lines=300');
+    const d = await r.json();
+    if (myId !== _logsReqId) return; // a newer request has since started, discard this one
+    box.textContent = d.lines && d.lines.length ? d.lines.join('\n') : 'No log entries yet.';
+  } catch (e) {
+    if (myId !== _logsReqId) return;
+    box.textContent = 'Failed to load log: ' + e.message;
+    return;
+  }
+  box.scrollTop = box.scrollHeight;
 }
 
 function confirmResetHistory() {
