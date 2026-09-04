@@ -537,23 +537,29 @@ function loadDarkMatterStyle() {
     });
 }
 
+// Detects iOS regardless of "Request Desktop Website" UA/platform spoofing:
+// navigator.standalone is a property only iOS's WebKit exposes at all.
+const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  typeof navigator.standalone !== 'undefined';
+
 // @maplibre/maplibre-gl-leaflet syncs its WebGL canvas to Leaflet's view on
-// every Leaflet 'zoom' event. Leaflet deliberately fires 'zoom' on every
-// requestAnimationFrame tick during a live pinch gesture regardless of the
-// zoomAnimation setting (Map.js's _move(): "Always fire 'zoom' if pinching
-// because #3530"), so an unthrottled pinch can ask MapLibre GL to fully
-// reproject and repaint the entire vector style up to ~60x/sec. That sustained
-// per-frame WebGL load, not Leaflet's own CSS zoom animation, is what makes a
-// deep pinch-zoom "progressively laggier" and eventually freeze the whole page
-// on iOS Safari: an earlier attempt at this fix disabled zoomAnimation (which
-// only governs the post-gesture settle animation, not this live-gesture path)
-// and the freeze persisted. Throttling the plugin's own zoom-sync handler caps
-// how often it repaints during a live pinch; _zoomEnd() still forces one final
-// unthrottled sync when the gesture ends, so the basemap always lands exactly
-// in place once the user lets go.
+// every Leaflet 'zoom' event, and Leaflet fires 'zoom' on every
+// requestAnimationFrame tick during a live pinch gesture (Map.js's _move():
+// "Always fire 'zoom' if pinching because #3530"), independent of any
+// animation setting - throttling that per-frame repaint (below) cuts how
+// often it happens, but a Retina iPad's WebGL canvas is still being asked to
+// fully reproject and repaint this style's ~80 layers at up to 3x device
+// pixel density on every one of those repaints. That per-frame GPU/fill-rate
+// cost, not repaint frequency alone, is what's been freezing real iPad
+// hardware after two frequency-only fixes didn't help. MapLibre GL has a
+// pixelRatio option built for exactly this: capping it to 1 on iOS renders
+// at standard (non-Retina) resolution, cutting GPU fill-rate/memory load per
+// frame by 4-9x depending on the device, at the cost of a softer-looking
+// basemap on iOS specifically.
 function addVectorBasemap(m) {
   loadDarkMatterStyle().then(style => {
-    const glLayer = L.maplibreGL({ style });
+    const glLayer = L.maplibreGL(IS_IOS ? { style, pixelRatio: 1 } : { style });
     glLayer._pinchZoom = L.Util.throttle(glLayer._pinchZoom, 100, glLayer);
     glLayer.addTo(m);
   }).catch(e => console.error('Basemap failed to load, falling back to plain background:', e));

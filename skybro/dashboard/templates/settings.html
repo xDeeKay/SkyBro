@@ -636,12 +636,16 @@ select.target-template:focus{border-color:var(--accent)}
 <div class="toast" id="toast"><span id="toast-msg"></span><button type="button" class="toast-close" onclick="closeToast()" aria-label="Dismiss" title="Dismiss">&times;</button></div>
 
 <script>
-// See the matching addVectorBasemap comment in index.html: throttles the GL
-// layer's per-frame pinch-zoom repaint instead of disabling Leaflet's zoom
-// animation, which didn't actually touch the live-pinch render path at fault.
+// See the matching addVectorBasemap/IS_IOS comment in index.html: caps
+// MapLibre GL's rendering resolution on iOS (its pixelRatio option) to cut
+// per-frame GPU/fill-rate load on Retina iPads, on top of throttling the
+// plugin's per-frame pinch-zoom repaint.
+const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  typeof navigator.standalone !== 'undefined';
 function addVectorBasemap(m) {
   loadDarkMatterStyle().then(style => {
-    const glLayer = L.maplibreGL({ style });
+    const glLayer = L.maplibreGL(IS_IOS ? { style, pixelRatio: 1 } : { style });
     glLayer._pinchZoom = L.Util.throttle(glLayer._pinchZoom, 100, glLayer);
     glLayer.addTo(m);
   }).catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
