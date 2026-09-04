@@ -553,7 +553,14 @@ const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
   typeof navigator.standalone !== 'undefined';
 
+// Temporary diagnostic only: ?nobasemap skips the vector layer entirely, to
+// isolate whether MapLibre GL is involved in a given freeze. The last time
+// this was tested, zoomAnimation wasn't actually being disabled on iOS yet
+// (confirmed since via the version-badge readout), so that result is not
+// trustworthy; re-testing now that zoomAnimation:false is confirmed active.
+// Remove once the iOS zoom freeze investigation is settled.
 function addVectorBasemap(m) {
+  if (new URLSearchParams(location.search).has('nobasemap')) return;
   loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(m))
     .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 }
