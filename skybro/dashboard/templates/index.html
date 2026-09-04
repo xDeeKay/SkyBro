@@ -537,13 +537,29 @@ function loadDarkMatterStyle() {
     });
 }
 
+// Confirmed on real hardware: disabling zoomAnimation is what actually fixes
+// the iOS pinch/zoom-button freeze (this is what d471e26 did originally, just
+// unscoped). The @maplibre/maplibre-gl-leaflet plugin only binds its
+// _transitionEnd handler when map.options.zoomAnimation is true (onAdd:
+// "if (map.options.zoomAnimation) L.DomEvent.on(map._proxy, TRANSITION_END,
+// this._transitionEnd, this)"), and that handler does a full GL canvas
+// resize + jumpTo + redraw after every single zoom - pinch or +/- button
+// alike, since both go through Leaflet's same animated-zoom path when
+// zoomAnimation is on. That's the per-zoom cost that compounds "the further
+// you zoom in", not gesture frequency or render resolution (both already
+// ruled out). Scoped to iOS only so desktop/Android keep smooth zoom; see the
+// IS_IOS comment below for why UA/platform alone isn't trusted.
+const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  typeof navigator.standalone !== 'undefined';
+
 function addVectorBasemap(m) {
   loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(m))
     .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
-const map = L.map('map', {zoomControl:true, maxZoom:19}).setView([_initLat, _initLon], 11);
+const map = L.map('map', {zoomControl:true, maxZoom:19, zoomAnimation:!IS_IOS}).setView([_initLat, _initLon], 11);
 addVectorBasemap(map);
 L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');

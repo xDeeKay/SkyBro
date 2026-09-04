@@ -636,6 +636,10 @@ select.target-template:focus{border-color:var(--accent)}
 <div class="toast" id="toast"><span id="toast-msg"></span><button type="button" class="toast-close" onclick="closeToast()" aria-label="Dismiss" title="Dismiss">&times;</button></div>
 
 <script>
+// See the matching IS_IOS/addVectorBasemap comment in index.html.
+const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  typeof navigator.standalone !== 'undefined';
 function addVectorBasemap(m) {
   loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(m))
     .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
@@ -2325,7 +2329,7 @@ function openMapPicker() {
   document.getElementById('map-modal').classList.add('open');
   if (!pickerMap) {
     setTimeout(() => {
-      pickerMap = L.map('picker-map', {maxZoom:19}).setView([pickedLat, pickedLon], 11);
+      pickerMap = L.map('picker-map', {maxZoom:19, zoomAnimation:!IS_IOS}).setView([pickedLat, pickedLon], 11);
       addVectorBasemap(pickerMap);
       pickerMarker = L.marker([pickedLat, pickedLon], {draggable:true}).addTo(pickerMap);
       pickerMarker.on('drag dragend', e => {
