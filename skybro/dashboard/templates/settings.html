@@ -757,6 +757,14 @@ const INITIAL_INNER = {{ initial_inner | tojson }};
 let _currentSubtab = INITIAL_SUBTAB;
 let _currentInner = INITIAL_INNER;
 
+// showTab() below calls loadLogs()/loadDiagnostics() synchronously on page
+// load when the System tab is the initial one (a bookmark, refresh, or the
+// URL-sync feature landing here), so this state has to exist before that
+// call runs, not declared down near the functions that use it.
+let _logsReqId = 0;
+let _diagReqId = 0;
+const DIAG_SOURCE_LABELS = {opensky: 'Aircraft (OpenSky)', iss: 'Satellites', weather: 'Weather', astronomy: 'Astronomy'};
+
 function pathForTab(tabId, subtabId, innerId) {
   if (tabId === 'notifications') return `/settings/notifications/${subtabId || 'aircraft'}/${innerId || 'targets'}`;
   if (tabId === 'location') return '/settings';
@@ -2083,7 +2091,6 @@ async function save() {
   } catch(e) { showToast('❌ '+e.message, 'error'); }
 }
 
-const DIAG_SOURCE_LABELS = {opensky: 'Aircraft (OpenSky)', iss: 'Satellites', weather: 'Weather', astronomy: 'Astronomy'};
 function diagAgo(ts) {
   if (!ts) return 'never';
   const s = Math.floor(Date.now() / 1000) - ts;
@@ -2104,11 +2111,10 @@ function diagBytes(n) {
   return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-let _diagReqId = 0;
 async function loadDiagnostics() {
   const myId = ++_diagReqId;
   const box = document.getElementById('diag-box');
-  box.textContent = 'Loading…';
+  if (!box.textContent.trim()) box.textContent = 'Loading…';
   let d;
   try {
     const r = await fetch('/api/diagnostics');
@@ -2149,11 +2155,10 @@ async function loadDiagnostics() {
   `;
 }
 
-let _logsReqId = 0;
 async function loadLogs() {
   const myId = ++_logsReqId;
   const box = document.getElementById('log-box');
-  box.textContent = 'Loading…';
+  if (!box.textContent.trim()) box.textContent = 'Loading…';
   try {
     const r = await fetch('/api/logs?lines=300');
     const d = await r.json();
