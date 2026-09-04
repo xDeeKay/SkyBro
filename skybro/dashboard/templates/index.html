@@ -557,7 +557,13 @@ const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
 // at standard (non-Retina) resolution, cutting GPU fill-rate/memory load per
 // frame by 4-9x depending on the device, at the cost of a softer-looking
 // basemap on iOS specifically.
+// Temporary diagnostic only, not a real feature: ?nobasemap in the URL skips
+// the vector layer entirely (plain background, markers/circles still work),
+// to bisect whether MapLibre GL's WebGL rendering is actually what's freezing
+// iOS Safari on pinch-zoom, versus something else in the page. Remove once
+// that's confirmed one way or the other.
 function addVectorBasemap(m) {
+  if (new URLSearchParams(location.search).has('nobasemap')) return;
   loadDarkMatterStyle().then(style => {
     const glLayer = L.maplibreGL(IS_IOS ? { style, pixelRatio: 1 } : { style });
     glLayer._pinchZoom = L.Util.throttle(glLayer._pinchZoom, 100, glLayer);
