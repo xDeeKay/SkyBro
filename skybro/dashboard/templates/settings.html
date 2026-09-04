@@ -636,6 +636,13 @@ select.target-template:focus{border-color:var(--accent)}
 <div class="toast" id="toast"><span id="toast-msg"></span><button type="button" class="toast-close" onclick="closeToast()" aria-label="Dismiss" title="Dismiss">&times;</button></div>
 
 <script>
+// See the matching IS_IOS comment in index.html: the map picker below hits the
+// same iOS Safari vector-basemap lockup, so it needs the same zoomAnimation
+// scoping.
+const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  typeof navigator.standalone !== 'undefined';
+
 // ── Header (live stats/clock/weather, mirrors the dashboard's header) ──────────
 const HOME_LAT = {{ cfg.home_lat }};
 const HOME_LON = {{ cfg.home_lon }};
@@ -2320,9 +2327,7 @@ function openMapPicker() {
   document.getElementById('map-modal').classList.add('open');
   if (!pickerMap) {
     setTimeout(() => {
-      const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      pickerMap = L.map('picker-map', {maxZoom:19, zoomAnimation:!isIOS}).setView([pickedLat, pickedLon], 11);
+      pickerMap = L.map('picker-map', {maxZoom:19, zoomAnimation:!IS_IOS}).setView([pickedLat, pickedLon], 11);
       loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(pickerMap))
         .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
       pickerMarker = L.marker([pickedLat, pickedLon], {draggable:true}).addTo(pickerMap);

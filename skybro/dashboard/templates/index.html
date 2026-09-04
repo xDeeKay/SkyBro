@@ -538,13 +538,23 @@ function loadDarkMatterStyle() {
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
-// Deep pinch-zooming on iOS Safari can leave the whole page unresponsive: Leaflet's
-// zoom animation waits on a CSS transitionend event to clear its animating-zoom
-// flag, and iOS Safari intermittently drops that event under the vector basemap's
-// GPU load. Scoped to iOS specifically (rather than disabled everywhere) so desktop
-// and Android keep smooth animated zoom, which is unaffected by that iOS bug.
+// Deep pinch-zooming on iOS Safari can leave the whole page unresponsive under
+// the vector basemap's GPU load. This was originally chalked up to a dropped CSS
+// transitionend event (Leaflet's zoom animation clears its animating-zoom flag
+// on that event, and a lost event stalls panning/zooming), but Leaflet 1.9.4
+// already has its own 250ms fallback timer for exactly that case (_animateZoom,
+// "Work around webkit not firing 'transitionend'", leaflet.js:4827), so the real
+// culprit is main-thread/GPU contention between Leaflet's CSS transform zoom
+// animation and MapLibre GL's WebGL redraws, not a stuck flag. Disabling
+// zoomAnimation removes that contention. Scoped to iOS specifically (rather than
+// disabled everywhere) so desktop and Android keep smooth animated zoom.
+// navigator.platform/userAgent alone were not reliable enough here (an iPad
+// still hit the lockup with UA+platform-only detection), so this also checks
+// navigator.standalone, a property that only exists in iOS's WebKit regardless
+// of any "Request Desktop Website" UA spoofing.
 const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+  typeof navigator.standalone !== 'undefined';
 const map = L.map('map', {zoomControl:true, maxZoom:19, zoomAnimation:!IS_IOS}).setView([_initLat, _initLon], 11);
 loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(map))
   .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
