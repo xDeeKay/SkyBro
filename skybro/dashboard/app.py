@@ -822,13 +822,6 @@ DIAGNOSTICS_TABLES = [
     ("flight_pings",    "Flight Pings"),
     ("iss_alerts",      "Satellite Passes"),
     ("photo_cache",     "Photo Cache"),
-    ("weather_current",  "Weather (Current)"),
-    ("weather_hourly",   "Weather (Hourly)"),
-    ("weather_daily",    "Weather (Daily)"),
-    ("moon_phase",       "Moon Phase"),
-    ("astronomy_data",   "Astronomy Data"),
-    ("source_status",    "Source Status"),
-    ("digest_state",     "Digest State"),
 ]
 
 @app.route("/api/diagnostics")
