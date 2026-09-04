@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>SkyBro</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css"/>
@@ -41,7 +41,7 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
   .hdr-clock{font-size:14px;gap:5px}
 }
 .main{display:flex;flex:1;overflow:hidden;position:relative}
-#map{flex:1;min-width:0;position:relative;z-index:0;background:#090909}
+#map{flex:1;min-width:0;position:relative;z-index:0;background:#090909;touch-action:none}
 .sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease;position:relative}
 .sidebar.collapsed{width:0;min-width:0;border:none}
 .sidebar-tab{position:absolute;right:var(--sidebar-w);top:50%;transform:translateY(-50%);width:18px;height:44px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;z-index:500;transition:right .2s ease;padding:0;line-height:1;user-select:none}
@@ -537,38 +537,9 @@ function loadDarkMatterStyle() {
     });
 }
 
-// Detects iOS regardless of "Request Desktop Website" UA/platform spoofing:
-// navigator.standalone is a property only iOS's WebKit exposes at all.
-const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-  typeof navigator.standalone !== 'undefined';
-
-// @maplibre/maplibre-gl-leaflet syncs its WebGL canvas to Leaflet's view on
-// every Leaflet 'zoom' event, and Leaflet fires 'zoom' on every
-// requestAnimationFrame tick during a live pinch gesture (Map.js's _move():
-// "Always fire 'zoom' if pinching because #3530"), independent of any
-// animation setting - throttling that per-frame repaint (below) cuts how
-// often it happens, but a Retina iPad's WebGL canvas is still being asked to
-// fully reproject and repaint this style's ~80 layers at up to 3x device
-// pixel density on every one of those repaints. That per-frame GPU/fill-rate
-// cost, not repaint frequency alone, is what's been freezing real iPad
-// hardware after two frequency-only fixes didn't help. MapLibre GL has a
-// pixelRatio option built for exactly this: capping it to 1 on iOS renders
-// at standard (non-Retina) resolution, cutting GPU fill-rate/memory load per
-// frame by 4-9x depending on the device, at the cost of a softer-looking
-// basemap on iOS specifically.
-// Temporary diagnostic only, not a real feature: ?nobasemap in the URL skips
-// the vector layer entirely (plain background, markers/circles still work),
-// to bisect whether MapLibre GL's WebGL rendering is actually what's freezing
-// iOS Safari on pinch-zoom, versus something else in the page. Remove once
-// that's confirmed one way or the other.
 function addVectorBasemap(m) {
-  if (new URLSearchParams(location.search).has('nobasemap')) return;
-  loadDarkMatterStyle().then(style => {
-    const glLayer = L.maplibreGL(IS_IOS ? { style, pixelRatio: 1 } : { style });
-    glLayer._pinchZoom = L.Util.throttle(glLayer._pinchZoom, 100, glLayer);
-    glLayer.addTo(m);
-  }).catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
+  loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(m))
+    .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────

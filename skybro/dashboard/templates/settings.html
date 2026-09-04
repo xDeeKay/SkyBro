@@ -248,7 +248,7 @@ select.target-template:focus{border-color:var(--accent)}
 .search-opt:hover,.search-opt.active{background:var(--surface2)}
 .search-opt-name{font-size:13px;font-weight:600}
 .search-opt-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.modal-map{height:340px;flex-shrink:0;background:#090909}
+.modal-map{height:340px;flex-shrink:0;background:#090909;touch-action:none}
 .modal-ftr{padding:12px 16px;display:flex;gap:10px;border-top:1px solid var(--border);flex-shrink:0}
 /* Help modal (filter syntax / template placeholders) */
 .help-link{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;padding:0;margin-left:6px;text-decoration:underline;text-underline-offset:2px}
@@ -636,19 +636,9 @@ select.target-template:focus{border-color:var(--accent)}
 <div class="toast" id="toast"><span id="toast-msg"></span><button type="button" class="toast-close" onclick="closeToast()" aria-label="Dismiss" title="Dismiss">&times;</button></div>
 
 <script>
-// See the matching addVectorBasemap/IS_IOS comment in index.html: caps
-// MapLibre GL's rendering resolution on iOS (its pixelRatio option) to cut
-// per-frame GPU/fill-rate load on Retina iPads, on top of throttling the
-// plugin's per-frame pinch-zoom repaint.
-const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-  typeof navigator.standalone !== 'undefined';
 function addVectorBasemap(m) {
-  loadDarkMatterStyle().then(style => {
-    const glLayer = L.maplibreGL(IS_IOS ? { style, pixelRatio: 1 } : { style });
-    glLayer._pinchZoom = L.Util.throttle(glLayer._pinchZoom, 100, glLayer);
-    glLayer.addTo(m);
-  }).catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
+  loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(m))
+    .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 }
 
 // ── Header (live stats/clock/weather, mirrors the dashboard's header) ──────────
