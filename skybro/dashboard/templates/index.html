@@ -537,27 +537,31 @@ function loadDarkMatterStyle() {
     });
 }
 
+// @maplibre/maplibre-gl-leaflet syncs its WebGL canvas to Leaflet's view on
+// every Leaflet 'zoom' event. Leaflet deliberately fires 'zoom' on every
+// requestAnimationFrame tick during a live pinch gesture regardless of the
+// zoomAnimation setting (Map.js's _move(): "Always fire 'zoom' if pinching
+// because #3530"), so an unthrottled pinch can ask MapLibre GL to fully
+// reproject and repaint the entire vector style up to ~60x/sec. That sustained
+// per-frame WebGL load, not Leaflet's own CSS zoom animation, is what makes a
+// deep pinch-zoom "progressively laggier" and eventually freeze the whole page
+// on iOS Safari: an earlier attempt at this fix disabled zoomAnimation (which
+// only governs the post-gesture settle animation, not this live-gesture path)
+// and the freeze persisted. Throttling the plugin's own zoom-sync handler caps
+// how often it repaints during a live pinch; _zoomEnd() still forces one final
+// unthrottled sync when the gesture ends, so the basemap always lands exactly
+// in place once the user lets go.
+function addVectorBasemap(m) {
+  loadDarkMatterStyle().then(style => {
+    const glLayer = L.maplibreGL({ style });
+    glLayer._pinchZoom = L.Util.throttle(glLayer._pinchZoom, 100, glLayer);
+    glLayer.addTo(m);
+  }).catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
+}
+
 // ── Map ───────────────────────────────────────────────────────────────────────
-// Deep pinch-zooming on iOS Safari can leave the whole page unresponsive under
-// the vector basemap's GPU load. This was originally chalked up to a dropped CSS
-// transitionend event (Leaflet's zoom animation clears its animating-zoom flag
-// on that event, and a lost event stalls panning/zooming), but Leaflet 1.9.4
-// already has its own 250ms fallback timer for exactly that case (_animateZoom,
-// "Work around webkit not firing 'transitionend'", leaflet.js:4827), so the real
-// culprit is main-thread/GPU contention between Leaflet's CSS transform zoom
-// animation and MapLibre GL's WebGL redraws, not a stuck flag. Disabling
-// zoomAnimation removes that contention. Scoped to iOS specifically (rather than
-// disabled everywhere) so desktop and Android keep smooth animated zoom.
-// navigator.platform/userAgent alone were not reliable enough here (an iPad
-// still hit the lockup with UA+platform-only detection), so this also checks
-// navigator.standalone, a property that only exists in iOS's WebKit regardless
-// of any "Request Desktop Website" UA spoofing.
-const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-  typeof navigator.standalone !== 'undefined';
-const map = L.map('map', {zoomControl:true, maxZoom:19, zoomAnimation:!IS_IOS}).setView([_initLat, _initLon], 11);
-loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(map))
-  .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
+const map = L.map('map', {zoomControl:true, maxZoom:19}).setView([_initLat, _initLon], 11);
+addVectorBasemap(map);
 L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');
 const radiusCircle = L.circle([_initLat, _initLon], {radius:RADIUS*1000, color:'#4f7cff',
