@@ -2140,6 +2140,8 @@ async function loadDiagnostics() {
   box.innerHTML = `
     <div class="diag-row"><span>Version</span><span>${verLine}</span></div>
     <div class="diag-row"><span>Uptime</span><span style="color:var(--muted)">${diagDuration(d.uptime_seconds)}</span></div>
+    <div class="diag-row"><span>Python</span><span style="color:var(--muted)">${d.python_version} (${d.arch})</span></div>
+    <div class="diag-row"><span>Apprise</span><span style="color:var(--muted)">${d.apprise_version}</span></div>
     <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 4px">Sources</div>
     ${sourceRows}
     <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 4px">Database (${diagBytes(d.db.size_bytes)})</div>

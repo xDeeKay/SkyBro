@@ -4,7 +4,7 @@ Serves the live map UI, API endpoints, and the settings page.
 Settings are persisted to /data/config.json (hot-reloaded by tracker).
 """
 
-import os, json, re, secrets, sqlite3, time
+import os, json, platform, re, secrets, sqlite3, time
 
 APP_VERSION = "1.6.0"
 STARTED_AT = time.time()
@@ -858,6 +858,9 @@ def api_diagnostics():
         "app_version": APP_VERSION,
         "git_sha": os.environ.get("GIT_SHA", "").strip(),
         "uptime_seconds": int(time.time() - STARTED_AT),
+        "python_version": platform.python_version(),
+        "arch": platform.machine(),
+        "apprise_version": getattr(apprise, "__version__", "unknown"),
         "sources": sources,
         "db": {"size_bytes": db_size, "tables": tables},
     })
