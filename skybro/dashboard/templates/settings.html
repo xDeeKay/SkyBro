@@ -584,7 +584,7 @@ select.target-template:focus{border-color:var(--accent)}
     </div>
   </div>
 
-  <div class="actions">
+  <div class="actions" id="save-actions">
     <button class="btn btn-primary" onclick="save()">Save settings</button>
   </div>
 
@@ -794,6 +794,7 @@ function _syncUrl(replace, state, path) {
 function showTab(tabId, push=true) {
   document.querySelectorAll('#settings-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tabId}`));
+  document.getElementById('save-actions').style.display = tabId === 'system' ? 'none' : '';
   if (tabId === 'system') { loadLogs(); loadDiagnostics(); }
   if (push) {
     _syncUrl(false, {tab: tabId, subtab: tabId === 'notifications' ? _currentSubtab : null, inner: tabId === 'notifications' ? _currentInner : null},
