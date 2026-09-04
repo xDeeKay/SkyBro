@@ -77,6 +77,7 @@ input:checked+.slider:before{transform:translateX(18px)}
 .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
 .diag-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)}
 .diag-row:last-child{border-bottom:none}
+.diag-row>span:last-child{min-width:0;overflow-wrap:break-word;text-align:right}
 select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0 10px;height:35px;line-height:33px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
 select.inline-select:focus{border-color:var(--accent)}
 .notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
@@ -2091,6 +2092,9 @@ async function save() {
   } catch(e) { showToast('❌ '+e.message, 'error'); }
 }
 
+function diagEscape(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
 function diagAgo(ts) {
   if (!ts) return 'never';
   const s = Math.floor(Date.now() / 1000) - ts;
@@ -2132,10 +2136,11 @@ async function loadDiagnostics() {
     const label = DIAG_SOURCE_LABELS[key];
     if (!s) return `<div class="diag-row"><span>${label}</span><span style="color:var(--muted)">no data yet</span></div>`;
     const ok = s.status === 'ok';
-    const dot = ok ? 'var(--green)' : (s.status === 'no_key' ? 'var(--muted)' : 'var(--red)');
+    const dot = ok ? 'var(--green)' : (s.status === 'no_key' || s.status === 'backoff' ? 'var(--muted)' : 'var(--red)');
+    const labelForStatus = {no_key: 'not configured', backoff: 'rate limited'}[s.status];
     const detail = ok
       ? `success ${diagAgo(s.last_success)}`
-      : `${s.status === 'no_key' ? 'not configured' : 'error ' + diagAgo(s.last_error)}${s.detail ? ' - ' + s.detail : ''}`;
+      : `${labelForStatus || 'error ' + diagAgo(s.last_error)}${s.detail ? ' - ' + diagEscape(s.detail) : ''}`;
     return `<div class="diag-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dot};margin-right:7px"></span>${label}</span><span style="color:var(--muted)">${detail}</span></div>`;
   }).join('');
 
