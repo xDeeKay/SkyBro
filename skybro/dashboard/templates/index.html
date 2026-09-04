@@ -538,7 +538,14 @@ function loadDarkMatterStyle() {
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
-const map = L.map('map', {zoomControl:true, maxZoom:19, zoomAnimation:false}).setView([_initLat, _initLon], 11);
+// Deep pinch-zooming on iOS Safari can leave the whole page unresponsive: Leaflet's
+// zoom animation waits on a CSS transitionend event to clear its animating-zoom
+// flag, and iOS Safari intermittently drops that event under the vector basemap's
+// GPU load. Scoped to iOS specifically (rather than disabled everywhere) so desktop
+// and Android keep smooth animated zoom, which is unaffected by that iOS bug.
+const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const map = L.map('map', {zoomControl:true, maxZoom:19, zoomAnimation:!IS_IOS}).setView([_initLat, _initLon], 11);
 loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(map))
   .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})

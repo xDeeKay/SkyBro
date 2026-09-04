@@ -2320,7 +2320,9 @@ function openMapPicker() {
   document.getElementById('map-modal').classList.add('open');
   if (!pickerMap) {
     setTimeout(() => {
-      pickerMap = L.map('picker-map', {maxZoom:19, zoomAnimation:false}).setView([pickedLat, pickedLon], 11);
+      const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      pickerMap = L.map('picker-map', {maxZoom:19, zoomAnimation:!isIOS}).setView([pickedLat, pickedLon], 11);
       loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(pickerMap))
         .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
       pickerMarker = L.marker([pickedLat, pickedLon], {draggable:true}).addTo(pickerMap);
