@@ -7,6 +7,7 @@ Settings are persisted to /data/config.json (hot-reloaded by tracker).
 import os, json, re, secrets, sqlite3, time
 
 APP_VERSION = "1.6.0"
+STARTED_AT = time.time()
 from datetime import datetime
 from pathlib import Path
 import apprise
@@ -810,5 +811,62 @@ def api_health():
     any_error = any(s["status"] == "error" for s in sources.values())
     status = "ok" if (db_ok and tracker_alive and not any_error) else "degraded"
     return jsonify({"status": status, "db": db_ok, "tracker_alive": tracker_alive, "sources": sources})
+
+# Display labels for the diagnostics row-count table, distinct from the raw
+# SQL table names since a couple no longer match what the UI calls that data:
+# "seen_aircraft" reads as the History cards' own ◉ seen flag, and "iss_alerts"
+# predates satellite dispatch covering Hubble/Tiangong/Starlink too.
+DIAGNOSTICS_TABLES = [
+    ("live_aircraft",   "Live Aircraft"),
+    ("seen_aircraft",   "Aircraft History"),
+    ("flight_pings",    "Flight Pings"),
+    ("iss_alerts",      "Satellite Passes"),
+    ("photo_cache",     "Photo Cache"),
+    ("weather_current",  "Weather (Current)"),
+    ("weather_hourly",   "Weather (Hourly)"),
+    ("weather_daily",    "Weather (Daily)"),
+    ("moon_phase",       "Moon Phase"),
+    ("astronomy_data",   "Astronomy Data"),
+    ("source_status",    "Source Status"),
+    ("digest_state",     "Digest State"),
+]
+
+@app.route("/api/diagnostics")
+def api_diagnostics():
+    sources = {}
+    try:
+        rows = db().execute(
+            "SELECT source, status, last_success, last_error, detail FROM source_status").fetchall()
+        for r in rows:
+            sources[r["source"]] = {
+                "status": r["status"], "last_success": r["last_success"],
+                "last_error": r["last_error"], "detail": r["detail"]}
+    except Exception:
+        pass
+
+    tables = []
+    try:
+        conn = db()
+        for name, label in DIAGNOSTICS_TABLES:
+            try:
+                n = conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+            except Exception:
+                n = None
+            tables.append({"table": name, "label": label, "rows": n})
+    except Exception:
+        tables = []
+
+    try:
+        db_size = DB_PATH.stat().st_size
+    except Exception:
+        db_size = None
+
+    return jsonify({
+        "app_version": APP_VERSION,
+        "git_sha": os.environ.get("GIT_SHA", "").strip(),
+        "uptime_seconds": int(time.time() - STARTED_AT),
+        "sources": sources,
+        "db": {"size_bytes": db_size, "tables": tables},
+    })
 
 import json as _json  # ensure json available in appended scope

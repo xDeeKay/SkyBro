@@ -75,6 +75,8 @@ input:checked+.slider:before{transform:translateX(18px)}
 .toast-close{background:none;border:none;color:inherit;opacity:.7;cursor:pointer;font-size:15px;line-height:1;padding:0;flex-shrink:0}
 .toast-close:hover{opacity:1}
 .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+.diag-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)}
+.diag-row:last-child{border-bottom:none}
 select.inline-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0 10px;height:35px;line-height:33px;color:var(--text);font-size:13px;outline:none;cursor:pointer;transition:border-color .15s}
 select.inline-select:focus{border-color:var(--accent)}
 .notif-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
@@ -561,6 +563,11 @@ select.target-template:focus{border-color:var(--accent)}
 
   <div class="tab-pane" id="pane-danger">
     <div class="card">
+      <div class="card-title">Diagnostics</div>
+      <div class="card-desc">App build, per-source health, and database size.</div>
+      <div id="diag-box"></div>
+    </div>
+    <div class="card">
       <div class="card-title">Tracker Log</div>
       <div class="card-desc">Last 300 lines from the tracker service.</div>
       <div id="log-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;max-height:360px;overflow-y:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--text)"></div>
@@ -767,7 +774,7 @@ function _syncUrl(replace, state, path) {
 function showTab(tabId, push=true) {
   document.querySelectorAll('#settings-tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `pane-${tabId}`));
-  if (tabId === 'danger') loadLogs();
+  if (tabId === 'danger') { loadLogs(); loadDiagnostics(); }
   if (push) {
     _syncUrl(false, {tab: tabId, subtab: tabId === 'notifications' ? _currentSubtab : null, inner: tabId === 'notifications' ? _currentInner : null},
       pathForTab(tabId, _currentSubtab, _currentInner));
@@ -2074,6 +2081,70 @@ async function save() {
     if (r.ok) showToast('✅ Settings saved');
     else showToast('❌ Save failed', 'error');
   } catch(e) { showToast('❌ '+e.message, 'error'); }
+}
+
+const DIAG_SOURCE_LABELS = {opensky: 'Aircraft (OpenSky)', iss: 'Satellites', weather: 'Weather', astronomy: 'Astronomy'};
+function diagAgo(ts) {
+  if (!ts) return 'never';
+  const s = Math.floor(Date.now() / 1000) - ts;
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+function diagDuration(s) {
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+function diagBytes(n) {
+  if (n == null) return 'unknown';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+let _diagReqId = 0;
+async function loadDiagnostics() {
+  const myId = ++_diagReqId;
+  const box = document.getElementById('diag-box');
+  box.textContent = 'Loading…';
+  let d;
+  try {
+    const r = await fetch('/api/diagnostics');
+    d = await r.json();
+    if (myId !== _diagReqId) return;
+  } catch (e) {
+    if (myId !== _diagReqId) return;
+    box.textContent = 'Failed to load diagnostics: ' + e.message;
+    return;
+  }
+
+  const verLine = d.git_sha ? `v${d.app_version} <span style="color:var(--muted)">(dev-${d.git_sha})</span>` : `v${d.app_version}`;
+  const sourceRows = Object.keys(DIAG_SOURCE_LABELS).map(key => {
+    const s = d.sources[key];
+    const label = DIAG_SOURCE_LABELS[key];
+    if (!s) return `<div class="diag-row"><span>${label}</span><span style="color:var(--muted)">no data yet</span></div>`;
+    const ok = s.status === 'ok';
+    const dot = ok ? 'var(--green)' : (s.status === 'no_key' ? 'var(--muted)' : 'var(--red)');
+    const detail = ok
+      ? `success ${diagAgo(s.last_success)}`
+      : `${s.status === 'no_key' ? 'not configured' : 'error ' + diagAgo(s.last_error)}${s.detail ? ' - ' + s.detail : ''}`;
+    return `<div class="diag-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dot};margin-right:7px"></span>${label}</span><span style="color:var(--muted)">${detail}</span></div>`;
+  }).join('');
+
+  const tableRows = (d.db.tables || []).map(t =>
+    `<div class="diag-row"><span>${t.label}</span><span style="color:var(--muted)">${t.rows == null ? 'unknown' : t.rows.toLocaleString()}</span></div>`
+  ).join('');
+
+  box.innerHTML = `
+    <div class="diag-row"><span>Version</span><span>${verLine}</span></div>
+    <div class="diag-row"><span>Uptime</span><span style="color:var(--muted)">${diagDuration(d.uptime_seconds)}</span></div>
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 4px">Sources</div>
+    ${sourceRows}
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 4px">Database (${diagBytes(d.db.size_bytes)})</div>
+    ${tableRows}
+  `;
 }
 
 let _logsReqId = 0;
