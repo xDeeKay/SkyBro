@@ -553,20 +553,21 @@ const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
   typeof navigator.standalone !== 'undefined';
 
-// Temporary diagnostic only: ?nobasemap skips the vector layer entirely, to
-// isolate whether MapLibre GL is involved in a given freeze. The last time
-// this was tested, zoomAnimation wasn't actually being disabled on iOS yet
-// (confirmed since via the version-badge readout), so that result is not
-// trustworthy; re-testing now that zoomAnimation:false is confirmed active.
-// Remove once the iOS zoom freeze investigation is settled.
 function addVectorBasemap(m) {
-  if (new URLSearchParams(location.search).has('nobasemap')) return;
   loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(m))
     .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
-const map = L.map('map', {zoomControl:true, maxZoom:19, zoomAnimation:!IS_IOS}).setView([_initLat, _initLon], 11);
+// preferCanvas: the radius circle covers real km, so at deep zoom its
+// projected pixel radius becomes enormous. Leaflet's default SVG renderer
+// builds that as a literal <path> arc at those extreme coordinates, which is
+// a known freeze/hang risk in WebKit's SVG rasterizer, especially on older
+// iOS hardware (confirmed: the freeze only happens zooming in near the
+// circle, not elsewhere on the map). Canvas rendering doesn't have this
+// failure mode since it draws with ctx.arc() clipped to the viewport rather
+// than generating an SVG path at the full unclipped radius.
+const map = L.map('map', {zoomControl:true, maxZoom:19, zoomAnimation:!IS_IOS, preferCanvas:true}).setView([_initLat, _initLon], 11);
 addVectorBasemap(map);
 L.circleMarker([_initLat, _initLon], {radius:9,fillColor:'#4f7cff',color:'#fff',weight:2,fillOpacity:1})
   .addTo(map).bindPopup('<b>Home</b>');
