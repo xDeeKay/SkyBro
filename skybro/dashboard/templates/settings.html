@@ -284,6 +284,13 @@ select.target-template:focus{border-color:var(--accent)}
 .help-table .help-symbol code + code{margin-top:4px}
 .help-table .help-explain{display:block;color:var(--muted);font-size:12px;margin-top:4px;font-weight:400;white-space:normal}
 .help-notes{margin:0;padding-left:18px;color:var(--muted)}
+.help-table col.col-ph-token{width:178px}
+.help-table col.col-ph-desc{width:180px}
+@media (max-width:480px){
+  .help-table col.col-ph-token{width:100px}
+  .help-table col.col-ph-desc{width:90px}
+  .ph-table td code.placeholder-token{white-space:normal;overflow-wrap:break-word}
+}
 .help-lede{color:var(--muted)}
 .help-notes li{margin-bottom:6px}
 .help-notes li:last-child{margin-bottom:0}
@@ -1007,8 +1014,8 @@ function threeColTable(h1, h2, h3, rows) {
 
 function placeholderTable(rows) {
   const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
-  return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:178px"><col style="width:180px"><col></colgroup><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
-    sorted.map(([t, d, e]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">{${t}}</code></td><td class="help-desc">${d}</td><td class="help-example">${e}</td></tr>`).join('') +
+  return `<div class="help-table-wrap"><table class="help-table ph-table"><colgroup><col class="col-ph-token"><col class="col-ph-desc"><col></colgroup><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
+    sorted.map(([t, d, e]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">{${t.replace(/_/g, '_<wbr>')}}</code></td><td class="help-desc">${d}</td><td class="help-example">${e}</td></tr>`).join('') +
     '</table></div>';
 }
 
