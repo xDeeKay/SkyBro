@@ -42,7 +42,8 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 #map{flex:1;min-width:0;position:relative;z-index:0;background:#090909;touch-action:none}
 .sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s ease;position:relative}
 .sidebar.collapsed{width:0;min-width:0;border:none}
-.sidebar-tab{position:absolute;right:var(--sidebar-w);top:50%;transform:translateY(-50%);width:18px;height:44px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;z-index:500;transition:right .2s ease;padding:0;line-height:1;user-select:none}
+.sidebar-tab{position:absolute;right:var(--sidebar-w);top:50%;transform:translateY(-50%);width:18px;height:44px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:6px 0 0 6px;cursor:pointer;color:var(--muted);font-size:13px;display:flex;align-items:center;justify-content:center;z-index:500;transition:right .2s ease;padding:0;line-height:1;user-select:none;touch-action:manipulation}
+.sidebar-tab::before{content:'';position:absolute;top:-16px;bottom:-16px;left:-14px;right:-14px}
 .sidebar-tab:hover{color:var(--text);background:var(--surface2)}
 .sidebar.collapsed~.sidebar-tab{right:0}
 .tabs{display:flex;justify-content:safe center;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
