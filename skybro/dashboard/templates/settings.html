@@ -264,7 +264,7 @@ select.target-template:focus{border-color:var(--accent)}
 .help-section-title:first-child{margin-top:0}
 .help-section-title + .help-subsection-title{margin-top:2px}
 .help-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px}
-.help-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.help-table{width:100%;border-collapse:collapse;table-layout:auto}
 .help-table th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2)}
 .help-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px}
 .help-table tr:last-child td{border-bottom:none}
@@ -273,7 +273,7 @@ select.target-template:focus{border-color:var(--accent)}
 .help-table th:last-child{border-top-right-radius:7px}
 .help-table tr:last-child td:first-child{border-bottom-left-radius:7px}
 .help-table tr:last-child td:last-child{border-bottom-right-radius:7px}
-.help-table code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;white-space:nowrap;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.help-table code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px;white-space:normal;overflow-wrap:break-word;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .help-table code.help-pattern{color:var(--muted)}
 .help-table code.help-pattern strong{font-weight:inherit;color:var(--text)}
 .help-table code.placeholder-token{cursor:pointer;transition:.15s}
@@ -284,13 +284,6 @@ select.target-template:focus{border-color:var(--accent)}
 .help-table .help-symbol code + code{margin-top:4px}
 .help-table .help-explain{display:block;color:var(--muted);font-size:12px;margin-top:4px;font-weight:400;white-space:normal}
 .help-notes{margin:0;padding-left:18px;color:var(--muted)}
-.help-table col.col-ph-token{width:178px}
-.help-table col.col-ph-desc{width:180px}
-@media (max-width:480px){
-  .help-table col.col-ph-token{width:100px}
-  .help-table col.col-ph-desc{width:90px}
-  .ph-table td code.placeholder-token{white-space:normal;overflow-wrap:break-word}
-}
 .help-lede{color:var(--muted)}
 .help-notes li{margin-bottom:6px}
 .help-notes li:last-child{margin-bottom:0}
@@ -996,15 +989,15 @@ const TOKEN_HELP = {
   },
 };
 
-function twoColTable(h1, h2, rows, sort = true, firstColWidth = 150) {
+function twoColTable(h1, h2, rows, sort = true) {
   const ordered = sort ? [...rows].sort((a, b) => a[0].localeCompare(b[0])) : rows;
-  return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:${firstColWidth}px"><col></colgroup><tr><th>${h1}</th><th>${h2}</th></tr>` +
-    ordered.map(([a, b]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">${a}</code></td><td class="help-desc">${b}</td></tr>`).join('') +
+  return `<div class="help-table-wrap"><table class="help-table"><tr><th>${h1}</th><th>${h2}</th></tr>` +
+    ordered.map(([a, b]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">${a.replace(/_/g, '_<wbr>')}</code></td><td class="help-desc">${b}</td></tr>`).join('') +
     '</table></div>';
 }
 
 function threeColTable(h1, h2, h3, rows) {
-  return `<div class="help-table-wrap"><table class="help-table"><colgroup><col style="width:70px"><col style="width:150px"><col></colgroup><tr><th>${h1}</th><th>${h2}</th><th>${h3}</th></tr>` +
+  return `<div class="help-table-wrap"><table class="help-table"><tr><th>${h1}</th><th>${h2}</th><th>${h3}</th></tr>` +
     rows.map(([symbols, meaning, pattern, explanation]) => {
       const symbolHtml = symbols.map(s => `<code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">${s}</code>`).join('<br>');
       return `<tr><td class="help-symbol">${symbolHtml}</td><td class="help-desc">${meaning}</td><td><code class="help-pattern">${pattern}</code><span class="help-explain">${explanation}</span></td></tr>`;
@@ -1014,7 +1007,7 @@ function threeColTable(h1, h2, h3, rows) {
 
 function placeholderTable(rows) {
   const sorted = [...rows].sort((a, b) => a[0].localeCompare(b[0]));
-  return `<div class="help-table-wrap"><table class="help-table ph-table"><colgroup><col class="col-ph-token"><col class="col-ph-desc"><col></colgroup><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
+  return `<div class="help-table-wrap"><table class="help-table"><tr><th>Placeholder</th><th>Meaning</th><th>Example</th></tr>` +
     sorted.map(([t, d, e]) => `<tr><td><code class="placeholder-token" onclick="copyToken(this)" title="Click to copy">{${t.replace(/_/g, '_<wbr>')}}</code></td><td class="help-desc">${d}</td><td class="help-example">${e}</td></tr>`).join('') +
     '</table></div>';
 }
@@ -1055,7 +1048,7 @@ function openFilterHelp(category) {
     html += `<div class="help-section-title">Range syntax</div>${threeColTable('Symbol', 'Meaning', 'Example', info.ranges)}`;
   }
   if (info.examples) {
-    html += `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples, false, 200)}`;
+    html += `<div class="help-section-title">Examples</div>${twoColTable('Rule', 'Effect', info.examples, false)}`;
   }
   openHelpModal(info.title, html);
 }
