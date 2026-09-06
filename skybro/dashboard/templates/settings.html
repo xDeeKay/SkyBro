@@ -562,6 +562,16 @@ select.target-template:focus{border-color:var(--accent)}
         </div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-title">CARTO Basemap API Key</div>
+      <div class="card-desc">CARTO watermarks map tiles requested without an account key. Paste a key from carto.com → Developers → API Keys to remove it. Leave blank to keep the watermarked tiles. Unlike the keys above this one is sent to your browser to load the map, so restrict it by domain in CARTO rather than treating it as a secret.</div>
+      <div class="form-row single">
+        <div>
+          <label>CARTO API Key</label>
+          <input type="text" id="carto_api_key" placeholder="Leave blank for unauthenticated tiles" value="{{ cfg.carto_api_key }}" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other">
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="tab-pane" id="pane-system">
@@ -638,12 +648,35 @@ select.target-template:focus{border-color:var(--accent)}
 <div class="toast" id="toast"><span id="toast-msg"></span><button type="button" class="toast-close" onclick="closeToast()" aria-label="Dismiss" title="Dismiss">&times;</button></div>
 
 <script>
+const CARTO_KEY = {{ cfg.carto_api_key | tojson }};
+
+// CARTO watermarks basemap requests that carry no account key. The key has to
+// ride on every CARTO request, not just the style: the style's TileJSON hands
+// back .mvt URLs with no key attached, so the tiles, sprite and glyphs each
+// need it applied independently. transformRequest is the one hook that sees
+// all of them (the plugin L.extends its options straight into maplibregl.Map,
+// so it passes through). The style.json fetch below is ours rather than
+// MapLibre's, so that one gets the key applied directly.
+function cartoUrl(url) {
+  if (!CARTO_KEY) return url;
+  return url + (url.includes('?') ? '&' : '?') + 'api_key=' + encodeURIComponent(CARTO_KEY);
+}
+
+// Returning undefined leaves MapLibre's default handling alone. Scoped to CARTO
+// hosts so the key is never appended to some other origin's request.
+function cartoTransformRequest(url) {
+  if (!CARTO_KEY) return;
+  let host;
+  try { host = new URL(url, location.href).hostname; } catch (e) { return; }
+  if (host === 'cartocdn.com' || host.endsWith('.cartocdn.com')) return { url: cartoUrl(url) };
+}
+
 // See the matching IS_IOS/addVectorBasemap comment in index.html.
 const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
   typeof navigator.standalone !== 'undefined';
 function addVectorBasemap(m) {
-  loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(m))
+  loadDarkMatterStyle().then(style => L.maplibreGL({ style, transformRequest: cartoTransformRequest }).addTo(m))
     .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 }
 
@@ -2077,7 +2110,7 @@ async function save() {
 
   const payload = {};
   ['home_lat','home_lon','radius_km','alt_threshold_ft','poll_interval',
-   'iss_check_hours','iss_warn_mins','opensky_client_id','opensky_client_secret','n2yo_api_key',
+   'iss_check_hours','iss_warn_mins','opensky_client_id','opensky_client_secret','n2yo_api_key','carto_api_key',
    'use_location_time','units_speed','units_temp','digest_send_time'].forEach(k => payload[k] = getVal(k));
   payload.time_format = getVal('time_format_24h') ? '24h' : '12h';
   payload.templates = collectTemplates();
@@ -2317,7 +2350,7 @@ function loadDarkMatterStyle() {
     roadname_pri: { 'text-color': '#333333', 'text-halo-color': '#030303' },
     roadname_major: { 'text-color': '#333333', 'text-halo-color': '#030303' }
   };
-  return fetch('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json')
+  return fetch(cartoUrl('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'))
     .then(r => {
       if (!r.ok) throw new Error('CARTO style fetch returned ' + r.status);
       return r.json();

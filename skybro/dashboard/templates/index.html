@@ -424,6 +424,29 @@ if (FIRST_RUN) {
   } catch (e) { /* Intl.DateTimeFormat unsupported, keep Singapore fallback */ }
 }
 
+const CARTO_KEY = {{ cfg.carto_api_key | tojson }};
+
+// CARTO watermarks basemap requests that carry no account key. The key has to
+// ride on every CARTO request, not just the style: the style's TileJSON hands
+// back .mvt URLs with no key attached, so the tiles, sprite and glyphs each
+// need it applied independently. transformRequest is the one hook that sees
+// all of them (the plugin L.extends its options straight into maplibregl.Map,
+// so it passes through). The style.json fetch below is ours rather than
+// MapLibre's, so that one gets the key applied directly.
+function cartoUrl(url) {
+  if (!CARTO_KEY) return url;
+  return url + (url.includes('?') ? '&' : '?') + 'api_key=' + encodeURIComponent(CARTO_KEY);
+}
+
+// Returning undefined leaves MapLibre's default handling alone. Scoped to CARTO
+// hosts so the key is never appended to some other origin's request.
+function cartoTransformRequest(url) {
+  if (!CARTO_KEY) return;
+  let host;
+  try { host = new URL(url, location.href).hostname; } catch (e) { return; }
+  if (host === 'cartocdn.com' || host.endsWith('.cartocdn.com')) return { url: cartoUrl(url) };
+}
+
 // CARTO's hosted vector style has drifted from the neutral-grey raster tiles it
 // replaced (blue-tinted water/roads, brighter labels/boundaries). These per-layer
 // overrides pull every color back to the original dark_all raster's own values
@@ -524,7 +547,7 @@ function loadDarkMatterStyle() {
     roadname_pri: { 'text-color': '#333333', 'text-halo-color': '#030303' },
     roadname_major: { 'text-color': '#333333', 'text-halo-color': '#030303' }
   };
-  return fetch('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json')
+  return fetch(cartoUrl('https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'))
     .then(r => {
       if (!r.ok) throw new Error('CARTO style fetch returned ' + r.status);
       return r.json();
@@ -555,7 +578,7 @@ const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
   typeof navigator.standalone !== 'undefined';
 
 function addVectorBasemap(m) {
-  loadDarkMatterStyle().then(style => L.maplibreGL({ style }).addTo(m))
+  loadDarkMatterStyle().then(style => L.maplibreGL({ style, transformRequest: cartoTransformRequest }).addTo(m))
     .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
 }
 
