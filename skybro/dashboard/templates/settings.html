@@ -1012,9 +1012,18 @@ function placeholderTable(rows) {
     '</table></div>';
 }
 
+const _helpScrollPos = {};
+
 function openHelpModal(title, bodyHtml) {
-  document.getElementById('help-modal-title').textContent = title;
-  document.getElementById('help-modal-body').innerHTML = bodyHtml;
+  const titleEl = document.getElementById('help-modal-title');
+  const body = document.getElementById('help-modal-body');
+  // Remember the outgoing modal's own scroll position before swapping content,
+  // so reopening the *same* help modal later restores where it was left, but
+  // opening a *different* one always starts fresh at the top.
+  if (titleEl.textContent) _helpScrollPos[titleEl.textContent] = body.scrollTop;
+  titleEl.textContent = title;
+  body.innerHTML = bodyHtml;
+  body.scrollTop = _helpScrollPos[title] || 0;
   document.getElementById('help-modal').classList.add('open');
 }
 
