@@ -1017,17 +1017,21 @@ const _helpScrollPos = {};
 function openHelpModal(title, bodyHtml) {
   const titleEl = document.getElementById('help-modal-title');
   const body = document.getElementById('help-modal-body');
-  // Remember the outgoing modal's own scroll position before swapping content,
-  // so reopening the *same* help modal later restores where it was left, but
-  // opening a *different* one always starts fresh at the top.
-  if (titleEl.textContent) _helpScrollPos[titleEl.textContent] = body.scrollTop;
   titleEl.textContent = title;
   body.innerHTML = bodyHtml;
-  body.scrollTop = _helpScrollPos[title] || 0;
   document.getElementById('help-modal').classList.add('open');
+  // Must restore after the backdrop is visible: a hidden (display:none)
+  // element's scrollTop reads back as 0 regardless of what it's set to.
+  body.scrollTop = _helpScrollPos[title] || 0;
 }
 
 function closeHelpModal() {
+  const titleEl = document.getElementById('help-modal-title');
+  const body = document.getElementById('help-modal-body');
+  // Capture scroll position before hiding, not on the next open: once the
+  // backdrop is display:none, its scrollTop has already reset to 0, so
+  // reading it later is too late.
+  if (titleEl.textContent) _helpScrollPos[titleEl.textContent] = body.scrollTop;
   document.getElementById('help-modal').classList.remove('open');
 }
 
