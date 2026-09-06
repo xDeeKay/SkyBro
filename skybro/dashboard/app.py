@@ -47,7 +47,7 @@ DEFAULTS = {
     "radius_km": 15.0, "alt_threshold_ft": 5000.0,
     "poll_interval": 15, "iss_check_hours": 2, "iss_warn_mins": 20,
     "opensky_client_id": "", "opensky_client_secret": "",
-    "n2yo_api_key": "",
+    "n2yo_api_key": "", "carto_api_key": "",
     "notifications": {
         "aircraft":   {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "08:00"}},
         "satellites": {"filters": "", "targets": [], "quiet_hours": {"enabled": False, "start": "22:00", "end": "08:00"}},
