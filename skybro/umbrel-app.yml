@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro
 category: networking
 name: SkyBro
-version: "1.6.0"
+version: "1.6.1"
 tagline: Live aircraft, satellite, weather & astronomy tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
@@ -41,7 +41,11 @@ description: >-
   seconds without restarting.
 
 releaseNotes: >
-  What's new in v1.6.0:
+  What's new in v1.6.1:
+
+    - Fixed both containers failing to start on some installs due to a line-ending issue in the startup script
+
+  v1.6.0:
 
     - Notifications rebuilt on Apprise, supporting Pushover, Discord, Telegram, email, and 130+ other services, with reusable message templates and per-target filters
     - Added a Daily Digest notification: a scheduled one-line summary of yesterday's aircraft, today's satellite passes, and tonight's astronomy highlights, with a short and a detailed template to choose from
