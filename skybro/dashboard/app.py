@@ -6,7 +6,7 @@ Settings are persisted to /data/config.json (hot-reloaded by tracker).
 
 import os, json, platform, re, secrets, sqlite3, time
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.6.2"
 STARTED_AT = time.time()
 from datetime import datetime
 from pathlib import Path

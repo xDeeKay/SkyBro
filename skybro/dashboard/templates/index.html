@@ -578,9 +578,35 @@ const IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
   typeof navigator.standalone !== 'undefined';
 
+// Some browsers/GPUs can't create a WebGL context at all (blocklisted driver,
+// disabled hardware acceleration, remote desktop, etc.) - MapLibre GL needs
+// one to render anything. Detect that up front rather than letting
+// L.maplibreGL's onAdd throw partway through: a mid-init failure there still
+// leaves the layer registered with the map's resize/event system, so every
+// later invalidateSize() throws trying to touch a gl context that never
+// existed. Skipping the vector attempt entirely avoids that broken state.
+function hasWebGL() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl') || c.getContext('experimental-webgl'));
+  } catch (e) {
+    return false;
+  }
+}
+
+function addRasterBasemap(m) {
+  L.tileLayer(cartoUrl('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'), {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+  }).addTo(m);
+}
+
 function addVectorBasemap(m) {
+  if (!hasWebGL()) { addRasterBasemap(m); return; }
   loadDarkMatterStyle().then(style => L.maplibreGL({ style, transformRequest: cartoTransformRequest }).addTo(m))
-    .catch(e => console.error('Basemap failed to load, falling back to plain background:', e));
+    .catch(e => {
+      console.error('Vector basemap failed to load, falling back to raster tiles:', e);
+      addRasterBasemap(m);
+    });
 }
 
 // ── Map ───────────────────────────────────────────────────────────────────────
