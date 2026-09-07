@@ -714,7 +714,8 @@ def get_opensky_token():
         log.info("OpenSky: OAuth2 token acquired")
         return _opensky_token
     except Exception as e:
-        log.warning(f"OpenSky token fetch error: {e}")
+        msg = str(e).replace(client_secret, "***") if client_secret else str(e)
+        log.warning(f"OpenSky token fetch error: {msg}")
         _opensky_token = None
         _opensky_token_expiry = 0.0
         return None
@@ -760,8 +761,9 @@ def fetch_states():
         update_source_status('opensky', True)
         return states
     except Exception as e:
-        log.warning(f"OpenSky error: {e}")
-        update_source_status('opensky', False, str(e))
+        msg = str(e).replace(_opensky_token, "***") if _opensky_token else str(e)
+        log.warning(f"OpenSky error: {msg}")
+        update_source_status('opensky', False, msg)
         return []
 
 def process_states(states):
