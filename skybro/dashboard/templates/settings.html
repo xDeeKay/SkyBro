@@ -259,6 +259,8 @@ select.target-template:focus{border-color:var(--accent)}
 .card-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .help-icon-btn{flex-shrink:0;width:18px;height:18px;border-radius:50%;border:1px solid var(--accent);background:none;color:var(--accent);font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .help-icon-btn:hover{opacity:.75}
+.text-link{color:var(--accent);text-decoration:none}
+.text-link:hover{text-decoration:underline}
 .modal-body{padding:16px 18px;overflow-y:auto;font-size:13px;line-height:1.6}
 .modal-body p{margin:0 0 12px}
 .help-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text);margin:16px 0 8px}
@@ -547,7 +549,7 @@ select.target-template:focus{border-color:var(--accent)}
   <div class="tab-pane" id="pane-integrations">
     <div class="card">
       <div class="card-title">OpenSky Credentials</div>
-      <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at opensky-network.org → My OpenSky → Client Credentials.</div>
+      <div class="card-desc">OAuth2 client credentials give higher rate limits. Create a client at <a class="text-link" href="https://opensky-network.org" target="_blank" rel="noopener">opensky-network.org</a> → My OpenSky → Client Credentials.</div>
       <div class="form-row">
         <div><label>Client ID</label><input type="text" id="opensky_client_id" value="{{ cfg.opensky_client_id }}"></div>
         <div><label>Client Secret</label><input type="text" id="opensky_client_secret" placeholder="••••••••" value="{{ cfg.opensky_client_secret }}" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" data-form-type="other"></div>
@@ -555,7 +557,7 @@ select.target-template:focus{border-color:var(--accent)}
     </div>
     <div class="card">
       <div class="card-title">n2yo API Key</div>
-      <div class="card-desc">Required for ISS flyover alerts. Sign up for free at n2yo.com. The API key arrives by email. Leave blank to disable ISS tracking.</div>
+      <div class="card-desc">Required for ISS flyover alerts. Sign up for free at <a class="text-link" href="https://www.n2yo.com" target="_blank" rel="noopener">n2yo.com</a>. The API key arrives by email. Leave blank to disable ISS tracking.</div>
       <div class="form-row single">
         <div>
           <label>n2yo API Key</label>
