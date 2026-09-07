@@ -167,12 +167,23 @@ def _seed_templates(raw_cfg):
     having `templates`, so this must not be gated by that migration's own guard.
     Also backfills any individual DEFAULT_TEMPLATES_LIST entry (e.g.
     default_digest, added after `templates` already existed on some installs)
-    that isn't present yet (mirrors app.py's copy of this function)."""
+    that isn't present yet, and self-heals a protected template whose stored
+    content has drifted from its current canonical entry (e.g. an existing
+    install's default_digest still carrying an older token set from before a
+    template body was updated in code) - _clean_templates already enforces
+    canonical content at save time, but a config that's only ever read, never
+    saved through Settings, would otherwise keep stale wording/tokens forever
+    (mirrors app.py's copy of this function)."""
     if "templates" not in raw_cfg:
         raw_cfg["templates"] = [dict(t) for t in DEFAULT_TEMPLATES_LIST]
         return True
+    default_by_id = {t["id"]: t for t in DEFAULT_TEMPLATES_LIST}
     existing_ids = {t.get("id") for t in raw_cfg["templates"] if isinstance(t, dict)}
     changed = False
+    for i, t in enumerate(raw_cfg["templates"]):
+        if isinstance(t, dict) and t.get("id") in default_by_id and t != default_by_id[t["id"]]:
+            raw_cfg["templates"][i] = dict(default_by_id[t["id"]])
+            changed = True
     for d in DEFAULT_TEMPLATES_LIST:
         if d["id"] not in existing_ids:
             raw_cfg["templates"].append(dict(d))

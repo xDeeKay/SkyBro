@@ -184,15 +184,24 @@ def _seed_templates(raw_cfg):
     Also backfills any individual DEFAULT_TEMPLATES_LIST entry (e.g.
     default_digest, added after `templates` already existed on some installs)
     that isn't present yet (same shallow-merge gap as
-    _seed_notification_categories, just for the templates list). _clean_templates
-    already does this at save time; this covers the read/render path too, since
-    settings.html's Daily Digest Templates tab would otherwise show nothing to
-    edit until the next save."""
+    _seed_notification_categories, just for the templates list), and self-heals
+    a protected template whose stored content has drifted from its current
+    canonical entry (e.g. an existing install's default_digest still carrying
+    an older token set from before a template body was updated in code).
+    _clean_templates already enforces canonical content at save time; this
+    covers the read/render path too, since settings.html's Daily Digest
+    Templates tab and "Send test alert" would otherwise keep showing/using
+    stale wording or tokens until the next Settings save."""
     if "templates" not in raw_cfg:
         raw_cfg["templates"] = [dict(t) for t in DEFAULT_TEMPLATES_LIST]
         return True
+    default_by_id = {t["id"]: t for t in DEFAULT_TEMPLATES_LIST}
     existing_ids = {t.get("id") for t in raw_cfg["templates"] if isinstance(t, dict)}
     changed = False
+    for i, t in enumerate(raw_cfg["templates"]):
+        if isinstance(t, dict) and t.get("id") in default_by_id and t != default_by_id[t["id"]]:
+            raw_cfg["templates"][i] = dict(default_by_id[t["id"]])
+            changed = True
     for d in DEFAULT_TEMPLATES_LIST:
         if d["id"] not in existing_ids:
             raw_cfg["templates"].append(dict(d))
