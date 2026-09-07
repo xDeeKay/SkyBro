@@ -605,8 +605,7 @@ map.fitBounds(radiusCircle.getBounds(), {padding:[_initPad,_initPad], animate:fa
   const VerCtrl = L.Control.extend({
     onAdd: function() {
       const d = L.DomUtil.create('div', 'ver-ctrl');
-      const diag = ` <span class="ver-sha">[iOS:${IS_IOS} zoomAnim:${map.options.zoomAnimation}]</span>`;
-      d.innerHTML = (GIT_SHA ? `v${APP_VERSION} <span class="ver-sha">dev-${GIT_SHA}</span>` : `v${APP_VERSION}`) + diag;
+      d.innerHTML = GIT_SHA ? `v${APP_VERSION} <span class="ver-sha">dev-${GIT_SHA}</span>` : `v${APP_VERSION}`;
       L.DomEvent.disableClickPropagation(d);
       return d;
     }
