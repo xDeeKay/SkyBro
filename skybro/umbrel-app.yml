@@ -2,7 +2,7 @@ manifestVersion: 1
 id: skybro
 category: networking
 name: SkyBro
-version: "1.6.1"
+version: "1.6.2"
 tagline: Live aircraft, satellite, weather & astronomy tracker
 description: >-
   SkyBro is a real-time sky tracker for your home. It runs silently in the
@@ -41,7 +41,11 @@ description: >-
   seconds without restarting.
 
 releaseNotes: >
-  What's new in v1.6.1:
+  What's new in v1.6.2:
+
+    - Fixed a blank map on browsers/devices that can't use hardware-accelerated 3D graphics, now falls back to the classic tile-based basemap automatically
+
+  v1.6.1:
 
     - Fixed both containers failing to start on some installs due to a line-ending issue in the startup script
 
