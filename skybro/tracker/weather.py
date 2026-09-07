@@ -46,6 +46,7 @@ def fetch_weather(lat, lon):
             "wind_speed_10m_max","uv_index_max","sunrise","sunset",
         ]),
         "forecast_days": 7,
+        "past_days": 1,
         "timezone": "auto",
         "wind_speed_unit": "kn",
     }

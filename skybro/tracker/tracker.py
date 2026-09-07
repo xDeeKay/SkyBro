@@ -12,7 +12,7 @@ import ephem
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from weather import fetch_weather, process_weather, process_moon
+from weather import fetch_weather, process_weather, process_moon, score_label
 from astronomy import process_astronomy
 
 DATA_DIR  = Path("/data")
@@ -52,7 +52,7 @@ SATELLITES = [
 # ── Default config ────────────────────────────────────────────────────────────
 # Named, reusable title/body pairs. Targets reference one by id (linked
 # reference: editing a template here updates every target using it) instead
-# of each carrying its own copy. The two defaults are protected: always
+# of each carrying its own copy. Every entry here is protected: always
 # present, never deletable (see _clean_templates in app.py).
 DEFAULT_TEMPLATES_LIST = [
     {
@@ -66,9 +66,27 @@ DEFAULT_TEMPLATES_LIST = [
         "body":  "Visible pass in ~{minutes} min (at {time} local), lasting {duration}s\nRises {start_az} • peaks at {max_el} • sets {end_az}",
     },
     {
-        "id": "default_digest", "name": "Default Daily Digest", "kind": "digest",
+        "id": "default_digest", "name": "Default Daily Digest (Short)", "kind": "digest",
         "title": "🌌 SkyBro Daily Digest",
-        "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es), {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
+        "body":  "✈️ Yesterday: {aircraft_count} aircraft, closest {aircraft_closest_callsign} ({aircraft_closest_model}) at {aircraft_closest_distance_km} km\n"
+                 "🛰️ Today: {satellite_count} pass(es), {satellite_list}\n"
+                 "⭐ Tonight: {astronomy_best_planet} visible, Bortle {astronomy_bortle_description}",
+    },
+    {
+        "id": "default_digest_detailed", "name": "Default Daily Digest (Detailed)", "kind": "digest",
+        "title": "🌌 SkyBro Daily Digest - Detailed",
+        "body":  "✈️ Yesterday: {aircraft_count} aircraft\n"
+                 "Closest: {aircraft_closest_callsign} ({aircraft_closest_model}) at {aircraft_closest_distance_km} km\n"
+                 "Highest: {aircraft_highest_callsign} at {aircraft_highest_altitude}\n"
+                 "{aircraft_military_count} military • {aircraft_heli_count} heli\n\n"
+                 "🛰️ Today: ISS {satellite_count_iss} • Hubble {satellite_count_hubble} • Tiangong {satellite_count_tiangong} • Starlink {satellite_count_starlink}\n"
+                 "Best pass: {satellite_best_name} at {satellite_best_time} ({satellite_best_elevation})\n\n"
+                 "🌤️ Weather: {weather_today_desc}, {weather_today_high} / {weather_today_low}\n"
+                 "Best sky window: {weather_sky_window_time} ({weather_sky_window_label}, {weather_sky_window_score}%)\n\n"
+                 "🌙 {moon_emoji} {moon_phase_name} ({moon_illumination}% illuminated)\n"
+                 "🪐 {astronomy_planet_count} planets visible: {astronomy_planet_names}\n"
+                 "☄️ {astronomy_meteor_name}, ZHR {astronomy_meteor_zhr}, peaks in {astronomy_meteor_days} days\n"
+                 "🏙️ Bortle {astronomy_bortle_class} ({astronomy_bortle_description})",
     },
 ]
 _CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite", "digest": "default_digest"}
@@ -905,6 +923,33 @@ def _az_compass(deg):
     dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
     return dirs[int(round(deg / 22.5)) % 16]
 
+# Digest-scoped formatting helpers. Mirror the unit-aware conversions already
+# inline in process_states()'s real-time alert path (~line 855-857) and the
+# 12h/24h branch duplicated across dispatch_satellite_alerts/_build_digest_values,
+# but kept separate here rather than refactoring that existing code, to avoid
+# any regression risk in the real-time alert path.
+def _fmt_local_time(ts, utc_off):
+    dt = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(timezone(timedelta(seconds=utc_off)))
+    return dt.strftime("%I:%M %p").lstrip("0") if cfg.get("time_format") == "12h" else dt.strftime("%H:%M")
+
+def _fmt_hour_label(hr):
+    if cfg.get("time_format") == "12h":
+        h12 = hr % 12 or 12
+        return f"{h12} {'AM' if hr < 12 else 'PM'}"
+    return f"{hr:02d}:00"
+
+def _fmt_alt_ft(ft):
+    metric = cfg.get("units_speed", "aviation") == "metric"
+    return f"{round(ft * 0.3048):,} m" if metric else f"{round(ft):,} ft"
+
+def _fmt_speed_kts(kts):
+    metric = cfg.get("units_speed", "aviation") == "metric"
+    return f"{round(kts * 1.852)} km/h" if metric else f"{round(kts)} kts"
+
+def _fmt_temp_c(c):
+    metric = cfg.get("units_temp", "imperial") == "metric"
+    return f"{c:.1f}°C" if metric else f"{(c * 9/5 + 32):.1f}°F"
+
 def _ephem_to_unix(d):
     return int(ephem.Date(d).datetime().replace(tzinfo=timezone.utc).timestamp())
 
@@ -1071,10 +1116,250 @@ def dispatch_satellite_alerts():
     conn.commit(); conn.close()
 
 # ── Daily digest ─────────────────────────────────────────────────────────────
+def _digest_aircraft(c, y_start_utc, y_end_utc, utc_off):
+    """Every value is atomic (no baked-in wording) so templates can be freely
+    composed; missing data is always the literal string 'N/A' (counts fall
+    back to '0'), matching the convention already used by aircraft alert
+    tokens like {squawk}/{registration}."""
+    ac_count = c.execute(
+        "SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen BETWEEN ? AND ?",
+        (y_start_utc, y_end_utc)).fetchone()[0]
+
+    closest = c.execute(
+        "SELECT callsign, model, min_dist_km FROM seen_aircraft WHERE alerted=1 AND last_seen BETWEEN ? AND ? "
+        "ORDER BY min_dist_km ASC LIMIT 1", (y_start_utc, y_end_utc)).fetchone()
+
+    # min_alt_ft is the lowest altitude reached during a visit, not a peak -
+    # this is really "stayed highest" (never dipped low), not a true altitude
+    # record. No column tracks a per-visit maximum.
+    highest = c.execute(
+        "SELECT callsign, model, min_alt_ft FROM seen_aircraft WHERE alerted=1 AND last_seen BETWEEN ? AND ? "
+        "ORDER BY min_alt_ft DESC LIMIT 1", (y_start_utc, y_end_utc)).fetchone()
+
+    fastest = c.execute(
+        "SELECT sa.callsign, sa.model, MAX(fp.speed_kts) FROM flight_pings fp "
+        "JOIN seen_aircraft sa ON fp.visit_id = sa.id "
+        "WHERE sa.alerted=1 AND sa.last_seen BETWEEN ? AND ? "
+        "GROUP BY fp.visit_id ORDER BY 3 DESC LIMIT 1", (y_start_utc, y_end_utc)).fetchone()
+    have_fastest = fastest and fastest[2] is not None
+
+    hour_row = c.execute(
+        "SELECT CAST((first_seen + ?) / 3600 AS INTEGER) % 24 AS hr, COUNT(*) AS n "
+        "FROM seen_aircraft WHERE alerted=1 AND last_seen BETWEEN ? AND ? "
+        "GROUP BY hr ORDER BY n DESC LIMIT 1", (utc_off, y_start_utc, y_end_utc)).fetchone()
+
+    country_row = c.execute(
+        "SELECT origin_country, COUNT(*) AS n FROM seen_aircraft "
+        "WHERE alerted=1 AND last_seen BETWEEN ? AND ? AND origin_country != '' "
+        "GROUP BY origin_country ORDER BY n DESC LIMIT 1", (y_start_utc, y_end_utc)).fetchone()
+
+    notable_rows = c.execute(
+        "SELECT category, callsign, model FROM seen_aircraft "
+        "WHERE alerted=1 AND last_seen BETWEEN ? AND ?", (y_start_utc, y_end_utc)).fetchall()
+    mil = heli = 0
+    for category, callsign, model in notable_rows:
+        airframe = _classify_airframe(category, callsign, model)
+        if airframe == 'military': mil += 1
+        elif airframe == 'heli': heli += 1
+
+    all_time_closest = c.execute(
+        "SELECT callsign, min_dist_km, last_seen FROM seen_aircraft "
+        "WHERE alerted=1 ORDER BY min_dist_km ASC LIMIT 1").fetchone()
+    new_closest = all_time_closest and y_start_utc <= all_time_closest[2] <= y_end_utc
+
+    all_time_lowest = c.execute(
+        "SELECT callsign, min_alt_ft, last_seen FROM seen_aircraft "
+        "WHERE alerted=1 ORDER BY min_alt_ft ASC LIMIT 1").fetchone()
+    new_lowest = all_time_lowest and y_start_utc <= all_time_lowest[2] <= y_end_utc
+
+    return {
+        "aircraft_count": str(ac_count),
+        "aircraft_closest_callsign": closest[0] if closest else "N/A",
+        "aircraft_closest_model": closest[1] if closest else "N/A",
+        "aircraft_closest_distance_km": str(closest[2]) if closest else "N/A",
+        "aircraft_highest_callsign": highest[0] if highest else "N/A",
+        "aircraft_highest_model": highest[1] if highest else "N/A",
+        "aircraft_highest_altitude": _fmt_alt_ft(highest[2]) if highest else "N/A",
+        "aircraft_fastest_callsign": fastest[0] if have_fastest else "N/A",
+        "aircraft_fastest_model": fastest[1] if have_fastest else "N/A",
+        "aircraft_fastest_speed": _fmt_speed_kts(fastest[2]) if have_fastest else "N/A",
+        "aircraft_busiest_hour": _fmt_hour_label(hour_row[0]) if hour_row else "N/A",
+        "aircraft_busiest_hour_count": str(hour_row[1]) if hour_row else "0",
+        "aircraft_top_country": country_row[0] if country_row else "N/A",
+        "aircraft_top_country_count": str(country_row[1]) if country_row else "0",
+        "aircraft_military_count": str(mil),
+        "aircraft_heli_count": str(heli),
+        "aircraft_record_closest_callsign": all_time_closest[0] if new_closest else "N/A",
+        "aircraft_record_closest_distance_km": str(all_time_closest[1]) if new_closest else "N/A",
+        "aircraft_record_lowest_callsign": all_time_lowest[0] if new_lowest else "N/A",
+        "aircraft_record_lowest_altitude": _fmt_alt_ft(all_time_lowest[1]) if new_lowest else "N/A",
+    }
+
+def _digest_satellites(c, today_start_utc, utc_off):
+    window = (today_start_utc, today_start_utc + 86399)
+    sat_rows = c.execute(
+        "SELECT sat_name, pass_time FROM iss_alerts WHERE pass_time BETWEEN ? AND ? ORDER BY pass_time ASC",
+        window).fetchall()
+    sat_count = len(sat_rows)
+    # satellite_list stays a joined list rather than N atomic tokens: the
+    # number of passes in a day is unbounded, so it can't be decomposed into
+    # fixed placeholders the way a single best/longest pass can.
+    if not sat_rows:
+        satellite_list = "no passes today"
+    else:
+        items = [f"{sat_name or 'ISS'} at {_fmt_local_time(pass_time, utc_off)}"
+                  for sat_name, pass_time in sat_rows[:5]]
+        satellite_list = ", ".join(items)
+
+    best = c.execute(
+        "SELECT sat_name, pass_time, max_el FROM iss_alerts "
+        "WHERE pass_time BETWEEN ? AND ? AND max_el IS NOT NULL "
+        "ORDER BY max_el DESC LIMIT 1", window).fetchone()
+
+    longest = c.execute(
+        "SELECT sat_name, pass_time, duration FROM iss_alerts "
+        "WHERE pass_time BETWEEN ? AND ? ORDER BY duration DESC LIMIT 1", window).fetchone()
+
+    # The satellite types are a fixed, known set (SATELLITES + Starlink), so
+    # unlike satellite_list this breaks cleanly into one token per type.
+    counts = dict(c.execute(
+        "SELECT COALESCE(sat_name, 'ISS') AS name, COUNT(*) AS n FROM iss_alerts "
+        "WHERE pass_time BETWEEN ? AND ? GROUP BY name", window).fetchall())
+
+    return {
+        "satellite_count": str(sat_count), "satellite_list": satellite_list,
+        "satellite_best_name": (best[0] or 'ISS') if best else "N/A",
+        "satellite_best_time": _fmt_local_time(best[1], utc_off) if best else "N/A",
+        "satellite_best_elevation": f"{round(best[2])}°" if best else "N/A",
+        "satellite_longest_name": (longest[0] or 'ISS') if longest else "N/A",
+        "satellite_longest_time": _fmt_local_time(longest[1], utc_off) if longest else "N/A",
+        "satellite_longest_duration": str(longest[2]) if longest else "N/A",
+        "satellite_count_iss": str(counts.get("ISS", 0)),
+        "satellite_count_hubble": str(counts.get("Hubble", 0)),
+        "satellite_count_tiangong": str(counts.get("Tiangong", 0)),
+        "satellite_count_starlink": str(counts.get("Starlink", 0)),
+    }
+
+def _digest_astronomy(adata, local_now, utc_off):
+    up_planets = sorted((p for p in adata.get("planets", []) if p.get("is_up")),
+                         key=lambda p: p.get("magnitude", 99))
+    # astronomy_planet_names stays a joined list (0-7 planets can be up at
+    # once); everything else here is a single value, so it's split.
+
+    moon = adata.get("moon") or {}
+
+    nf, nn = moon.get("next_full_moon"), moon.get("next_new_moon")
+    if nf and nn:
+        soonest_ts, moon_next_phase_name = (nf, "Full") if nf <= nn else (nn, "New")
+        moon_next_phase_days = str(round((soonest_ts - local_now.timestamp()) / 86400))
+        moon_next_phase_date = datetime.fromtimestamp(
+            soonest_ts, tz=timezone(timedelta(seconds=utc_off))).strftime("%b %-d")
+    else:
+        moon_next_phase_name = moon_next_phase_days = moon_next_phase_date = "N/A"
+
+    twilight = adata.get("twilight") or {}
+    sunset, sunrise = twilight.get("sunset"), twilight.get("sunrise")
+    dusk, dawn = twilight.get("astronomical_dusk"), twilight.get("astronomical_dawn")
+
+    up_dso = sorted((d for d in adata.get("dso", []) if d.get("is_up")), key=lambda d: d.get("magnitude", 99))
+    dso0 = up_dso[0] if up_dso else None
+
+    # meteor_showers is always populated (11 known showers) and pre-sorted
+    # active-first/soonest-first, so showers[0] is "the one to mention"
+    # whether or not it's currently active; days_to_peak can be a small
+    # negative number for a shower that just passed.
+    showers = adata.get("meteor_showers", [])
+    m = showers[0] if showers else None
+
+    bortle = adata.get("bortle")
+
+    return {
+        "astronomy_best_planet": up_planets[0]['name'] if up_planets else "N/A",
+        "astronomy_planet_count": str(len(up_planets)),
+        "astronomy_planet_names": ", ".join(p['name'] for p in up_planets) if up_planets else "none",
+        "moon_phase_name": moon.get("phase_name") or "N/A",
+        "moon_illumination": str(moon["illumination"]) if moon.get("illumination") is not None else "N/A",
+        "moon_emoji": moon.get("phase_emoji") or "",
+        "moon_next_phase_name": moon_next_phase_name,
+        "moon_next_phase_days": moon_next_phase_days,
+        "moon_next_phase_date": moon_next_phase_date,
+        "astronomy_sunset": _fmt_local_time(sunset, utc_off) if sunset else "N/A",
+        "astronomy_sunrise": _fmt_local_time(sunrise, utc_off) if sunrise else "N/A",
+        "astronomy_dark_start": _fmt_local_time(dusk, utc_off) if dusk else "N/A",
+        "astronomy_dark_end": _fmt_local_time(dawn, utc_off) if dawn else "N/A",
+        "astronomy_dso_id": f"M{dso0['id']}" if dso0 else "N/A",
+        "astronomy_dso_name": dso0['name'] if dso0 else "N/A",
+        "astronomy_dso_type": dso0['type'] if dso0 else "N/A",
+        "astronomy_dso_constellation": dso0['constellation'] if dso0 else "N/A",
+        "astronomy_dso_magnitude": str(dso0['magnitude']) if dso0 else "N/A",
+        "astronomy_meteor_name": m['name'] if m else "N/A",
+        "astronomy_meteor_zhr": str(m['zhr']) if m else "N/A",
+        "astronomy_meteor_days": str(m['days_to_peak']) if m else "N/A",
+        "astronomy_bortle_class": str(bortle['class']) if bortle else "N/A",
+        "astronomy_bortle_description": bortle['description'] if bortle else "N/A",
+        "astronomy_bortle_sqm": str(bortle['sqm']) if bortle and bortle.get('sqm') is not None else "N/A",
+    }
+
+def _digest_weather(c, local_now, twilight, utc_off):
+    daily_row = c.execute("SELECT data FROM weather_daily WHERE id=1").fetchone()
+    try:
+        daily = json.loads(daily_row[0]) if daily_row else []
+    except Exception:
+        daily = []
+    today_str = local_now.strftime("%Y-%m-%d")
+    yday_str = (local_now - timedelta(days=1)).strftime("%Y-%m-%d")
+    today_entry = next((d for d in daily if d.get("date") == today_str), None)
+    yday_entry = next((d for d in daily if d.get("date") == yday_str), None)
+
+    def day_fields(entry):
+        if not entry or entry.get("temp_max") is None or entry.get("temp_min") is None:
+            return "N/A", "N/A", "N/A"
+        return entry.get("description") or "N/A", _fmt_temp_c(entry["temp_max"]), _fmt_temp_c(entry["temp_min"])
+
+    today_desc, today_high, today_low = day_fields(today_entry)
+    yday_desc, yday_high, yday_low = day_fields(yday_entry)
+
+    hourly_row = c.execute("SELECT data FROM weather_hourly WHERE id=1").fetchone()
+    try:
+        hourly = json.loads(hourly_row[0]) if hourly_row else []
+    except Exception:
+        hourly = []
+
+    sunset, sunrise = twilight.get("sunset"), twilight.get("sunrise")
+    window_time = window_label = window_score = "N/A"
+    if sunset and sunrise and sunset < sunrise and hourly:
+        night_hours = []
+        for h in hourly:
+            t = h.get("time")
+            if not t:
+                continue
+            try:
+                naive = datetime.strptime(t, "%Y-%m-%dT%H:%M")
+            except ValueError:
+                continue
+            # h["time"] is Open-Meteo's local wall-clock string (timezone=auto),
+            # not UTC - shift it back to a true UTC ts to compare against twilight.
+            ts = int(naive.replace(tzinfo=timezone.utc).timestamp()) - utc_off
+            if sunset <= ts <= sunrise:
+                night_hours.append((ts, h))
+        if night_hours:
+            best_ts, best_h = max(night_hours, key=lambda x: x[1].get("astronomy_score", 0))
+            score = best_h.get("astronomy_score", 0)
+            label, _ = score_label(score)
+            window_time, window_label, window_score = _fmt_local_time(best_ts, utc_off), label, str(score)
+
+    return {
+        "weather_today_desc": today_desc, "weather_today_high": today_high, "weather_today_low": today_low,
+        "weather_yesterday_desc": yday_desc, "weather_yesterday_high": yday_high, "weather_yesterday_low": yday_low,
+        "weather_sky_window_time": window_time, "weather_sky_window_label": window_label,
+        "weather_sky_window_score": window_score,
+    }
+
 def _build_digest_values(conn, utc_off, local_now):
-    """Lean digest content: yesterday's aircraft, today's satellite passes,
-    one-line tonight's astronomy highlight. Reads already-computed data
-    (seen_aircraft/iss_alerts/astronomy_data) rather than re-deriving any of it."""
+    """Aggregates yesterday's aircraft activity, today's satellite passes,
+    weather, and tonight's astronomy into digest tokens. Reads already-computed
+    data (seen_aircraft/flight_pings/iss_alerts/weather_*/astronomy_data)
+    rather than re-deriving any of it."""
     local_ts = int(local_now.timestamp())
     today_start_local = local_ts - (local_ts % 86400)
     y_start_utc = today_start_local - 86400 - utc_off
@@ -1082,51 +1367,18 @@ def _build_digest_values(conn, utc_off, local_now):
     today_start_utc = today_start_local - utc_off
 
     c = conn.cursor()
-    ac_count = c.execute(
-        "SELECT COUNT(*) FROM seen_aircraft WHERE alerted=1 AND last_seen BETWEEN ? AND ?",
-        (y_start_utc, y_end_utc)).fetchone()[0]
-    closest = c.execute(
-        "SELECT callsign, model, min_dist_km FROM seen_aircraft WHERE alerted=1 AND last_seen BETWEEN ? AND ? "
-        "ORDER BY min_dist_km ASC LIMIT 1", (y_start_utc, y_end_utc)).fetchone()
-    aircraft_closest = "no aircraft seen" if not closest else \
-        f"closest was {closest[0]} ({closest[1]}) at {closest[2]} km"
-
-    sat_rows = c.execute(
-        "SELECT sat_name, pass_time FROM iss_alerts WHERE pass_time BETWEEN ? AND ? ORDER BY pass_time ASC",
-        (today_start_utc, today_start_utc + 86399)).fetchall()
-    sat_count = len(sat_rows)
-    if not sat_rows:
-        satellite_list = "no passes today"
-    else:
-        local_tz = timezone(timedelta(seconds=utc_off))
-        items = []
-        for sat_name, pass_time in sat_rows[:5]:
-            dt = datetime.fromtimestamp(pass_time, tz=timezone.utc).astimezone(local_tz)
-            t = dt.strftime("%I:%M %p").lstrip("0") if cfg.get("time_format") == "12h" else dt.strftime("%H:%M")
-            items.append(f"{sat_name or 'ISS'} at {t}")
-        satellite_list = ", ".join(items)
-
     astro_row = c.execute("SELECT data FROM astronomy_data WHERE id=1").fetchone()
-    parts = []
-    if astro_row:
-        try:
-            adata = json.loads(astro_row[0])
-        except Exception:
-            adata = {}
-        up = sorted((p for p in adata.get("planets", []) if p.get("is_up")), key=lambda p: p.get("magnitude", 99))
-        if up:
-            parts.append(f"{up[0]['name']} visible")
-        active = [m for m in adata.get("meteor_showers", []) if m.get("active")]
-        if active:
-            parts.append(f"{active[0]['name']} meteor shower active")
-        bortle = adata.get("bortle")
-        if bortle and bortle.get("description"):
-            parts.append(f"Bortle: {bortle['description']}")
-    astronomy_highlight = "; ".join(parts) or "no astronomy data available"
+    try:
+        adata = json.loads(astro_row[0]) if astro_row else {}
+    except Exception:
+        adata = {}
 
-    return {"aircraft_count": str(ac_count), "aircraft_closest": aircraft_closest,
-            "satellite_count": str(sat_count), "satellite_list": satellite_list,
-            "astronomy_highlight": astronomy_highlight}
+    values = {}
+    values.update(_digest_aircraft(c, y_start_utc, y_end_utc, utc_off))
+    values.update(_digest_satellites(c, today_start_utc, utc_off))
+    values.update(_digest_astronomy(adata, local_now, utc_off))
+    values.update(_digest_weather(c, local_now, adata.get("twilight") or {}, utc_off))
+    return values
 
 def maybe_send_digest():
     """Fires once per local calendar day at cfg['digest_send_time'], tracked in

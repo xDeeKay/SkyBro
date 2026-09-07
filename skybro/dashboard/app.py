@@ -21,7 +21,7 @@ LOG_PATH = DATA_DIR / "tracker.log"
 
 # Named, reusable title/body pairs. Targets reference one by id (linked
 # reference: editing a template here updates every target using it) instead
-# of each carrying its own copy. The two defaults are protected: always
+# of each carrying its own copy. Every entry here is protected: always
 # present, never deletable (see _clean_templates).
 DEFAULT_TEMPLATES_LIST = [
     {
@@ -35,9 +35,27 @@ DEFAULT_TEMPLATES_LIST = [
         "body":  "Visible pass in ~{minutes} min (at {time} local), lasting {duration}s\nRises {start_az} • peaks at {max_el} • sets {end_az}",
     },
     {
-        "id": "default_digest", "name": "Default Daily Digest", "kind": "digest",
+        "id": "default_digest", "name": "Default Daily Digest (Short)", "kind": "digest",
         "title": "🌌 SkyBro Daily Digest",
-        "body":  "✈️ Yesterday: {aircraft_count} aircraft ({aircraft_closest})\n🛰️ Today: {satellite_count} pass(es), {satellite_list}\n⭐ Tonight: {astronomy_highlight}",
+        "body":  "✈️ Yesterday: {aircraft_count} aircraft, closest {aircraft_closest_callsign} ({aircraft_closest_model}) at {aircraft_closest_distance_km} km\n"
+                 "🛰️ Today: {satellite_count} pass(es), {satellite_list}\n"
+                 "⭐ Tonight: {astronomy_best_planet} visible, Bortle {astronomy_bortle_description}",
+    },
+    {
+        "id": "default_digest_detailed", "name": "Default Daily Digest (Detailed)", "kind": "digest",
+        "title": "🌌 SkyBro Daily Digest - Detailed",
+        "body":  "✈️ Yesterday: {aircraft_count} aircraft\n"
+                 "Closest: {aircraft_closest_callsign} ({aircraft_closest_model}) at {aircraft_closest_distance_km} km\n"
+                 "Highest: {aircraft_highest_callsign} at {aircraft_highest_altitude}\n"
+                 "{aircraft_military_count} military • {aircraft_heli_count} heli\n\n"
+                 "🛰️ Today: ISS {satellite_count_iss} • Hubble {satellite_count_hubble} • Tiangong {satellite_count_tiangong} • Starlink {satellite_count_starlink}\n"
+                 "Best pass: {satellite_best_name} at {satellite_best_time} ({satellite_best_elevation})\n\n"
+                 "🌤️ Weather: {weather_today_desc}, {weather_today_high} / {weather_today_low}\n"
+                 "Best sky window: {weather_sky_window_time} ({weather_sky_window_label}, {weather_sky_window_score}%)\n\n"
+                 "🌙 {moon_emoji} {moon_phase_name} ({moon_illumination}% illuminated)\n"
+                 "🪐 {astronomy_planet_count} planets visible: {astronomy_planet_names}\n"
+                 "☄️ {astronomy_meteor_name}, ZHR {astronomy_meteor_zhr}, peaks in {astronomy_meteor_days} days\n"
+                 "🏙️ Bortle {astronomy_bortle_class} ({astronomy_bortle_description})",
     },
 ]
 _CATEGORY_DEFAULT_TEMPLATE_ID = {"aircraft": "default_aircraft", "satellites": "default_satellite", "digest": "default_digest"}
@@ -692,9 +710,49 @@ def _sample_placeholders(category, cfg):
     process_states in tracker.py) and time-format-aware per time_format, so a
     test alert previews the units/format a real alert would actually use."""
     if category == "digest":
-        return {"aircraft_count": "3", "aircraft_closest": "closest was QFA123 (BOEING 737-8AS) at 8.4 km",
-                "satellite_count": "2", "satellite_list": "ISS at 8:15 PM, Starlink at 9:40 PM",
-                "astronomy_highlight": "Jupiter visible; Perseids meteor shower active; Bortle: Suburban sky"}
+        metric_speed = cfg.get("units_speed", "aviation") == "metric"
+        metric_temp  = cfg.get("units_temp", "imperial") == "metric"
+        sample_hi_alt = f"{round(38000 * 0.3048):,} m" if metric_speed else "38,000 ft"
+        sample_lo_alt = f"{round(3200 * 0.3048):,} m" if metric_speed else "3,200 ft"
+        sample_speed  = f"{round(480 * 1.852)} km/h" if metric_speed else "480 kts"
+        today_hi  = f"{(84 - 32) * 5 / 9:.1f}°C" if metric_temp else "84°F"
+        today_lo  = f"{(71 - 32) * 5 / 9:.1f}°C" if metric_temp else "71°F"
+        yday_hi   = f"{(82 - 32) * 5 / 9:.1f}°C" if metric_temp else "82°F"
+        yday_lo   = f"{(70 - 32) * 5 / 9:.1f}°C" if metric_temp else "70°F"
+        return {
+            "aircraft_count": "3",
+            "aircraft_closest_callsign": "QFA123", "aircraft_closest_model": "BOEING 737-8AS",
+            "aircraft_closest_distance_km": "8.4",
+            "aircraft_highest_callsign": "QFA123", "aircraft_highest_model": "BOEING 737-8AS",
+            "aircraft_highest_altitude": sample_hi_alt,
+            "aircraft_fastest_callsign": "QFA123", "aircraft_fastest_model": "BOEING 737-8AS",
+            "aircraft_fastest_speed": sample_speed,
+            "aircraft_busiest_hour": "6 PM", "aircraft_busiest_hour_count": "4",
+            "aircraft_top_country": "Australia", "aircraft_top_country_count": "5",
+            "aircraft_military_count": "1", "aircraft_heli_count": "2",
+            "aircraft_record_closest_callsign": "N/A", "aircraft_record_closest_distance_km": "N/A",
+            "aircraft_record_lowest_callsign": "N/A", "aircraft_record_lowest_altitude": "N/A",
+            "satellite_count": "2", "satellite_list": "ISS at 8:15 PM, Starlink at 9:40 PM",
+            "satellite_best_name": "ISS", "satellite_best_time": "8:15 PM", "satellite_best_elevation": "62°",
+            "satellite_longest_name": "ISS", "satellite_longest_time": "8:15 PM", "satellite_longest_duration": "420",
+            "satellite_count_iss": "2", "satellite_count_hubble": "0",
+            "satellite_count_tiangong": "1", "satellite_count_starlink": "63",
+            "weather_today_desc": "Partly cloudy", "weather_today_high": today_hi, "weather_today_low": today_lo,
+            "weather_yesterday_desc": "Clear sky", "weather_yesterday_high": yday_hi, "weather_yesterday_low": yday_lo,
+            "weather_sky_window_time": "9 PM", "weather_sky_window_label": "Excellent", "weather_sky_window_score": "91",
+            "astronomy_best_planet": "Jupiter", "astronomy_planet_count": "3",
+            "astronomy_planet_names": "Jupiter, Saturn, Mars",
+            "moon_phase_name": "Waxing Gibbous", "moon_illumination": "78", "moon_emoji": "🌔",
+            "moon_next_phase_name": "Full", "moon_next_phase_days": "4", "moon_next_phase_date": "Sep 7",
+            "astronomy_sunset": "7:02 PM", "astronomy_sunrise": "6:41 AM",
+            "astronomy_dark_start": "8:34 PM", "astronomy_dark_end": "5:09 AM",
+            "astronomy_dso_id": "M42", "astronomy_dso_name": "Orion Nebula",
+            "astronomy_dso_type": "Emission Nebula", "astronomy_dso_constellation": "Orion",
+            "astronomy_dso_magnitude": "4.0",
+            "astronomy_meteor_name": "Perseids", "astronomy_meteor_zhr": "100", "astronomy_meteor_days": "2",
+            "astronomy_bortle_class": "4", "astronomy_bortle_description": "Rural/suburban transition",
+            "astronomy_bortle_sqm": "20.49",
+        }
     if category != "aircraft":
         sample_time = "8:15 PM" if cfg.get("time_format", "12h") == "12h" else "20:15"
         return {"sat_name": "ISS", "time": sample_time, "minutes": "12", "duration": "420",
