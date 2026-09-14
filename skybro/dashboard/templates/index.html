@@ -802,10 +802,12 @@ function updateMap(aircraft) {
     const icon = planeIcon(ac.heading, isAlert, aircraftType(ac.model, ac.category, ac.callsign));
     const vr = ac.vertical_rate;
     const vrStr = fmtVR(vr);
+    const routeLine = (ac.origin_iata && ac.dest_iata)
+      ? `<br>${ac.origin_iata} &rarr; ${ac.dest_iata}` : '';
     const popup = `<b>${ac.callsign}</b>${ac.registration ? ' ('+ac.registration+')' : ''}<br>
       ${ac.model || 'Unknown'}<br>
       ${fmtAlt(ac.alt_ft||0)} &bull; ${fmtSpeed(ac.speed_kts)} &bull; ${vrStr}<br>
-      ${ac.dist_km} km away &bull; ${ac.origin_country}`;
+      ${ac.dist_km} km away &bull; ${ac.origin_country}${routeLine}`;
     if (markers[ac.icao24])
       markers[ac.icao24].setLatLng([ac.lat,ac.lon]).setIcon(icon).setPopupContent(popup);
     else
@@ -842,6 +844,7 @@ function _histCardHtml(r, i) {
         <div class="hc-model">${r.model || 'Unknown type'}${r.registration ? ' · ' + r.registration : ''}${durMins}</div>
         <div class="hc-tags">
           ${r.origin_country ? `<span class="hc-tag">${r.origin_country}</span>` : ''}
+          ${(r.origin_iata && r.dest_iata) ? `<span class="hc-tag">${r.origin_iata} &rarr; ${r.dest_iata}</span>` : ''}
           <span class="hc-tag">↕ ${fmtAlt(r.min_alt_ft||0)}</span>
           <span class="hc-tag">⊙ ${r.min_dist_km} km</span>
           ${r.speed_kts ? `<span class="hc-tag">➜ ${fmtSpeed(r.speed_kts)}</span>` : ''}

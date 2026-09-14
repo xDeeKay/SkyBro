@@ -307,6 +307,13 @@ def init_db():
             thumb_url TEXT,
             fetched INTEGER
         );
+        CREATE TABLE IF NOT EXISTS route_cache (
+            callsign TEXT PRIMARY KEY,
+            found INTEGER DEFAULT 0,
+            looked_up INTEGER,
+            origin_iata TEXT, origin_name TEXT,
+            dest_iata TEXT, dest_name TEXT
+        );
         CREATE TABLE IF NOT EXISTS digest_state (id INTEGER PRIMARY KEY, last_sent_date TEXT);
     """)
     conn.commit()
@@ -334,7 +341,15 @@ def migrate_db():
                        ("seen_aircraft",   "geo_alt_ft REAL DEFAULT 0"),
                        ("seen_aircraft",   "squawk TEXT"),
                        ("seen_aircraft",   "spi INTEGER DEFAULT 0"),
-                       ("seen_aircraft",   "position_source INTEGER DEFAULT 0")]:
+                       ("seen_aircraft",   "position_source INTEGER DEFAULT 0"),
+                       ("live_aircraft",   "origin_iata TEXT"),
+                       ("live_aircraft",   "origin_name TEXT"),
+                       ("live_aircraft",   "dest_iata TEXT"),
+                       ("live_aircraft",   "dest_name TEXT"),
+                       ("seen_aircraft",   "origin_iata TEXT"),
+                       ("seen_aircraft",   "origin_name TEXT"),
+                       ("seen_aircraft",   "dest_iata TEXT"),
+                       ("seen_aircraft",   "dest_name TEXT")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -683,6 +698,62 @@ def fetch_aircraft_photo(icao24):
     conn.close()
     return photo_url, thumb_url
 
+# ── Flight routes ─────────────────────────────────────────────────────────────
+# Callsign -> scheduled origin/destination, via adsbdb (free, keyless). Unlike
+# photo_cache, this is not a "look up once, forever" cache: a resolved route is
+# a schedule attribute (airlines reassign flight numbers to different routes
+# each schedule season), so it's re-checked periodically. A definitive "no
+# route" answer (callsign doesn't match any known scheduled flight, e.g. a
+# tail-derived GA/military callsign) is permanent and never re-checked, since
+# that never changes. A network/timeout failure writes nothing at all, so it's
+# retried on the callsign's next sighting rather than being stuck either way.
+ROUTE_CACHE_MAX_AGE = 90 * 24 * 3600  # re-check a resolved route after ~90 days
+ROUTE_FETCH_WORKERS = 8
+
+def _route_needs_lookup(cache_row):
+    """cache_row is (found, looked_up, ...) from route_cache, or None if never looked up."""
+    if cache_row is None:
+        return True
+    found, looked_up = cache_row[0], cache_row[1]
+    if not found:
+        return False
+    return (time.time() - (looked_up or 0)) > ROUTE_CACHE_MAX_AGE
+
+def fetch_route(callsign):
+    """Look up callsign's scheduled route via adsbdb and update route_cache.
+    Returns a dict of origin/destination fields, or None if no route is known."""
+    data = {"origin_iata": "", "origin_name": "", "dest_iata": "", "dest_name": ""}
+    try:
+        r = requests.get(f"https://api.adsbdb.com/v0/callsign/{callsign}",
+                         headers={"User-Agent": "SkyBro/1.0 (https://github.com/xDeeKay/SkyBro)"},
+                         timeout=5)
+        if r.status_code not in (200, 400, 404):
+            r.raise_for_status()
+        fr = (r.json().get("response") or {})
+        fr = fr.get("flightroute") if isinstance(fr, dict) else None
+    except Exception as e:
+        log.debug(f"Route fetch {callsign}: {type(e).__name__}")
+        return None  # network/parse failure: leave route_cache untouched, retry next sighting
+
+    origin = (fr or {}).get("origin") or {}
+    dest   = (fr or {}).get("destination") or {}
+    found  = 1 if (origin and dest) else 0
+    if found:
+        data = {
+            "origin_iata": origin.get("iata_code") or "", "origin_name": origin.get("name") or "",
+            "dest_iata":   dest.get("iata_code") or "",   "dest_name":   dest.get("name") or "",
+        }
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""INSERT OR REPLACE INTO route_cache
+        (callsign, found, looked_up, origin_iata, origin_name, dest_iata, dest_name)
+        VALUES (?,?,?,?,?,?,?)""",
+        (callsign, found, int(time.time()), data["origin_iata"], data["origin_name"],
+         data["dest_iata"], data["dest_name"]))
+    conn.commit()
+    conn.close()
+    return data if found else None
+
 # ── OpenSky ───────────────────────────────────────────────────────────────────
 _alerted = {}  # icao24 → seen_aircraft.id of current visit
 _opensky_backoff_until = 0.0
@@ -769,23 +840,35 @@ def fetch_states():
 def process_states(states):
     now = int(time.time())
 
-    # ── Phase 1: read photo cache (read-only, no write lock) ─────────────────
+    # ── Phase 1: read photo/route caches (read-only, no write lock) ──────────
     visible = [s[0] for s in states if s[6] is not None and s[5] is not None and not s[8]]
     photo_cache_map = {}
+    route_cache_map = {}
+    callsigns = []
     if visible:
+        visible_set = set(visible)
+        callsigns = list({(s[1] or "").strip() or s[0].upper()
+                          for s in states if s[0] in visible_set})
         conn_r = sqlite3.connect(DB_PATH)
         ph = ','.join('?' * len(visible))
         for row in conn_r.execute(
                 f"SELECT icao24, thumb_url FROM photo_cache WHERE icao24 IN ({ph})", visible):
             photo_cache_map[row[0]] = row[1] or ""
+        phc = ','.join('?' * len(callsigns))
+        for row in conn_r.execute(
+                f"SELECT callsign, found, looked_up, origin_iata, origin_name, dest_iata, dest_name "
+                f"FROM route_cache WHERE callsign IN ({phc})", callsigns):
+            route_cache_map[row[0]] = row[1:]
         conn_r.close()
     needs_photo = [icao for icao in visible if icao not in photo_cache_map]
+    needs_route = [cs for cs in callsigns if _route_needs_lookup(route_cache_map.get(cs))]
 
     # ── Phase 2: write transaction - no HTTP, no secondary connections ────────
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM live_aircraft")
     alert_queue = []
+    pending_route_visits = {}  # callsign -> [seen_aircraft.id, ...] created this cycle, awaiting a fresh route lookup
 
     for s in states:
         icao24, callsign = s[0], (s[1] or "").strip() or s[0].upper()
@@ -807,11 +890,17 @@ def process_states(states):
         dist_km   = round(haversine(cfg["home_lat"], cfg["home_lon"], lat, lon), 2)
         model, reg = lookup(icao24)
         thumb_url  = photo_cache_map.get(icao24, "")
+        route_row  = route_cache_map.get(callsign)
+        if route_row and route_row[0]:  # found=1
+            origin_iata, origin_name, dest_iata, dest_name = route_row[2], route_row[3], route_row[4], route_row[5]
+        else:
+            origin_iata = origin_name = dest_iata = dest_name = ""
 
         c.execute("""INSERT OR REPLACE INTO live_aircraft VALUES
-            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (icao24, callsign, lat, lon, alt_ft, speed_kts, heading,
-             vrate, country, model, reg, dist_km, now, thumb_url, category))
+             vrate, country, model, reg, dist_km, now, thumb_url, category,
+             origin_iata, origin_name, dest_iata, dest_name))
 
         in_zone = (dist_km <= cfg["radius_km"] and alt_ft <= cfg["alt_threshold_ft"])
 
@@ -829,16 +918,25 @@ def process_states(states):
                 'heading': heading, 'category': category,
                 'geo_alt_ft': geo_alt_ft, 'squawk': squawk,
                 'spi': spi, 'position_source': position_source,
+                'origin_iata': origin_iata, 'origin_name': origin_name,
+                'dest_iata': dest_iata, 'dest_name': dest_name,
             })
             c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
                  lat,lon,origin_country,model,registration,alerted,photo_url,heading,category,
-                 speed_kts,vertical_rate,geo_alt_ft,squawk,spi,position_source)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?)""",
+                 speed_kts,vertical_rate,geo_alt_ft,squawk,spi,position_source,
+                 origin_iata,origin_name,dest_iata,dest_name)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (icao24, callsign, now, now, alt_ft, dist_km, lat, lon,
                  country, model, reg, thumb_url, heading, category,
-                 speed_kts, vrate, geo_alt_ft, squawk, spi, position_source))
+                 speed_kts, vrate, geo_alt_ft, squawk, spi, position_source,
+                 origin_iata, origin_name, dest_iata, dest_name))
             _alerted[icao24] = c.lastrowid
+            # Route data is a snapshot of this one visit, frozen once known - a later
+            # route_cache refresh (e.g. next schedule season) must never edit this row,
+            # so the write-back below always targets this exact visit id, never callsign.
+            if callsign in needs_route:
+                pending_route_visits.setdefault(callsign, []).append(c.lastrowid)
 
         if in_zone and icao24 in _alerted:
             c.execute("""INSERT INTO flight_pings
@@ -865,8 +963,15 @@ def process_states(states):
                 if thumb:
                     newly_fetched[icao24] = thumb
 
-    # ── Phase 4: single write to update photo_urls ────────────────────────────
-    if newly_fetched:
+    newly_fetched_routes = {}
+    if needs_route:
+        with ThreadPoolExecutor(max_workers=ROUTE_FETCH_WORKERS) as pool:
+            for callsign, route in zip(needs_route, pool.map(fetch_route, needs_route)):
+                if route:
+                    newly_fetched_routes[callsign] = route
+
+    # ── Phase 4: single write to update photo_urls and routes ─────────────────
+    if newly_fetched or newly_fetched_routes:
         conn_upd = sqlite3.connect(DB_PATH)
         for icao24, thumb in newly_fetched.items():
             conn_upd.execute(
@@ -874,6 +979,17 @@ def process_states(states):
             conn_upd.execute(
                 "UPDATE seen_aircraft SET photo_url=? WHERE icao24=? AND photo_url=''",
                 (thumb, icao24))
+        for callsign, route in newly_fetched_routes.items():
+            conn_upd.execute(
+                "UPDATE live_aircraft SET origin_iata=?, origin_name=?, dest_iata=?, dest_name=? WHERE callsign=?",
+                (route['origin_iata'], route['origin_name'], route['dest_iata'], route['dest_name'], callsign))
+            # Scoped to this cycle's specific visit id(s), not "WHERE callsign=?": a
+            # visit already recorded under this callsign weeks ago must stay untouched.
+            for visit_id in pending_route_visits.get(callsign, []):
+                conn_upd.execute(
+                    "UPDATE seen_aircraft SET origin_iata=?, origin_name=?, dest_iata=?, dest_name=? "
+                    "WHERE id=? AND COALESCE(origin_iata,'')=''",
+                    (route['origin_iata'], route['origin_name'], route['dest_iata'], route['dest_name'], visit_id))
         conn_upd.commit()
         conn_upd.close()
 
@@ -886,6 +1002,14 @@ def process_states(states):
         _metric = cfg.get("units_speed", "aviation") == "metric"
         spd_str = f"{round(alert['speed_kts'] * 1.852)} km/h" if _metric else f"{alert['speed_kts']} kts"
         alt_str = f"{round(alert['alt_ft'] * 0.3048):,} m" if _metric else f"{alert['alt_ft']:,} ft"
+        # Prefer a route resolved just now (this callsign was in needs_route) over
+        # whatever was already cached when the alert/visit row was first created.
+        route = newly_fetched_routes.get(alert['callsign']) or {
+            'origin_iata': alert['origin_iata'], 'origin_name': alert['origin_name'],
+            'dest_iata': alert['dest_iata'], 'dest_name': alert['dest_name'],
+        }
+        origin_str      = f"{route['origin_name']} ({route['origin_iata']})" if route['origin_iata'] else "Unknown"
+        destination_str = f"{route['dest_name']} ({route['dest_iata']})" if route['dest_iata'] else "Unknown"
         values = {
             'emoji': ac_emoji, 'callsign': alert['callsign'], 'model': alert['model'],
             'registration': alert['reg'] or "N/A", 'country': alert['country'],
@@ -894,6 +1018,7 @@ def process_states(states):
             'altitude': alt_str, 'distance_km': alert['dist_km'],
             'icao24': icao24, 'lat': round(alert['lat'], 4), 'long': round(alert['lon'], 4),
             'heading': alert['heading'], 'squawk': alert['squawk'] or "N/A",
+            'origin': origin_str, 'destination': destination_str,
         }
         # Filters compare raw numeric values (ft/kts/fpm), not the formatted,
         # unit-suffixed strings templates render, so metric/aviation display

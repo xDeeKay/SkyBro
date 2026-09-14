@@ -6,7 +6,7 @@ Settings are persisted to /data/config.json (hot-reloaded by tracker).
 
 import os, json, platform, re, secrets, sqlite3, time
 
-APP_VERSION = "1.6.2"
+APP_VERSION = "1.7.0"
 STARTED_AT = time.time()
 from datetime import datetime
 from pathlib import Path
@@ -391,6 +391,7 @@ def api_history():
                    sa.squawk,
                    COALESCE(sa.spi, 0) AS spi,
                    COALESCE(sa.position_source, 0) AS position_source,
+                   sa.origin_iata, sa.origin_name, sa.dest_iata, sa.dest_name,
                    COALESCE(pc.thumb_url, sa.photo_url) AS thumb_url,
                    pc.photo_url AS full_photo_url
             FROM seen_aircraft sa
@@ -777,6 +778,8 @@ def _sample_placeholders(category, cfg):
         "altitude": altitude, "distance_km": "8.4",
         "icao24": "7c1234", "lat": "-33.8688", "long": "151.2093",
         "heading": "270", "squawk": "7000",
+        "origin": "Sydney Kingsford Smith International Airport (SYD)",
+        "destination": "Melbourne Airport (MEL)",
     }
 
 @app.route("/api/test-alert/<category>", methods=["POST"])
