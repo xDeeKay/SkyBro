@@ -779,7 +779,7 @@ def _sample_placeholders(category, cfg):
         "icao24": "7c1234", "lat": "-33.8688", "long": "151.2093",
         "heading": "270", "squawk": "7000",
         "origin": "Sydney Kingsford Smith International Airport (SYD)",
-        "destination": "Melbourne Airport (MEL)",
+        "destination": "Melbourne Airport (MEL)", "eta": "1h 42m",
     }
 
 @app.route("/api/test-alert/<category>", methods=["POST"])

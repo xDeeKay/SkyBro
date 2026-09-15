@@ -349,7 +349,10 @@ def migrate_db():
                        ("seen_aircraft",   "origin_iata TEXT"),
                        ("seen_aircraft",   "origin_name TEXT"),
                        ("seen_aircraft",   "dest_iata TEXT"),
-                       ("seen_aircraft",   "dest_name TEXT")]:
+                       ("seen_aircraft",   "dest_name TEXT"),
+                       ("route_cache",     "dest_lat REAL"),
+                       ("route_cache",     "dest_lon REAL"),
+                       ("live_aircraft",   "eta_minutes INTEGER")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:
@@ -371,6 +374,17 @@ def bearing_from_home(lat, lon):
     dlat = lat - cfg["home_lat"]
     dlon = lon - cfg["home_lon"]
     return math.degrees(math.atan2(dlon, dlat))
+
+def _initial_bearing(lat1, lon1, lat2, lon2):
+    """True great-circle initial bearing from point 1 to point 2, 0-360. Unlike
+    bearing_from_home's flat-plane approximation (fine at home-radius scale),
+    this is used for aircraft-to-destination legs that can span thousands of
+    km, where that approximation would drift meaningfully."""
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dlon = math.radians(lon2 - lon1)
+    x = math.sin(dlon) * math.cos(p2)
+    y = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dlon)
+    return math.degrees(math.atan2(x, y)) % 360
 
 # ── Aircraft DB ───────────────────────────────────────────────────────────────
 _ac_db = {}
@@ -722,7 +736,8 @@ def _route_needs_lookup(cache_row):
 def fetch_route(callsign):
     """Look up callsign's scheduled route via adsbdb and update route_cache.
     Returns a dict of origin/destination fields, or None if no route is known."""
-    data = {"origin_iata": "", "origin_name": "", "dest_iata": "", "dest_name": ""}
+    data = {"origin_iata": "", "origin_name": "", "dest_iata": "", "dest_name": "",
+            "dest_lat": None, "dest_lon": None}
     try:
         r = requests.get(f"https://api.adsbdb.com/v0/callsign/{callsign}",
                          headers={"User-Agent": "SkyBro/1.0 (https://github.com/xDeeKay/SkyBro)"},
@@ -742,17 +757,40 @@ def fetch_route(callsign):
         data = {
             "origin_iata": origin.get("iata_code") or "", "origin_name": origin.get("name") or "",
             "dest_iata":   dest.get("iata_code") or "",   "dest_name":   dest.get("name") or "",
+            "dest_lat": dest.get("latitude"), "dest_lon": dest.get("longitude"),
         }
 
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""INSERT OR REPLACE INTO route_cache
-        (callsign, found, looked_up, origin_iata, origin_name, dest_iata, dest_name)
-        VALUES (?,?,?,?,?,?,?)""",
+        (callsign, found, looked_up, origin_iata, origin_name, dest_iata, dest_name, dest_lat, dest_lon)
+        VALUES (?,?,?,?,?,?,?,?,?)""",
         (callsign, found, int(time.time()), data["origin_iata"], data["origin_name"],
-         data["dest_iata"], data["dest_name"]))
+         data["dest_iata"], data["dest_name"], data["dest_lat"], data["dest_lon"]))
     conn.commit()
     conn.close()
     return data if found else None
+
+def _eta_minutes(lat, lon, heading, speed_kts, dest_lat, dest_lon):
+    """Rough straight-line ETA in minutes: current ground speed projected onto
+    the bearing toward the destination (no flight-plan or wind awareness).
+    None if the destination isn't known, or the aircraft isn't currently
+    closing on it at all (e.g. still climbing out in the opposite direction,
+    or the resolved route doesn't actually match this flight's real path)."""
+    if dest_lat is None or dest_lon is None or not speed_kts:
+        return None
+    bearing = _initial_bearing(lat, lon, dest_lat, dest_lon)
+    closing_kts = speed_kts * math.cos(math.radians(heading - bearing))
+    if closing_kts < 1:
+        return None
+    dist_km = haversine(lat, lon, dest_lat, dest_lon)
+    return round(dist_km / (closing_kts * 1.852) * 60)
+
+def _format_eta(minutes):
+    if minutes is None:
+        return "Unknown"
+    minutes = max(minutes, 0)
+    h, m = divmod(minutes, 60)
+    return f"{h}h {m}m" if h else f"{m} min"
 
 # ── OpenSky ───────────────────────────────────────────────────────────────────
 _alerted = {}  # icao24 → seen_aircraft.id of current visit
@@ -856,8 +894,8 @@ def process_states(states):
             photo_cache_map[row[0]] = row[1] or ""
         phc = ','.join('?' * len(callsigns))
         for row in conn_r.execute(
-                f"SELECT callsign, found, looked_up, origin_iata, origin_name, dest_iata, dest_name "
-                f"FROM route_cache WHERE callsign IN ({phc})", callsigns):
+                f"SELECT callsign, found, looked_up, origin_iata, origin_name, dest_iata, dest_name, "
+                f"dest_lat, dest_lon FROM route_cache WHERE callsign IN ({phc})", callsigns):
             route_cache_map[row[0]] = row[1:]
         conn_r.close()
     needs_photo = [icao for icao in visible if icao not in photo_cache_map]
@@ -893,14 +931,17 @@ def process_states(states):
         route_row  = route_cache_map.get(callsign)
         if route_row and route_row[0]:  # found=1
             origin_iata, origin_name, dest_iata, dest_name = route_row[2], route_row[3], route_row[4], route_row[5]
+            dest_lat, dest_lon = route_row[6], route_row[7]
         else:
             origin_iata = origin_name = dest_iata = dest_name = ""
+            dest_lat = dest_lon = None
+        eta_minutes = _eta_minutes(lat, lon, heading, speed_kts, dest_lat, dest_lon)
 
         c.execute("""INSERT OR REPLACE INTO live_aircraft VALUES
-            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (icao24, callsign, lat, lon, alt_ft, speed_kts, heading,
              vrate, country, model, reg, dist_km, now, thumb_url, category,
-             origin_iata, origin_name, dest_iata, dest_name))
+             origin_iata, origin_name, dest_iata, dest_name, eta_minutes))
 
         in_zone = (dist_km <= cfg["radius_km"] and alt_ft <= cfg["alt_threshold_ft"])
 
@@ -920,6 +961,7 @@ def process_states(states):
                 'spi': spi, 'position_source': position_source,
                 'origin_iata': origin_iata, 'origin_name': origin_name,
                 'dest_iata': dest_iata, 'dest_name': dest_name,
+                'dest_lat': dest_lat, 'dest_lon': dest_lon,
             })
             c.execute("""INSERT INTO seen_aircraft
                 (icao24,callsign,first_seen,last_seen,min_alt_ft,min_dist_km,
@@ -1007,9 +1049,12 @@ def process_states(states):
         route = newly_fetched_routes.get(alert['callsign']) or {
             'origin_iata': alert['origin_iata'], 'origin_name': alert['origin_name'],
             'dest_iata': alert['dest_iata'], 'dest_name': alert['dest_name'],
+            'dest_lat': alert['dest_lat'], 'dest_lon': alert['dest_lon'],
         }
         origin_str      = f"{route['origin_name']} ({route['origin_iata']})" if route['origin_iata'] else "Unknown"
         destination_str = f"{route['dest_name']} ({route['dest_iata']})" if route['dest_iata'] else "Unknown"
+        eta_str = _format_eta(_eta_minutes(alert['lat'], alert['lon'], alert['heading'],
+                                            alert['speed_kts'], route['dest_lat'], route['dest_lon']))
         values = {
             'emoji': ac_emoji, 'callsign': alert['callsign'], 'model': alert['model'],
             'registration': alert['reg'] or "N/A", 'country': alert['country'],
@@ -1018,7 +1063,7 @@ def process_states(states):
             'altitude': alt_str, 'distance_km': alert['dist_km'],
             'icao24': icao24, 'lat': round(alert['lat'], 4), 'long': round(alert['lon'], 4),
             'heading': alert['heading'], 'squawk': alert['squawk'] or "N/A",
-            'origin': origin_str, 'destination': destination_str,
+            'origin': origin_str, 'destination': destination_str, 'eta': eta_str,
         }
         # Filters compare raw numeric values (ft/kts/fpm), not the formatted,
         # unit-suffixed strings templates render, so metric/aviation display

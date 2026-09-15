@@ -350,6 +350,10 @@ function fmtVR(ms) {
   if (UNITS_SPEED === 'metric') return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 60)) + ' m/min';
   return (up ? '↑ ' : '↓ ') + Math.round(Math.abs(ms * 196.85)) + ' fpm';
 }
+function fmtEta(mins) {
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h ? `${h}h ${m}m` : `${m} min`;
+}
 
 // ── First-run timezone-based location default ─────────────────────────────────
 const TIMEZONE_CITIES = {
@@ -803,7 +807,7 @@ function updateMap(aircraft) {
     const vr = ac.vertical_rate;
     const vrStr = fmtVR(vr);
     const routeLine = (ac.origin_iata && ac.dest_iata)
-      ? `<br>${ac.origin_iata} &rarr; ${ac.dest_iata}` : '';
+      ? `<br>${ac.origin_iata} &rarr; ${ac.dest_iata}${ac.eta_minutes != null ? ' &bull; ETA ' + fmtEta(ac.eta_minutes) : ''}` : '';
     const popup = `<b>${ac.callsign}</b>${ac.registration ? ' ('+ac.registration+')' : ''}<br>
       ${ac.model || 'Unknown'}<br>
       ${fmtAlt(ac.alt_ft||0)} &bull; ${fmtSpeed(ac.speed_kts)} &bull; ${vrStr}<br>
