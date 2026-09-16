@@ -97,6 +97,8 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .fav-btn.active,.fav-btn:hover{opacity:1}
 .seen-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px;line-height:1;flex-shrink:0;opacity:.3;transition:opacity .15s}
 .seen-btn.active,.seen-btn:hover{opacity:1}
+.note-btn{background:none;border:none;cursor:pointer;font-size:12px;padding:2px;line-height:1;flex-shrink:0;opacity:.3;transition:opacity .15s}
+.note-btn.active,.note-btn:hover{opacity:1}
 .del-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:2px;opacity:.25;transition:opacity .15s,text-shadow .15s;line-height:1;flex-shrink:0}
 .del-btn:hover{opacity:1;text-shadow:0 0 1px var(--red),0 0 2px var(--red),0 0 2px var(--red)}
 .fav-filter-btn,.seen-filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:13px;transition:border-color .15s,background .15s;flex-shrink:0}
@@ -137,6 +139,10 @@ header{padding:10px 18px;background:var(--surface);border-bottom:1px solid var(-
 .confirm-ok:hover{opacity:.85}
 .confirm-cancel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 18px;border-radius:6px;font-size:13px;cursor:pointer;transition:border-color .15s}
 .confirm-cancel:hover{border-color:var(--accent)}
+.notes-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 22px;max-width:380px;width:90%;text-align:left}
+.notes-box h3{font-size:14px;margin-bottom:12px}
+.notes-box textarea{width:100%;min-height:110px;resize:vertical;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px;font-size:13px;font-family:inherit;line-height:1.5}
+.notes-box textarea:focus{outline:none;border-color:var(--accent)}
 .first-run-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center}
 .frm-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px;max-width:360px;width:90%;text-align:center}
 .frm-box p{font-size:14px;margin-bottom:18px;line-height:1.5}
@@ -861,6 +867,7 @@ function _histCardHtml(r, i) {
       <span class="hc-actions">
         <button class="fav-btn${r.favourited?' active':''}" onclick="event.stopPropagation();toggleFav(${r.id},${i})" title="${r.favourited?'Unfavourite':'Favourite'}">⭐</button>
         <button class="seen-btn${r.seen?' active':''}" onclick="event.stopPropagation();toggleSeen(${r.id},${i})" title="${r.seen?'Mark as unseen':'Mark as seen'}">👁️</button>
+        <button class="note-btn${r.notes?' active':''}" onclick="event.stopPropagation();openNotes(${r.id},${i})" title="${r.notes?'Edit note':'Add note'}">📝</button>
         <button class="del-btn" onclick="event.stopPropagation();deleteHistEntry(${r.id},${i})" title="Delete">🗑️</button>
       </span>
     </div>
@@ -1203,6 +1210,33 @@ function toggleSeen(id, idx) {
     .then(d => { if (d.ok) { historyData[idx].seen = d.seen; _drawAircraft(); } });
   }, 'neutral');
 }
+
+let _notesId = null, _notesIdx = null;
+function openNotes(id, idx) {
+  _notesId = id; _notesIdx = idx;
+  document.getElementById('notes-text').value = historyData[idx]?.notes || '';
+  document.getElementById('notes-overlay').classList.add('open');
+  document.getElementById('notes-text').focus();
+}
+function closeNotes() {
+  document.getElementById('notes-overlay').classList.remove('open');
+  _notesId = null; _notesIdx = null;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('notes-save-btn').addEventListener('click', () => {
+    if (_notesId == null) return;
+    const notes = document.getElementById('notes-text').value;
+    const id = _notesId, idx = _notesIdx;
+    fetch('/api/history/notes', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({id, notes})
+    })
+    .then(r => r.json())
+    .then(d => { if (d.ok && historyData[idx]) { historyData[idx].notes = d.notes; _drawAircraft(); } });
+    closeNotes();
+  });
+});
 
 function deleteHistEntry(id, idx) {
   showConfirm(`Delete ${historyData[idx]?.callsign || id} from history?`, 'Delete', async () => {
@@ -1929,6 +1963,16 @@ if (FIRST_RUN && !sessionStorage.getItem('skybro_first_run_dismissed')) {
     <div class="confirm-actions">
       <button class="confirm-ok" id="confirm-ok-btn"></button>
       <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+<div class="confirm-overlay" id="notes-overlay" onclick="closeNotes()">
+  <div class="notes-box" onclick="event.stopPropagation()">
+    <h3>Observation notes</h3>
+    <textarea id="notes-text" maxlength="2000" placeholder="Add a note about this sighting..."></textarea>
+    <div class="confirm-actions" style="margin-top:14px">
+      <button class="confirm-ok neutral" id="notes-save-btn">Save</button>
+      <button class="confirm-cancel" onclick="closeNotes()">Cancel</button>
     </div>
   </div>
 </div>

@@ -352,7 +352,8 @@ def migrate_db():
                        ("seen_aircraft",   "dest_name TEXT"),
                        ("route_cache",     "dest_lat REAL"),
                        ("route_cache",     "dest_lon REAL"),
-                       ("live_aircraft",   "eta_minutes INTEGER")]:
+                       ("live_aircraft",   "eta_minutes INTEGER"),
+                       ("seen_aircraft",   "notes TEXT")]:
         try:
             c.execute(f"ALTER TABLE {table} ADD COLUMN {col}")
         except sqlite3.OperationalError:

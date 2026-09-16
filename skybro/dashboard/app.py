@@ -385,6 +385,7 @@ def api_history():
                    COALESCE(sa.category, 0) AS category,
                    COALESCE(sa.favourited, 0) AS favourited,
                    COALESCE(sa.seen, 0) AS seen,
+                   COALESCE(sa.notes, '') AS notes,
                    COALESCE(sa.speed_kts, 0) AS speed_kts,
                    COALESCE(sa.vertical_rate, 0) AS vertical_rate,
                    COALESCE(sa.geo_alt_ft, 0) AS geo_alt_ft,
@@ -434,6 +435,25 @@ def api_history_seen():
         conn.execute("UPDATE seen_aircraft SET seen=? WHERE id=?", (new_val, row_id))
         conn.commit()
         return jsonify({"ok": True, "seen": new_val})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+NOTES_MAX_LEN = 2000
+
+@app.route("/api/history/notes", methods=["POST"])
+def api_history_notes():
+    data = request.get_json(force=True)
+    row_id = (data or {}).get("id")
+    if not row_id: abort(400)
+    notes = (data or {}).get("notes") or ""
+    notes = notes.strip()[:NOTES_MAX_LEN]
+    try:
+        conn = db()
+        row = conn.execute("SELECT id FROM seen_aircraft WHERE id=?", (row_id,)).fetchone()
+        if not row: abort(404)
+        conn.execute("UPDATE seen_aircraft SET notes=? WHERE id=?", (notes, row_id))
+        conn.commit()
+        return jsonify({"ok": True, "notes": notes})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
